@@ -1,12 +1,3 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IH Dashboard 2026</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <link rel="stylesheet" href="style.css">
@@ -39,78 +30,38 @@
   from { transform: translateY(-50px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
-.login-logo { font-size: 48px; color: #dc2626; margin-bottom: 20px; }
+.login-logo { font-size: 48px; color: #2563eb; margin-bottom: 20px; }
 .login-title { font-size: 24px; font-weight: 700; margin-bottom: 8px; color: var(--text, #1f2937); }
 .login-subtitle { color: #6b7280; margin-bottom: 30px; }
 .login-form .form-group { margin-bottom: 20px; text-align: left; }
 .login-form label { display: block; margin-bottom: 6px; font-weight: 600; color: var(--text, #1f2937); font-size: 14px; }
 .login-form input { width: 100%; padding: 12px 16px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 16px; transition: all 0.2s; box-sizing: border-box; }
-.login-form input:focus { outline: none; border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220,38,38,0.1); }
-.login-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, #dc2626, #b91c1c); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-.login-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(220,38,38,0.3); }
+.login-form input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+.login-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.login-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(37,99,235,0.3); }
 .login-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 .error-login { background: #fee2e2; color: #dc2626; padding: 12px; border-radius: 8px; margin-top: 15px; border-left: 4px solid #dc2626; display: none; }
 
-/* PDF DOWNLOAD BUTTON */
-.download-section { 
-  padding: 20px 24px 0; 
-  text-align: center; 
-  background: linear-gradient(135deg, #f8fafc, #e2e8f0);
-  border-bottom: 1px solid #e2e7e9;
-}
-.download-pdf-btn { 
-  display: inline-flex; 
-  align-items: center; 
-  gap: 12px; 
-  padding: 16px 32px; 
-  background: linear-gradient(135deg, #dc2626, #b91c1c); 
+/* DOWNLOAD BUTTON */
+.download-section { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+.download-btn { 
+  display: flex; align-items: center; gap: 8px; 
+  padding: 10px 20px; 
+  background: linear-gradient(135deg, #059669, #047857); 
   color: white; 
   border: none; 
-  border-radius: 12px; 
-  font-weight: 700; 
-  font-size: 16px; 
+  border-radius: 8px; 
+  font-weight: 600; 
   cursor: pointer; 
-  transition: all 0.3s; 
+  transition: all 0.2s; 
   text-decoration: none;
-  box-shadow: 0 4px 14px rgba(220,38,38,0.3);
+  font-size: 14px;
 }
-.download-pdf-btn:hover { 
-  transform: translateY(-3px); 
-  box-shadow: 0 12px 30px rgba(220,38,38,0.5); 
-}
-.download-pdf-btn i { font-size: 20px; }
-.download-pdf-btn:active { transform: translateY(-1px); }
-
-/* PRINT LANDSCAPE STYLES */
-@media print {
-  body * { visibility: hidden; }
-  .print-content, .print-content * { visibility: visible; }
-  .print-content { 
-    position: absolute; 
-    left: 0; 
-    top: 0; 
-    width: 100%; 
-    height: 100%; 
-  }
-  @page { 
-    size: A4 landscape; 
-    margin: 10mm; 
-  }
-  .kpi-grid, .chart-row, .bottom-row { 
-    break-inside: avoid; 
-    page-break-inside: avoid; 
-  }
-  .no-print { display: none !important; }
-}
-
-/* HAZARD THEME */
-.hazard-glow {
-  animation: hazardGlow 2s infinite;
-}
-@keyframes hazardGlow {
-  0%, 100% { filter: drop-shadow(0 0 5px rgba(220,38,38,0.5)); }
-  50% { filter: drop-shadow(0 0 15px rgba(220,38,38,0.8)); }
-}
+.download-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(5,150,105,0.4); }
+.download-btn i { font-size: 16px; }
+.download-btn.excel { background: linear-gradient(135deg, #059669, #047857); }
+.download-btn.pdf { background: linear-gradient(135deg, #dc2626, #b91c1c); }
+.download-btn.all { background: linear-gradient(135deg, #7c3aed, #6d28d9); }
 </style>
 </head>
 <body>
@@ -118,9 +69,9 @@
 <!-- LOGIN MODAL -->
 <div class="login-modal" id="loginModal">
   <div class="login-container">
-    <div class="login-logo"><i class="fas fa-biohazard hazard-glow"></i></div>
+    <div class="login-logo"><i class="fas fa-anchor"></i></div>
     <h2 class="login-title">Health PPN III</h2>
-    <p class="login-subtitle">IH Hazard Dashboard 2026</p>
+    <p class="login-subtitle">Dashboard System 2026</p>
     <form class="login-form" onsubmit="login(event)">
       <div class="form-group">
         <label>Username</label>
@@ -137,117 +88,141 @@
 </div>
 
 <!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
 <aside class="sidebar" id="sidebar" style="display:none">
-  <div class="sidebar-brand">
-    <div class="brand-icon"><i class="fas fa-biohazard hazard-glow" style="font-size: 24px; color: #dc2626;"></i></div>
-    <div>
-      <span class="brand-title">Health PPN III</span>
-      <span class="brand-sub">IH Hazard Dashboard</span>
-    </div>
-  </div>
-
-  <div class="sidebar-user">
-    <div class="user-avatar"><i class="fas fa-user-tie" style="font-size:16px"></i></div>
-    <div>
+<div class="sidebar-brand">
+<div class="brand-icon"><i class="fas fa-anchor"></i></div>
+<div>
+@@ -26,7 +109,7 @@
+<div class="sidebar-user">
+<div class="user-avatar"><i class="fas fa-user-tie" style="font-size:16px"></i></div>
+<div>
+      <div class="user-name">Arief Ganteng</div>
       <div class="user-name" id="userName">Arief Ganteng</div>
-      <div class="user-role">Super Admin</div>
-    </div>
-  </div>
-
-  <nav class="sidebar-nav">
-    <div class="nav-label">Monitoring</div>
-    <a href="#" class="nav-item active" data-menu="hra" data-title="Dashboard HRA & IH">
-      <span class="nav-icon"><i class="fas fa-lungs"></i></span>
-      <span class="nav-text">IH Dashboard</span>
-    </a>
-    <a href="#" class="nav-item" data-menu="dat" data-title="Drugs & Alcohol Test">
-      <span class="nav-icon"><i class="fas fa-vial"></i></span>
-      <span class="nav-text">Drugs & Alcohol Test</span>
-    </a>
-    <div class="nav-label">Facility</div>
-    <a href="#" class="nav-item placeholder" data-menu="pest" data-title="Pest & Rodent Control">
-      <span class="nav-icon"><i class="fas fa-bug"></i></span>
-      <span class="nav-text">Pest & Rodent Control</span>
-      <span class="nav-badge">Soon</span>
-    </a>
-    <a href="#" class="nav-item placeholder" data-menu="p3k" data-title="P3K & AED Office">
-      <span class="nav-icon"><i class="fas fa-kit-medical"></i></span>
-      <span class="nav-text">P3K & AED Office</span>
-      <span class="nav-badge">Soon</span>
-    </a>
-    <div class="nav-label">Others</div>
-    <a href="#" class="nav-item placeholder" data-menu="menu5" data-title="Menu Placeholder 5">
-      <span class="nav-icon"><i class="fas fa-chart-pie"></i></span>
-      <span class="nav-text">Menu Placeholder 5</span>
-      <span class="nav-badge">Soon</span>
-    </a>
-    <a href="#" class="nav-item placeholder" data-menu="menu6" data-title="Menu Placeholder 6">
-      <span class="nav-icon"><i class="fas fa-table-cells"></i></span>
-      <span class="nav-text">Menu Placeholder 6</span>
-      <span class="nav-badge">Soon</span>
-    </a>
-  </nav>
-
-  <div class="sidebar-footer">
-    <div class="refresh-info">
-      <i class="fas fa-circle-dot pulse-dot"></i>
-      <span>Live — auto refresh 5 mnt</span>
-    </div>
-    <div class="last-updated" id="lastUpdated">Menghubungkan...</div>
-  </div>
+<div class="user-role">Super Admin</div>
+</div>
+</div>
+@@ -75,7 +158,15 @@
 </aside>
 
 <!-- MAIN -->
-<main class="main print-content" id="mainContent" style="display:none">
+<main class="main" id="mainContent">
+<main class="main" id="mainContent" style="display:none">
 
-  <!-- PDF DOWNLOAD BUTTON (HANYA PDF) -->
-  <div class="download-section no-print">
-    <button class="download-pdf-btn" onclick="downloadPDF()" title="Download PDF Landscape A4">
-      <i class="fas fa-file-pdf"></i>
-      <span>📄 Download Laporan PDF (Landscape)</span>
-    </button>
+  <!-- DOWNLOAD BUTTONS -->
+  <div class="download-section" style="padding: 20px 24px 0;">
+    <a href="#" class="download-btn excel" onclick="downloadExcel('hra')" id="downloadHRA"><i class="fas fa-file-excel"></i> Download HRA Excel</a>
+    <a href="#" class="download-btn excel" onclick="downloadExcel('dat')" id="downloadDAT"><i class="fas fa-file-excel"></i> Download DAT Excel</a>
+    <a href="#" class="download-btn pdf" onclick="downloadPDF()"><i class="fas fa-file-pdf"></i> Download PDF Laporan</a>
+    <a href="#" class="download-btn all" onclick="downloadAll()"><i class="fas fa-download"></i> Download Semua</a>
   </div>
 
-  <!-- TOPBAR -->
-  <header class="topbar no-print">
-    <div class="topbar-left">
-      <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
-      <div class="page-breadcrumb">
-        <span class="breadcrumb-home"><i class="fas fa-house"></i></span>
-        <span class="breadcrumb-sep">/</span>
-        <span class="page-title" id="pageTitle">IH Hazard Dashboard</span>
-      </div>
-    </div>
-    <div class="topbar-right">
-      <div class="topbar-icon-btn" title="Notifikasi"><i class="fas fa-bell"></i></div>
-      <div class="topbar-icon-btn" title="Pengaturan"><i class="fas fa-gear"></i></div>
+<!-- TOPBAR -->
+<header class="topbar">
+@@ -90,6 +181,7 @@
+<div class="topbar-right">
+<div class="topbar-icon-btn" title="Notifikasi"><i class="fas fa-bell"></i></div>
+<div class="topbar-icon-btn" title="Pengaturan"><i class="fas fa-gear"></i></div>
       <button class="btn-logout" onclick="logout()" title="Logout" style="background:none;border:none;color:var(--text);cursor:pointer;padding:8px;font-size:16px;"><i class="fas fa-sign-out-alt"></i></button>
-      <button class="btn-refresh" id="btnRefresh">
-        <i class="fas fa-rotate-right"></i> Refresh
-      </button>
-    </div>
-  </header>
+<button class="btn-refresh" id="btnRefresh">
+<i class="fas fa-rotate-right"></i> Refresh
+</button>
+@@ -396,6 +488,98 @@ <h2>Menu Placeholder 6</h2>
 
-  <!-- LOADING -->
-  <div class="loading-overlay no-print" id="loadingOverlay">
-    <div class="loading-inner">
-      <div class="spinner"></div>
-      <p style="font-weight:700;font-size:14px;margin-top:8px">Memuat data...</p>
-    </div>
-  </div>
+</main>
 
-  <!-- ERROR -->
-  <div class="error-banner no-print" id="errorBanner" style="display:none">
-    <i class="fas fa-triangle-exclamation"></i>
-    <span id="errorMsg">Gagal memuat data. Periksa API URL di script.js</span>
-    <button onclick="document.getElementById('errorBanner').style.display='none'"><i class="fas fa-xmark"></i></button>
-  </div>
+<script>
+// ========== LOGIN SYSTEM ==========
+const USERS = {
+  'admin': { password: 'ppn123', name: 'Arief Ganteng', role: 'Super Admin' },
+  'user': { password: 'user123', name: 'HSE Officer', role: 'Officer' }
+};
 
-  <!-- ===== PAGE HRA ===== -->
-  <section class="page-content active" id="page-hra">
+function login(event) {
+  event.preventDefault();
+  const username = document.getElementById('username').value;
+  const password = document.getElementById('password').value;
+  const loginBtn = document.getElementById('loginBtn');
+  const errorLogin = document.getElementById('errorLogin');
+  
+  loginBtn.disabled = true;
+  loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memverifikasi...';
+  
+  setTimeout(() => {
+    if (USERS[username] && USERS[username].password === password) {
+      localStorage.setItem('loggedIn', 'true');
+      localStorage.setItem('username', username);
+      localStorage.setItem('userName', USERS[username].name);
+      document.getElementById('userName').textContent = USERS[username].name;
+      document.getElementById('loginModal').style.display = 'none';
+      document.getElementById('sidebar').style.display = 'block';
+      document.getElementById('mainContent').style.display = 'block';
+      
+      // Trigger existing script initialization
+      if (typeof initDashboard === 'function') initDashboard();
+      else console.log('Dashboard initialized');
+    } else {
+      errorLogin.style.display = 'block';
+      loginBtn.disabled = false;
+      loginBtn.innerHTML = 'Masuk ke Dashboard';
+    }
+  }, 1500);
+}
 
-    <div class="filter-bar no-print">
-      <div class="filter-group">
-        <label>Bulan</label>
-        <select id="hra-filter-bulan" onchange="applyHRAFilters()">
-          <option value="">
+function logout() {
+  localStorage.clear();
+  document.getElementById('loginModal').style.display = 'flex';
+  document.getElementById('sidebar').style.display = 'none';
+  document.getElementById('mainContent').style.display = 'none';
+  document.getElementById('username').value = '';
+  document.getElementById('password').value = '';
+  document.getElementById('errorLogin').style.display = 'none';
+}
+
+// Check if already logged in
+if (localStorage.getItem('loggedIn') === 'true') {
+  document.getElementById('loginModal').style.display = 'none';
+  document.getElementById('sidebar').style.display = 'block';
+  document.getElementById('mainContent').style.display = 'block';
+  document.getElementById('userName').textContent = localStorage.getItem('userName');
+}
+
+// ========== DOWNLOAD FUNCTIONS ==========
+function downloadExcel(type) {
+  // Simulate data download
+  const data = type === 'hra' ? 
+    [{Kapal: 'MV Sample', Fleet: 'FP I', Bulan: 'Mei', Vendor: 'ABC', Status: 'Done', Budget: 'Rp 5.000.000'}] :
+    [{Kapal: 'MV Sample', Fleet: 'FP I', Tanggal: '2024-05-15', Crew: '25', Hasil: 'Negatif', Positif: '0', TindakLanjut: 'None'}];
+  
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, type.toUpperCase());
+  XLSX.writeFile(wb, `Health_PPN_III_${type.toUpperCase()}_2026.xlsx`);
+}
+
+function downloadPDF() {
+  window.print(); // Simple PDF via browser print
+  // You can integrate jsPDF for better PDF generation
+}
+
+function downloadAll() {
+  downloadExcel('hra');
+  setTimeout(() => downloadExcel('dat'), 1000);
+  setTimeout(() => downloadPDF(), 2000);
+}
+
+// Prevent F12, Right Click, Ctrl+U, etc.
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('keydown', e => {
+  if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I') || 
+      (e.ctrlKey && e.key === 'u') || (e.ctrlKey && e.key === 's')) {
+    e.preventDefault();
+  }
+});
+</script>
+
+<!-- Load SheetJS for Excel export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
