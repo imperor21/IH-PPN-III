@@ -39,38 +39,78 @@
   from { transform: translateY(-50px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
-.login-logo { font-size: 48px; color: #2563eb; margin-bottom: 20px; }
+.login-logo { font-size: 48px; color: #dc2626; margin-bottom: 20px; }
 .login-title { font-size: 24px; font-weight: 700; margin-bottom: 8px; color: var(--text, #1f2937); }
 .login-subtitle { color: #6b7280; margin-bottom: 30px; }
 .login-form .form-group { margin-bottom: 20px; text-align: left; }
 .login-form label { display: block; margin-bottom: 6px; font-weight: 600; color: var(--text, #1f2937); font-size: 14px; }
 .login-form input { width: 100%; padding: 12px 16px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 16px; transition: all 0.2s; box-sizing: border-box; }
-.login-form input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
-.login-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-.login-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(37,99,235,0.3); }
+.login-form input:focus { outline: none; border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220,38,38,0.1); }
+.login-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, #dc2626, #b91c1c); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.login-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(220,38,38,0.3); }
 .login-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 .error-login { background: #fee2e2; color: #dc2626; padding: 12px; border-radius: 8px; margin-top: 15px; border-left: 4px solid #dc2626; display: none; }
 
-/* DOWNLOAD BUTTON */
-.download-section { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
-.download-btn { 
-  display: flex; align-items: center; gap: 8px; 
-  padding: 10px 20px; 
-  background: linear-gradient(135deg, #059669, #047857); 
+/* PDF DOWNLOAD BUTTON */
+.download-section { 
+  padding: 20px 24px 0; 
+  text-align: center; 
+  background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+  border-bottom: 1px solid #e2e7e9;
+}
+.download-pdf-btn { 
+  display: inline-flex; 
+  align-items: center; 
+  gap: 12px; 
+  padding: 16px 32px; 
+  background: linear-gradient(135deg, #dc2626, #b91c1c); 
   color: white; 
   border: none; 
-  border-radius: 8px; 
-  font-weight: 600; 
+  border-radius: 12px; 
+  font-weight: 700; 
+  font-size: 16px; 
   cursor: pointer; 
-  transition: all 0.2s; 
+  transition: all 0.3s; 
   text-decoration: none;
-  font-size: 14px;
+  box-shadow: 0 4px 14px rgba(220,38,38,0.3);
 }
-.download-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(5,150,105,0.4); }
-.download-btn i { font-size: 16px; }
-.download-btn.excel { background: linear-gradient(135deg, #059669, #047857); }
-.download-btn.pdf { background: linear-gradient(135deg, #dc2626, #b91c1c); }
-.download-btn.all { background: linear-gradient(135deg, #7c3aed, #6d28d9); }
+.download-pdf-btn:hover { 
+  transform: translateY(-3px); 
+  box-shadow: 0 12px 30px rgba(220,38,38,0.5); 
+}
+.download-pdf-btn i { font-size: 20px; }
+.download-pdf-btn:active { transform: translateY(-1px); }
+
+/* PRINT LANDSCAPE STYLES */
+@media print {
+  body * { visibility: hidden; }
+  .print-content, .print-content * { visibility: visible; }
+  .print-content { 
+    position: absolute; 
+    left: 0; 
+    top: 0; 
+    width: 100%; 
+    height: 100%; 
+  }
+  @page { 
+    size: A4 landscape; 
+    margin: 10mm; 
+  }
+  .kpi-grid, .chart-row, .bottom-row { 
+    break-inside: avoid; 
+    page-break-inside: avoid; 
+  }
+  .no-print { display: none !important; }
+}
+
+/* HAZARD THEME */
+.hazard-glow {
+  animation: hazardGlow 2s infinite;
+}
+@keyframes hazardGlow {
+  0%, 100% { filter: drop-shadow(0 0 5px rgba(220,38,38,0.5)); }
+  50% { filter: drop-shadow(0 0 15px rgba(220,38,38,0.8)); }
+}
 </style>
 </head>
 <body>
@@ -78,9 +118,9 @@
 <!-- LOGIN MODAL -->
 <div class="login-modal" id="loginModal">
   <div class="login-container">
-    <div class="login-logo"><i class="fas fa-anchor"></i></div>
+    <div class="login-logo"><i class="fas fa-biohazard hazard-glow"></i></div>
     <h2 class="login-title">Health PPN III</h2>
-    <p class="login-subtitle">Dashboard System 2026</p>
+    <p class="login-subtitle">IH Hazard Dashboard 2026</p>
     <form class="login-form" onsubmit="login(event)">
       <div class="form-group">
         <label>Username</label>
@@ -99,10 +139,10 @@
 <!-- SIDEBAR -->
 <aside class="sidebar" id="sidebar" style="display:none">
   <div class="sidebar-brand">
-    <div class="brand-icon"><i class="fas fa-anchor"></i></div>
+    <div class="brand-icon"><i class="fas fa-biohazard hazard-glow" style="font-size: 24px; color: #dc2626;"></i></div>
     <div>
       <span class="brand-title">Health PPN III</span>
-      <span class="brand-sub">Dashboard System</span>
+      <span class="brand-sub">IH Hazard Dashboard</span>
     </div>
   </div>
 
@@ -158,24 +198,24 @@
 </aside>
 
 <!-- MAIN -->
-<main class="main" id="mainContent" style="display:none">
+<main class="main print-content" id="mainContent" style="display:none">
 
-  <!-- DOWNLOAD BUTTONS -->
-  <div class="download-section" style="padding: 20px 24px 0;">
-    <a href="#" class="download-btn excel" onclick="downloadExcel('hra')" id="downloadHRA"><i class="fas fa-file-excel"></i> Download HRA Excel</a>
-    <a href="#" class="download-btn excel" onclick="downloadExcel('dat')" id="downloadDAT"><i class="fas fa-file-excel"></i> Download DAT Excel</a>
-    <a href="#" class="download-btn pdf" onclick="downloadPDF()"><i class="fas fa-file-pdf"></i> Download PDF Laporan</a>
-    <a href="#" class="download-btn all" onclick="downloadAll()"><i class="fas fa-download"></i> Download Semua</a>
+  <!-- PDF DOWNLOAD BUTTON (HANYA PDF) -->
+  <div class="download-section no-print">
+    <button class="download-pdf-btn" onclick="downloadPDF()" title="Download PDF Landscape A4">
+      <i class="fas fa-file-pdf"></i>
+      <span>📄 Download Laporan PDF (Landscape)</span>
+    </button>
   </div>
 
   <!-- TOPBAR -->
-  <header class="topbar">
+  <header class="topbar no-print">
     <div class="topbar-left">
       <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
       <div class="page-breadcrumb">
         <span class="breadcrumb-home"><i class="fas fa-house"></i></span>
         <span class="breadcrumb-sep">/</span>
-        <span class="page-title" id="pageTitle">IH Dashboard</span>
+        <span class="page-title" id="pageTitle">IH Hazard Dashboard</span>
       </div>
     </div>
     <div class="topbar-right">
@@ -189,7 +229,7 @@
   </header>
 
   <!-- LOADING -->
-  <div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-overlay no-print" id="loadingOverlay">
     <div class="loading-inner">
       <div class="spinner"></div>
       <p style="font-weight:700;font-size:14px;margin-top:8px">Memuat data...</p>
@@ -197,7 +237,7 @@
   </div>
 
   <!-- ERROR -->
-  <div class="error-banner" id="errorBanner" style="display:none">
+  <div class="error-banner no-print" id="errorBanner" style="display:none">
     <i class="fas fa-triangle-exclamation"></i>
     <span id="errorMsg">Gagal memuat data. Periksa API URL di script.js</span>
     <button onclick="document.getElementById('errorBanner').style.display='none'"><i class="fas fa-xmark"></i></button>
@@ -206,380 +246,8 @@
   <!-- ===== PAGE HRA ===== -->
   <section class="page-content active" id="page-hra">
 
-    <div class="filter-bar">
+    <div class="filter-bar no-print">
       <div class="filter-group">
         <label>Bulan</label>
         <select id="hra-filter-bulan" onchange="applyHRAFilters()">
-          <option value="">Semua Bulan</option>
-          <option>Mei</option><option>Juni</option><option>Juli</option>
-          <option>Agustus</option><option>September</option><option>Oktober</option>
-          <option>November</option><option>Desember</option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <label>Jenis Fleet</label>
-        <select id="hra-filter-fleet" onchange="applyHRAFilters()">
-          <option value="">Semua Fleet</option>
-          <option>FP I</option><option>FP II</option><option>FC</option><option>FGP</option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <label>Nama Kapal</label>
-        <input type="text" id="hra-filter-kapal" placeholder="Cari nama kapal..." oninput="applyHRAFilters()">
-      </div>
-      <button class="btn-clear" onclick="clearHRAFilters()"><i class="fas fa-xmark"></i> Reset</button>
-    </div>
-
-    <!-- KPI -->
-    <div class="kpi-grid">
-      <div class="kpi-card blue">
-        <a class="kpi-link" href="#">View Detail</a>
-        <div class="kpi-icon"><i class="fas fa-ship"></i></div>
-        <div class="kpi-body">
-          <div class="kpi-value" id="hra-total">85</div>
-          <div class="kpi-label">Total Kapal</div>
-        </div>
-      </div>
-      <div class="kpi-card green">
-        <a class="kpi-link" href="#">View Detail</a>
-        <div class="kpi-icon"><i class="fas fa-circle-check"></i></div>
-        <div class="kpi-body">
-          <div class="kpi-value" id="hra-done">—</div>
-          <div class="kpi-label">Sudah Monitoring</div>
-        </div>
-      </div>
-      <div class="kpi-card orange">
-        <a class="kpi-link" href="#">View Detail</a>
-        <div class="kpi-icon"><i class="fas fa-clock"></i></div>
-        <div class="kpi-body">
-          <div class="kpi-value" id="hra-belum">—</div>
-          <div class="kpi-label">Belum Monitoring</div>
-        </div>
-      </div>
-      <div class="kpi-card purple">
-        <a class="kpi-link" href="#">View Detail</a>
-        <div class="kpi-icon"><i class="fas fa-sack-dollar"></i></div>
-        <div class="kpi-body">
-          <div class="kpi-value" id="hra-budget">—</div>
-          <div class="kpi-label">Est. Budget</div>
-        </div>
-      </div>
-      <div class="kpi-card teal">
-        <a class="kpi-link" href="#">View Detail</a>
-        <div class="kpi-icon"><i class="fas fa-percent"></i></div>
-        <div class="kpi-body">
-          <div class="kpi-value" id="hra-coverage">—</div>
-          <div class="kpi-label">Coverage</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- CHARTS -->
-    <div class="chart-row">
-      <div class="chart-card">
-        <div class="chart-header">
-          <span class="chart-title"><i class="fas fa-chart-column"></i> Monitoring per Bulan</span>
-          <div class="pill-group">
-            <button class="pill active">Bar</button>
-            <button class="pill" onclick="toggleHRAChartType(this,'line')">Line</button>
-          </div>
-        </div>
-        <div class="chart-body"><canvas id="hraBarChart" role="img" aria-label="Bar chart monitoring per bulan"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-header">
-          <span class="chart-title"><i class="fas fa-chart-pie"></i> Distribusi Fleet</span>
-        </div>
-        <div class="chart-body"><canvas id="hraDonutChart" role="img" aria-label="Donut chart distribusi fleet"></canvas></div>
-      </div>
-    </div>
-
-    <!-- BOTTOM -->
-    <div class="bottom-row">
-      <div class="hazard-card">
-        <div class="chart-header">
-          <span class="chart-title"><i class="fas fa-triangle-exclamation"></i> Top Hazard</span>
-          <select id="hra-hazard-bulan" onchange="renderHRAHazard()" style="font-size:11px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:var(--font)">
-            <option value="">Semua</option>
-            <option>Mei</option><option>Juni</option><option>Juli</option>
-            <option>Agustus</option><option>September</option><option>Oktober</option>
-            <option>November</option><option>Desember</option>
-          </select>
-        </div>
-        <div id="hazardList" class="hazard-list"></div>
-      </div>
-
-      <div class="table-card">
-        <div class="chart-header">
-          <span class="chart-title"><i class="fas fa-table-list"></i> Data Monitoring IH</span>
-          <input type="text" id="hra-search" placeholder="🔍 Cari data..." oninput="searchHRATable()" class="search-input">
-        </div>
-        <div class="table-wrap">
-          <table class="data-table" id="hraTable">
-            <thead>
-              <tr>
-                <th onclick="sortHRATable(0)">Kapal <i class="fas fa-sort fa-xs"></i></th>
-                <th onclick="sortHRATable(1)">Fleet <i class="fas fa-sort fa-xs"></i></th>
-                <th onclick="sortHRATable(2)">Bulan <i class="fas fa-sort fa-xs"></i></th>
-                <th onclick="sortHRATable(3)">Vendor <i class="fas fa-sort fa-xs"></i></th>
-                <th onclick="sortHRATable(4)">Status <i class="fas fa-sort fa-xs"></i></th>
-                <th onclick="sortHRATable(5)">Est. Budget <i class="fas fa-sort fa-xs"></i></th>
-              </tr>
-            </thead>
-            <tbody id="hraTableBody"></tbody>
-          </table>
-        </div>
-        <div class="table-footer" id="hraTableFooter">Memuat data...</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== PAGE DAT ===== -->
-  <section class="page-content" id="page-dat">
-
-    <div class="filter-bar">
-      <div class="filter-group">
-        <label>Bulan</label>
-        <select id="dat-filter-bulan" onchange="applyDATFilters()">
-          <option value="">Semua Bulan</option>
-          <option>Mei</option><option>Juni</option><option>Juli</option>
-          <option>Agustus</option><option>September</option><option>Oktober</option>
-          <option>November</option><option>Desember</option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <label>Jenis Fleet</label>
-        <select id="dat-filter-fleet" onchange="applyDATFilters()">
-          <option value="">Semua Fleet</option>
-          <option>FP I</option><option>FP II</option><option>FC</option><option>FGP</option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <label>Nama Kapal</label>
-        <input type="text" id="dat-filter-kapal" placeholder="Cari nama kapal..." oninput="applyDATFilters()">
-      </div>
-      <button class="btn-clear" onclick="clearDATFilters()"><i class="fas fa-xmark"></i> Reset</button>
-    </div>
-
-    <div class="kpi-grid">
-      <div class="kpi-card blue">
-        <a class="kpi-link" href="#">View Detail</a>
-        <div class="kpi-icon"><i class="fas fa-ship"></i></div>
-        <div class="kpi-body"><div class="kpi-value">85</div><div class="kpi-label">Total Kapal</div></div>
-      </div>
-      <div class="kpi-card green">
-        <a class="kpi-link" href="#">View Detail</a>
-        <div class="kpi-icon"><i class="fas fa-circle-check"></i></div>
-        <div class="kpi-body"><div class="kpi-value" id="dat-done">—</div><div class="kpi-label">Sudah DAT</div></div>
-      </div>
-      <div class="kpi-card orange">
-        <a class="kpi-link" href="#">View Detail</a>
-        <div class="kpi-icon"><i class="fas fa-clock"></i></div>
-        <div class="kpi-body"><div class="kpi-value" id="dat-belum">—</div><div class="kpi-label">Belum DAT</div></div>
-      </div>
-      <div class="kpi-card red">
-        <a class="kpi-link" href="#">View Detail</a>
-        <div class="kpi-icon"><i class="fas fa-person-falling-burst"></i></div>
-        <div class="kpi-body"><div class="kpi-value" id="dat-positif">—</div><div class="kpi-label">Crew Positif</div></div>
-      </div>
-      <div class="kpi-card teal">
-        <a class="kpi-link" href="#">View Detail</a>
-        <div class="kpi-icon"><i class="fas fa-users"></i></div>
-        <div class="kpi-body"><div class="kpi-value" id="dat-crew">—</div><div class="kpi-label">Total Crew Diperiksa</div></div>
-      </div>
-      <div class="kpi-card purple">
-        <a class="kpi-link" href="#">View Detail</a>
-        <div class="kpi-icon"><i class="fas fa-sack-dollar"></i></div>
-        <div class="kpi-body"><div class="kpi-value" id="dat-biaya">—</div><div class="kpi-label">Est. Total Biaya</div></div>
-      </div>
-      <div class="kpi-card indigo">
-        <a class="kpi-link" href="#">View Detail</a>
-        <div class="kpi-icon"><i class="fas fa-percent"></i></div>
-        <div class="kpi-body"><div class="kpi-value" id="dat-coverage">—</div><div class="kpi-label">Coverage</div></div>
-      </div>
-    </div>
-
-    <div class="chart-row">
-      <div class="chart-card">
-        <div class="chart-header">
-          <span class="chart-title"><i class="fas fa-chart-line"></i> Crew Test per Bulan</span>
-          <div class="pill-group">
-            <button class="pill active">Bar</button>
-            <button class="pill" onclick="toggleDATChartType(this,'line')">Line</button>
-          </div>
-        </div>
-        <div class="chart-body"><canvas id="datBarChart" role="img" aria-label="Bar chart crew test per bulan"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-header">
-          <span class="chart-title"><i class="fas fa-chart-pie"></i> Hasil Test (Negatif/Positif)</span>
-        </div>
-        <div class="chart-body"><canvas id="datDonutChart" role="img" aria-label="Donut chart hasil DAT"></canvas></div>
-      </div>
-    </div>
-
-    <div class="bottom-row">
-      <div class="hazard-card">
-        <div class="chart-header">
-          <span class="chart-title"><i class="fas fa-arrow-trend-down"></i> Tindak Lanjut</span>
-        </div>
-        <div id="datTindakLanjut"></div>
-      </div>
-
-      <div class="table-card">
-        <div class="chart-header">
-          <span class="chart-title"><i class="fas fa-table-list"></i> Data Drugs & Alcohol Test</span>
-          <input type="text" id="dat-search" placeholder="🔍 Cari data..." oninput="searchDATTable()" class="search-input">
-        </div>
-        <div class="table-wrap">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th onclick="sortDATTable(0)">Kapal <i class="fas fa-sort fa-xs"></i></th>
-                <th onclick="sortDATTable(1)">Fleet <i class="fas fa-sort fa-xs"></i></th>
-                <th onclick="sortDATTable(2)">Tanggal <i class="fas fa-sort fa-xs"></i></th>
-                <th onclick="sortDATTable(3)">Crew Diperiksa <i class="fas fa-sort fa-xs"></i></th>
-                <th onclick="sortDATTable(4)">Hasil <i class="fas fa-sort fa-xs"></i></th>
-                <th onclick="sortDATTable(5)">Crew Positif <i class="fas fa-sort fa-xs"></i></th>
-                <th onclick="sortDATTable(6)">Tindak Lanjut <i class="fas fa-sort fa-xs"></i></th>
-              </tr>
-            </thead>
-            <tbody id="datTableBody"></tbody>
-          </table>
-        </div>
-        <div class="table-footer" id="datTableFooter">Memuat data...</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== PLACEHOLDERS ===== -->
-  <section class="page-content" id="page-pest">
-    <div class="placeholder-page">
-      <div class="placeholder-icon"><i class="fas fa-bug"></i></div>
-      <h2>Pest & Rodent Control</h2>
-      <p>Dashboard ini sedang dalam pengembangan. Sheet data sudah tersedia di Google Sheets dan siap diisi.</p>
-      <div class="placeholder-tag">Coming Soon</div>
-    </div>
-  </section>
-  <section class="page-content" id="page-p3k">
-    <div class="placeholder-page">
-      <div class="placeholder-icon"><i class="fas fa-kit-medical"></i></div>
-      <h2>P3K & AED Office</h2>
-      <p>Dashboard ini sedang dalam pengembangan. Sheet data sudah tersedia di Google Sheets dan siap diisi.</p>
-      <div class="placeholder-tag">Coming Soon</div>
-    </div>
-  </section>
-  <section class="page-content" id="page-menu5">
-    <div class="placeholder-page">
-      <div class="placeholder-icon"><i class="fas fa-chart-pie"></i></div>
-      <h2>Menu Placeholder 5</h2>
-      <p>Modul belum tersedia. Hubungi tim HSE untuk pengembangan lebih lanjut.</p>
-      <div class="placeholder-tag">Coming Soon</div>
-    </div>
-  </section>
-  <section class="page-content" id="page-menu6">
-    <div class="placeholder-page">
-      <div class="placeholder-icon"><i class="fas fa-table-cells"></i></div>
-      <h2>Menu Placeholder 6</h2>
-      <p>Modul belum tersedia. Hubungi tim HSE untuk pengembangan lebih lanjut.</p>
-      <div class="placeholder-tag">Coming Soon</div>
-    </div>
-  </section>
-
-</main>
-
-<script>
-// ========== LOGIN SYSTEM ==========
-const USERS = {
-  'admin': { password: 'ppn123', name: 'Arief Ganteng', role: 'Super Admin' },
-  'user': { password: 'user123', name: 'HSE Officer', role: 'Officer' }
-};
-
-function login(event) {
-  event.preventDefault();
-  const username = document.getElementById('username').value;
-  const password = document.getElementById('password').value;
-  const loginBtn = document.getElementById('loginBtn');
-  const errorLogin = document.getElementById('errorLogin');
-  
-  loginBtn.disabled = true;
-  loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memverifikasi...';
-  
-  setTimeout(() => {
-    if (USERS[username] && USERS[username].password === password) {
-      localStorage.setItem('loggedIn', 'true');
-      localStorage.setItem('username', username);
-      localStorage.setItem('userName', USERS[username].name);
-      document.getElementById('userName').textContent = USERS[username].name;
-      document.getElementById('loginModal').style.display = 'none';
-      document.getElementById('sidebar').style.display = 'block';
-      document.getElementById('mainContent').style.display = 'block';
-      
-      // Trigger existing script initialization
-      if (typeof initDashboard === 'function') initDashboard();
-      else console.log('Dashboard initialized');
-    } else {
-      errorLogin.style.display = 'block';
-      loginBtn.disabled = false;
-      loginBtn.innerHTML = 'Masuk ke Dashboard';
-    }
-  }, 1500);
-}
-
-function logout() {
-  localStorage.clear();
-  document.getElementById('loginModal').style.display = 'flex';
-  document.getElementById('sidebar').style.display = 'none';
-  document.getElementById('mainContent').style.display = 'none';
-  document.getElementById('username').value = '';
-  document.getElementById('password').value = '';
-  document.getElementById('errorLogin').style.display = 'none';
-}
-
-// Check if already logged in
-if (localStorage.getItem('loggedIn') === 'true') {
-  document.getElementById('loginModal').style.display = 'none';
-  document.getElementById('sidebar').style.display = 'block';
-  document.getElementById('mainContent').style.display = 'block';
-  document.getElementById('userName').textContent = localStorage.getItem('userName');
-}
-
-// ========== DOWNLOAD FUNCTIONS ==========
-function downloadExcel(type) {
-  // Simulate data download
-  const data = type === 'hra' ? 
-    [{Kapal: 'MV Sample', Fleet: 'FP I', Bulan: 'Mei', Vendor: 'ABC', Status: 'Done', Budget: 'Rp 5.000.000'}] :
-    [{Kapal: 'MV Sample', Fleet: 'FP I', Tanggal: '2024-05-15', Crew: '25', Hasil: 'Negatif', Positif: '0', TindakLanjut: 'None'}];
-  
-  const ws = XLSX.utils.json_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, type.toUpperCase());
-  XLSX.writeFile(wb, `Health_PPN_III_${type.toUpperCase()}_2026.xlsx`);
-}
-
-function downloadPDF() {
-  window.print(); // Simple PDF via browser print
-  // You can integrate jsPDF for better PDF generation
-}
-
-function downloadAll() {
-  downloadExcel('hra');
-  setTimeout(() => downloadExcel('dat'), 1000);
-  setTimeout(() => downloadPDF(), 2000);
-}
-
-// Prevent F12, Right Click, Ctrl+U, etc.
-document.addEventListener('contextmenu', e => e.preventDefault());
-document.addEventListener('keydown', e => {
-  if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I') || 
-      (e.ctrlKey && e.key === 'u') || (e.ctrlKey && e.key === 's')) {
-    e.preventDefault();
-  }
-});
-</script>
-
-<!-- Load SheetJS for Excel export -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="script.js"></script>
-</body>
-</html>
+          <option value="">
