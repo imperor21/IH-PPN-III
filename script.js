@@ -3,7 +3,7 @@
 // ============================================================
 // ⚠️  GANTI URL INI DENGAN URL GOOGLE APPS SCRIPT ANDA
 // ============================================================
-const API_URL = "https://script.google.com/macros/s/AKfycbzaEpvCR-o1g7-pmWIOWawNvWf1luVu1f1oFtxqtvzdkLbb_NmZgxxKLpyIRHspKsFKwQ/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbx2EZacvsBprUXbd9QImpNmE9AA4BOfik_g15RrGtc-YvWAsAlamfWpWSBLUAQfnvPAyQ/exec";
 // ============================================================
 
 const TOTAL_KAPAL = 85;
