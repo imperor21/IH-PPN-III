@@ -440,3 +440,14 @@ function statusBadge(s) {
     ? '<span class="badge badge-done">✓ Done</span>'
     : '<span class="badge badge-belum">⏳ Belum</span>';
 }
+async function downloadPDF() {
+  const { jsPDF } = window.jspdf;
+  const element = document.querySelector(".page-content.active");
+
+  const canvas = await html2canvas(element);
+  const img = canvas.toDataURL("image/png");
+
+  const pdf = new jsPDF("l","mm","a4");
+  pdf.addImage(img, "PNG", 0, 0, 297, 210);
+  pdf.save("dashboard.pdf");
+}
