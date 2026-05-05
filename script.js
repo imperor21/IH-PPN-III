@@ -3,7 +3,6 @@
 // ============================================================
 // ⚠️  GANTI URL INI DENGAN URL GOOGLE APPS SCRIPT ANDA
 // ============================================================
-const API_URL = "https://script.google.com/macros/s/PASTE_YOUR_DEPLOYMENT_ID_HERE/exec";
 const API_URL = "https://script.google.com/macros/s/AKfycbxsXmF_2yn5l2INI2Uv43m6R9-tbbTuWFzn4xWK4-tj3VikQ09V4tfj3SNTJzjXE6q5tg/exec";
 // ============================================================
 
@@ -21,7 +20,8 @@ document.addEventListener("DOMContentLoaded", () => {
 setupNav();
 setupSidebar();
 loadData();
-setInterval(loadData, 30000);
+  setInterval(loadData, 30000);
+  setInterval(loadData, 300000);
 document.getElementById("btnRefresh").addEventListener("click", loadData);
 });
 
