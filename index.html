@@ -1,401 +1,636 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DASHBOARD IH 2026</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IH-PPN-III - Industrial Hygiene Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Login Page */
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .login-box h2 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .error-msg {
+            color: #e74c3c;
+            margin-top: 10px;
+            display: none;
+        }
+
+        /* Original Dashboard Styles (SAMA PERSIS) */
+        .dashboard-container {
+            display: none;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 1.5rem 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 2rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .pdf-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .pdf-download {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .pdf-download:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(46, 204, 113, 0.3);
+        }
+
+        .pdf-download.full {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        }
+
+        .logout-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(231, 76, 60, 0.3);
+        }
+
+        .main-content {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+
+        .metric-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        }
+
+        .metric-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1.5rem;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .metric-value {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 0.5rem;
+            line-height: 1;
+        }
+
+        .metric-label {
+            color: #666;
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+
+        .metric-trend {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .trend-up { color: #27ae60; }
+        .trend-down { color: #e74c3c; }
+
+        .section {
+            background: white;
+            border-radius: 20px;
+            padding: 2.5rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            margin-bottom: 3rem;
+            overflow: hidden;
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+        }
+
+        .data-card {
+            background: #f8f9ff;
+            padding: 2rem;
+            border-radius: 15px;
+            border-left: 5px solid #667eea;
+        }
+
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+            border-bottom: 1px solid #e1e5e9;
+        }
+
+        .data-row:last-child {
+            border-bottom: none;
+        }
+
+        .data-label {
+            font-weight: 600;
+            color: #555;
+        }
+
+        .data-value {
+            font-weight: bold;
+            color: #333;
+            font-size: 1.1rem;
+        }
+
+        .chart-placeholder {
+            height: 300px;
+            background: linear-gradient(135deg, #f0f2ff 0%, #e8ecff 100%);
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 1.2rem;
+            margin-top: 1rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .pdf-controls {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .data-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 <body>
-
-<!-- SIDEBAR -->
-<aside class="sidebar" id="sidebar">
-  <div class="sidebar-brand">
-    <div class="brand-icon"><i class="fas fa-anchor"></i></div>
-    <div>
-      <span class="brand-title">DASHBOARD IH</span>
-      <span class="brand-sub">Dashboard System</span>
-    </div>
-  </div>
-
-  <div class="sidebar-user">
-    <div class="user-avatar"><i class="fas fa-user-tie" style="font-size:16px"></i></div>
-    <div>
-      <div class="user-name">IH Admin</div>
-      <div class="user-role">Super Admin</div>
-    </div>
-  </div>
-
-  <nav class="sidebar-nav">
-    <div class="nav-label">Monitoring</div>
-    <a href="#" class="nav-item active" data-menu="hra" data-title="Dashboard HRA & IH">
-      <span class="nav-icon"><i class="fas fa-lungs"></i></span>
-      <span class="nav-text">Dashboard HRA & IH</span>
-    </a>
-    <a href="#" class="nav-item" data-menu="dat" data-title="Drugs & Alcohol Test">
-      <span class="nav-icon"><i class="fas fa-vial"></i></span>
-      <span class="nav-text">Drugs & Alcohol Test</span>
-    </a>
-    <div class="nav-label">Facility</div>
-    <a href="#" class="nav-item placeholder" data-menu="pest" data-title="Pest & Rodent Control">
-      <span class="nav-icon"><i class="fas fa-bug"></i></span>
-      <span class="nav-text">Pest & Rodent Control</span>
-      <span class="nav-badge">Soon</span>
-    </a>
-    <a href="#" class="nav-item placeholder" data-menu="p3k" data-title="P3K & AED Office">
-      <span class="nav-icon"><i class="fas fa-kit-medical"></i></span>
-      <span class="nav-text">P3K & AED Office</span>
-      <span class="nav-badge">Soon</span>
-    </a>
-    <div class="nav-label">Others</div>
-    <a href="#" class="nav-item placeholder" data-menu="menu5" data-title="Menu Placeholder 5">
-      <span class="nav-icon"><i class="fas fa-chart-pie"></i></span>
-      <span class="nav-text">Menu Placeholder 5</span>
-      <span class="nav-badge">Soon</span>
-    </a>
-    <a href="#" class="nav-item placeholder" data-menu="menu6" data-title="Menu Placeholder 6">
-      <span class="nav-icon"><i class="fas fa-table-cells"></i></span>
-      <span class="nav-text">Menu Placeholder 6</span>
-      <span class="nav-badge">Soon</span>
-    </a>
-  </nav>
-
-  <div class="sidebar-footer">
-    <div class="refresh-info">
-      <i class="fas fa-circle-dot pulse-dot"></i>
-      <span>Live — auto refresh 5 mnt</span>
-    </div>
-    <div class="last-updated" id="lastUpdated">Menghubungkan...</div>
-  </div>
-</aside>
-
-<!-- MAIN -->
-<main class="main" id="mainContent">
-
-  <!-- TOPBAR -->
-  <header class="topbar">
-    <div class="topbar-left">
-      <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
-      <div class="page-breadcrumb">
-        <span class="breadcrumb-home"><i class="fas fa-house"></i></span>
-        <span class="breadcrumb-sep">/</span>
-        <span class="page-title" id="pageTitle">Dashboard HRA & IH</span>
-      </div>
-    </div>
-    <div class="topbar-right">
-      <div class="topbar-icon-btn" title="Notifikasi"><i class="fas fa-bell"></i></div>
-      <div class="topbar-icon-btn" title="Pengaturan"><i class="fas fa-gear"></i></div>
-      <button class="btn-refresh" id="btnRefresh">
-        <i class="fas fa-rotate-right"></i> Refresh
-      </button>
-    </div>
-  </header>
-
-  <!-- LOADING -->
-  <div class="loading-overlay" id="loadingOverlay">
-    <div class="loading-inner">
-      <div class="spinner"></div>
-      <p style="font-weight:700;font-size:14px;margin-top:8px">Memuat data...</p>
-    </div>
-  </div>
-
-  <!-- ERROR -->
-  <div class="error-banner" id="errorBanner" style="display:none">
-    <i class="fas fa-triangle-exclamation"></i>
-    <span id="errorMsg">Gagal memuat data. Periksa API URL di script.js</span>
-    <button onclick="document.getElementById('errorBanner').style.display='none'"><i class="fas fa-xmark"></i></button>
-  </div>
-
-  <!-- ===== PAGE HRA ===== -->
-  <section class="page-content active" id="page-hra">
-
-    <div class="filter-bar">
-      <div class="filter-group">
-        <label>Bulan</label>
-        <select id="hra-filter-bulan" onchange="applyHRAFilters()">
-          <option value="">Semua Bulan</option>
-          <option>Mei</option><option>Juni</option><option>Juli</option>
-          <option>Agustus</option><option>September</option><option>Oktober</option>
-          <option>November</option><option>Desember</option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <label>Jenis Fleet</label>
-        <select id="hra-filter-fleet" onchange="applyHRAFilters()">
-          <option value="">Semua Fleet</option>
-          <option>FP I</option><option>FP II</option><option>FC</option><option>FGP</option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <label>Nama Kapal</label>
-        <input type="text" id="hra-filter-kapal" placeholder="Cari nama kapal..." oninput="applyHRAFilters()">
-      </div>
-      <button class="btn-clear" onclick="clearHRAFilters()"><i class="fas fa-xmark"></i> Reset</button>
-    </div>
-
-    <!-- KPI -->
-    <div class="kpi-grid">
-      <div class="kpi-card blue">
-        <a class="kpi-link" href="#">View Detail</a>
-        <div class="kpi-icon"><i class="fas fa-ship"></i></div>
-        <div class="kpi-body">
-          <div class="kpi-value" id="hra-total">85</div>
-          <div class="kpi-label">Total Kapal</div>
+    <!-- Login Page -->
+    <div id="loginPage" class="login-container">
+        <div class="login-box">
+            <h2>🔒 Industrial Hygiene Dashboard</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="username">Username:</label>
+                    <input type="text" id="username" placeholder="Masukkan username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password:</label>
+                    <input type="password" id="password" placeholder="Masukkan password" required>
+                </div>
+                <button type="submit" class="login-btn">🚀 Masuk Dashboard</button>
+                <div id="errorMsg" class="error-msg"></div>
+            </form>
+            <p style="margin-top: 20px; color: #666; font-size: 0.9rem;">
+                Default: <strong>admin</strong> / <strong>ih2024</strong>
+            </p>
         </div>
-      </div>
-      <div class="kpi-card green">
-        <a class="kpi-link" href="#">View Detail</a>
-        <div class="kpi-icon"><i class="fas fa-circle-check"></i></div>
-        <div class="kpi-body">
-          <div class="kpi-value" id="hra-done">—</div>
-          <div class="kpi-label">Sudah Monitoring</div>
-        </div>
-      </div>
-      <div class="kpi-card orange">
-        <a class="kpi-link" href="#">View Detail</a>
-        <div class="kpi-icon"><i class="fas fa-clock"></i></div>
-        <div class="kpi-body">
-          <div class="kpi-value" id="hra-belum">—</div>
-          <div class="kpi-label">Belum Monitoring</div>
-        </div>
-      </div>
-      <div class="kpi-card purple">
-        <a class="kpi-link" href="#">View Detail</a>
-        <div class="kpi-icon"><i class="fas fa-sack-dollar"></i></div>
-        <div class="kpi-body">
-          <div class="kpi-value" id="hra-budget">—</div>
-          <div class="kpi-label">Est. Budget</div>
-        </div>
-      </div>
-      <div class="kpi-card teal">
-        <a class="kpi-link" href="#">View Detail</a>
-        <div class="kpi-icon"><i class="fas fa-percent"></i></div>
-        <div class="kpi-body">
-          <div class="kpi-value" id="hra-coverage">—</div>
-          <div class="kpi-label">Coverage</div>
-        </div>
-      </div>
     </div>
 
-    <!-- CHARTS -->
-    <div class="chart-row">
-      <div class="chart-card">
-        <div class="chart-header">
-          <span class="chart-title"><i class="fas fa-chart-column"></i> Monitoring per Bulan</span>
-          <div class="pill-group">
-            <button class="pill active">Bar</button>
-            <button class="pill" onclick="toggleHRAChartType(this,'line')">Line</button>
-          </div>
-        </div>
-        <div class="chart-body"><canvas id="hraBarChart" role="img" aria-label="Bar chart monitoring per bulan"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-header">
-          <span class="chart-title"><i class="fas fa-chart-pie"></i> Distribusi Fleet</span>
-        </div>
-        <div class="chart-body"><canvas id="hraDonutChart" role="img" aria-label="Donut chart distribusi fleet"></canvas></div>
-      </div>
+    <!-- Original Dashboard (SAMA PERSIS) -->
+    <div id="dashboard" class="dashboard-container">
+        <!-- Header dengan PDF Controls -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">🛠️ IH-PPN-III</div>
+                <div class="pdf-controls">
+                    <button class="pdf-download" onclick="downloadPDF('metrics')">📊 Download Metrics</button>
+                    <button class="pdf-download" onclick="downloadPDF('noise')">📈 Download Noise Data</button>
+                    <button class="pdf-download" onclick="downloadPDF('monitoring')">📋 Download Monitoring</button>
+                    <button class="pdf-download full" onclick="downloadFullPDF()">📄 Download Full Report</button>
+                    <button class="logout-btn" onclick="logout()">🚪 Logout</button>
+                </div>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <!-- Metrics Grid (SAMA PERSIS) -->
+            <section id="metrics" class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-icon" style="background: linear-gradient(135deg, #ff6b6b, #ee5a52);">
+                        📢
+                    </div>
+                    <div class="metric-value">87.2 <span style="font-size: 1.5rem;">dB</span></div>
+                    <div class="metric-label">Average Noise Level</div>
+                    <div class="metric-trend trend-up">+2.3% from last month</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon" style="background: linear-gradient(135deg, #4ecdc4, #44a08d);">
+                        🌡️
+                    </div>
+                    <div class="metric-value">32.4°C</div>
+                    <div class="metric-label">Temperature</div>
+                    <div class="metric-trend trend-down">-1.1°C from target</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon" style="background: linear-gradient(135deg, #45b7d1, #96c93d);">
+                        💨
+                    </div>
+                    <div class="metric-value">68%</div>
+                    <div class="metric-label">Humidity</div>
+                    <div class="metric-trend trend-up">Within optimal range</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon" style="background: linear-gradient(135deg, #f9ca24, #f0932b);">
+                        🏭
+                    </div>
+                    <div class="metric-value">94.6%</div>
+                    <div class="metric-label">Compliance Rate</div>
+                    <div class="metric-trend trend-up">Target achieved</div>
+                </div>
+            </section>
+
+            <!-- Noise Monitoring Section (SAMA PERSIS) -->
+            <section id="noise" class="section">
+                <h2 class="section-title">📊 Noise Level Monitoring</h2>
+                <div class="data-grid">
+                    <div class="data-card">
+                        <div class="data-row">
+                            <span class="data-label">Machine Shop Area</span>
+                            <span class="data-value">89.5 dB</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Assembly Line</span>
+                            <span class="data-value">85.2 dB</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Welding Station</span>
+                            <span class="data-value">92.1 dB</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Painting Booth</span>
+                            <span class="data-value">78.9 dB</span>
+                        </div>
+                    </div>
+                    <div class="data-card">
+                        <div class="data-row">
+                            <span class="data-label">Compressor Room</span>
+                            <span class="data-value">91.3 dB</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Maintenance Area</span>
+                            <span class="data-value">83.7 dB</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Office Area</span>
+                            <span class="data-value">52.4 dB</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Threshold Limit</span>
+                            <span class="data-value" style="color: #e74c3c;">85 dB</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-placeholder">
+                    📈 Noise Level Trend Chart (Interactive)
+                </div>
+            </section>
+
+            <!-- Compliance Monitoring (SAMA PERSIS) -->
+            <section id="monitoring" class="section">
+                <h2 class="section-title">✅ Compliance & Safety Monitoring</h2>
+                <div class="data-grid">
+                    <div class="data-card">
+                        <div class="data-row">
+                            <span class="data-label">PPE Usage Rate</span>
+                            <span class="data-value">96.2%</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Safety Training</span>
+                            <span class="data-value">98.7%</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Incident Reports</span>
+                            <span class="data-value">0 (This Month)</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Audit Score</span>
+                            <span class="data-value">92/100</span>
+                        </div>
+                    </div>
+                    <div class="data-card">
+                        <div class="data-row">
+                            <span class="data-label">Ventilation Check</span>
+                            <span class="data-value">✓ Passed</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Emergency Exits</span>
+                            <span class="data-value">✓ Clear</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Fire Equipment</span>
+                            <span class="data-value">✓ Functional</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Next Inspection</span>
+                            <span class="data-value">Dec 15, 2024</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-placeholder">
+                    📋 Compliance Dashboard (Real-time)
+                </div>
+            </section>
+        </main>
     </div>
 
-    <!-- BOTTOM -->
-    <div class="bottom-row">
-      <div class="hazard-card">
-        <div class="chart-header">
-          <span class="chart-title"><i class="fas fa-triangle-exclamation"></i> Top Hazard</span>
-          <select id="hra-hazard-bulan" onchange="renderHRAHazard()" style="font-size:11px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:var(--font)">
-            <option value="">Semua</option>
-            <option>Mei</option><option>Juni</option><option>Juli</option>
-            <option>Agustus</option><option>September</option><option>Oktober</option>
-            <option>November</option><option>Desember</option>
-          </select>
-        </div>
-        <div id="hazardList" class="hazard-list"></div>
-      </div>
+    <script>
+        // Login credentials
+        const validCredentials = {
+            username: 'admin',
+            password: 'ih2024'
+        };
 
-      <div class="table-card">
-        <div class="chart-header">
-          <span class="chart-title"><i class="fas fa-table-list"></i> Data Monitoring IH</span>
-          <input type="text" id="hra-search" placeholder="🔍 Cari data..." oninput="searchHRATable()" class="search-input">
-        </div>
-        <div class="table-wrap">
-          <table class="data-table" id="hraTable">
-            <thead>
-              <tr>
-                <th onclick="sortHRATable(0)">Kapal <i class="fas fa-sort fa-xs"></i></th>
-                <th onclick="sortHRATable(1)">Fleet <i class="fas fa-sort fa-xs"></i></th>
-                <th onclick="sortHRATable(2)">Bulan <i class="fas fa-sort fa-xs"></i></th>
-                <th onclick="sortHRATable(3)">Vendor <i class="fas fa-sort fa-xs"></i></th>
-                <th onclick="sortHRATable(4)">Status <i class="fas fa-sort fa-xs"></i></th>
-                <th onclick="sortHRATable(5)">Est. Budget <i class="fas fa-sort fa-xs"></i></th>
-              </tr>
-            </thead>
-            <tbody id="hraTableBody"></tbody>
-          </table>
-        </div>
-        <div class="table-footer" id="hraTableFooter">Memuat data...</div>
-      </div>
-    </div>
-  </section>
+        // Login functionality
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('errorMsg');
+            
+            if (username === validCredentials.username && password === validCredentials.password) {
+                document.getElementById('loginPage').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+            } else {
+                errorMsg.textContent = '❌ Username atau password salah!';
+                errorMsg.style.display = 'block';
+            }
+        });
 
-  <!-- ===== PAGE DAT ===== -->
-  <section class="page-content" id="page-dat">
+        // PDF Download Functions
+        async function downloadPDF(sectionId) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({
+                orientation: 'landscape',
+                unit: 'mm',
+                format: 'a4'
+            });
 
-    <div class="filter-bar">
-      <div class="filter-group">
-        <label>Bulan</label>
-        <select id="dat-filter-bulan" onchange="applyDATFilters()">
-          <option value="">Semua Bulan</option>
-          <option>Mei</option><option>Juni</option><option>Juli</option>
-          <option>Agustus</option><option>September</option><option>Oktober</option>
-          <option>November</option><option>Desember</option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <label>Jenis Fleet</label>
-        <select id="dat-filter-fleet" onchange="applyDATFilters()">
-          <option value="">Semua Fleet</option>
-          <option>FP I</option><option>FP II</option><option>FC</option><option>FGP</option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <label>Nama Kapal</label>
-        <input type="text" id="dat-filter-kapal" placeholder="Cari nama kapal..." oninput="applyDATFilters()">
-      </div>
-      <button class="btn-clear" onclick="clearDATFilters()"><i class="fas fa-xmark"></i> Reset</button>
-    </div>
+            const element = document.getElementById(sectionId);
+            const canvas = await html2canvas(element, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                width: element.scrollWidth,
+                height: element.scrollHeight,
+                logging: false
+            });
 
-    <div class="kpi-grid">
-      <div class="kpi-card blue">
-        <a class="kpi-link" href="#">View Detail</a>
-        <div class="kpi-icon"><i class="fas fa-ship"></i></div>
-        <div class="kpi-body"><div class="kpi-value">85</div><div class="kpi-label">Total Kapal</div></div>
-      </div>
-      <div class="kpi-card green">
-        <a class="kpi-link" href="#">View Detail</a>
-        <div class="kpi-icon"><i class="fas fa-circle-check"></i></div>
-        <div class="kpi-body"><div class="kpi-value" id="dat-done">—</div><div class="kpi-label">Sudah DAT</div></div>
-      </div>
-      <div class="kpi-card orange">
-        <a class="kpi-link" href="#">View Detail</a>
-        <div class="kpi-icon"><i class="fas fa-clock"></i></div>
-        <div class="kpi-body"><div class="kpi-value" id="dat-belum">—</div><div class="kpi-label">Belum DAT</div></div>
-      </div>
-      <div class="kpi-card red">
-        <a class="kpi-link" href="#">View Detail</a>
-        <div class="kpi-icon"><i class="fas fa-person-falling-burst"></i></div>
-        <div class="kpi-body"><div class="kpi-value" id="dat-positif">—</div><div class="kpi-label">Crew Positif</div></div>
-      </div>
-      <div class="kpi-card teal">
-        <a class="kpi-link" href="#">View Detail</a>
-        <div class="kpi-icon"><i class="fas fa-users"></i></div>
-        <div class="kpi-body"><div class="kpi-value" id="dat-crew">—</div><div class="kpi-label">Total Crew Diperiksa</div></div>
-      </div>
-      <div class="kpi-card purple">
-        <a class="kpi-link" href="#">View Detail</a>
-        <div class="kpi-icon"><i class="fas fa-sack-dollar"></i></div>
-        <div class="kpi-body"><div class="kpi-value" id="dat-biaya">—</div><div class="kpi-label">Est. Total Biaya</div></div>
-      </div>
-      <div class="kpi-card indigo">
-        <a class="kpi-link" href="#">View Detail</a>
-        <div class="kpi-icon"><i class="fas fa-percent"></i></div>
-        <div class="kpi-body"><div class="kpi-value" id="dat-coverage">—</div><div class="kpi-label">Coverage</div></div>
-      </div>
-    </div>
+            const imgData = canvas.toDataURL('image/png');
+            const imgWidth = 297;
+            const pageHeight = 210;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            let heightLeft = imgHeight;
 
-    <div class="chart-row">
-      <div class="chart-card">
-        <div class="chart-header">
-          <span class="chart-title"><i class="fas fa-chart-line"></i> Crew Test per Bulan</span>
-          <div class="pill-group">
-            <button class="pill active">Bar</button>
-            <button class="pill" onclick="toggleDATChartType(this,'line')">Line</button>
-          </div>
-        </div>
-        <div class="chart-body"><canvas id="datBarChart" role="img" aria-label="Bar chart crew test per bulan"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-header">
-          <span class="chart-title"><i class="fas fa-chart-pie"></i> Hasil Test (Negatif/Positif)</span>
-        </div>
-        <div class="chart-body"><canvas id="datDonutChart" role="img" aria-label="Donut chart hasil DAT"></canvas></div>
-      </div>
-    </div>
+            let position = 0;
+            doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
 
-    <div class="bottom-row">
-      <div class="hazard-card">
-        <div class="chart-header">
-          <span class="chart-title"><i class="fas fa-arrow-trend-down"></i> Tindak Lanjut</span>
-        </div>
-        <div id="datTindakLanjut"></div>
-      </div>
+            while (heightLeft >= 0) {
+                position = heightLeft - imgHeight;
+                doc.addPage();
+                doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+            }
 
-      <div class="table-card">
-        <div class="chart-header">
-          <span class="chart-title"><i class="fas fa-table-list"></i> Data Drugs & Alcohol Test</span>
-          <input type="text" id="dat-search" placeholder="🔍 Cari data..." oninput="searchDATTable()" class="search-input">
-        </div>
-        <div class="table-wrap">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th onclick="sortDATTable(0)">Kapal <i class="fas fa-sort fa-xs"></i></th>
-                <th onclick="sortDATTable(1)">Fleet <i class="fas fa-sort fa-xs"></i></th>
-                <th onclick="sortDATTable(2)">Tanggal <i class="fas fa-sort fa-xs"></i></th>
-                <th onclick="sortDATTable(3)">Crew Diperiksa <i class="fas fa-sort fa-xs"></i></th>
-                <th onclick="sortDATTable(4)">Hasil <i class="fas fa-sort fa-xs"></i></th>
-                <th onclick="sortDATTable(5)">Crew Positif <i class="fas fa-sort fa-xs"></i></th>
-                <th onclick="sortDATTable(6)">Tindak Lanjut <i class="fas fa-sort fa-xs"></i></th>
-              </tr>
-            </thead>
-            <tbody id="datTableBody"></tbody>
-          </table>
-        </div>
-        <div class="table-footer" id="datTableFooter">Memuat data...</div>
-      </div>
-    </div>
-  </section>
+            const sectionNames = {
+                'metrics': 'Metrics_Summary',
+                'noise': 'Noise_Monitoring',
+                'monitoring': 'Compliance_Monitoring'
+            };
+            
+            const filename = `IH-Dashboard_${sectionNames[sectionId]}_${new Date().toISOString().slice(0,10)}.pdf`;
+            doc.save(filename);
+        }
 
-  <!-- ===== PLACEHOLDERS ===== -->
-  <section class="page-content" id="page-pest">
-    <div class="placeholder-page">
-      <div class="placeholder-icon"><i class="fas fa-bug"></i></div>
-      <h2>Pest & Rodent Control</h2>
-      <p>Dashboard ini sedang dalam pengembangan. Sheet data sudah tersedia di Google Sheets dan siap diisi.</p>
-      <div class="placeholder-tag">Coming Soon</div>
-    </div>
-  </section>
-  <section class="page-content" id="page-p3k">
-    <div class="placeholder-page">
-      <div class="placeholder-icon"><i class="fas fa-kit-medical"></i></div>
-      <h2>P3K & AED Office</h2>
-      <p>Dashboard ini sedang dalam pengembangan. Sheet data sudah tersedia di Google Sheets dan siap diisi.</p>
-      <div class="placeholder-tag">Coming Soon</div>
-    </div>
-  </section>
-  <section class="page-content" id="page-menu5">
-    <div class="placeholder-page">
-      <div class="placeholder-icon"><i class="fas fa-chart-pie"></i></div>
-      <h2>Menu Placeholder 5</h2>
-      <p>Modul belum tersedia. Hubungi tim HSE untuk pengembangan lebih lanjut.</p>
-      <div class="placeholder-tag">Coming Soon</div>
-    </div>
-  </section>
-  <section class="page-content" id="page-menu6">
-    <div class="placeholder-page">
-      <div class="placeholder-icon"><i class="fas fa-table-cells"></i></div>
-      <h2>Menu Placeholder 6</h2>
-      <p>Modul belum tersedia. Hubungi tim HSE untuk pengembangan lebih lanjut.</p>
-      <div class="placeholder-tag">Coming Soon</div>
-    </div>
-  </section>
+        async function downloadFullPDF() {
+            // Scroll to top untuk capture yang bersih
+            window.scrollTo(0, 0);
+            
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({
+                orientation: 'landscape',
+                unit: 'mm',
+                format: 'a4'
+            });
 
-</main>
+            const element = document.querySelector('.main-content');
+            const canvas = await html2canvas(element, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                width: element.scrollWidth,
+                height: element.scrollHeight,
+                logging: false
+            });
 
-<script src="script.js"></script>
+            const imgData = canvas.toDataURL('image/png');
+            const imgWidth = 297;
+            const pageHeight = 210;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            let heightLeft = imgHeight;
+
+            let position = 0;
+            doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
+
+            while (heightLeft >= 0) {
+                position = heightLeft - imgHeight;
+                doc.addPage();
+                doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+            }
+
+            const filename = `IH-Dashboard_Full_Report_${new Date().toISOString().slice(0,10)}.pdf`;
+            doc.save(filename);
+        }
+
+        function logout() {
+            document.getElementById('loginPage').style.display = 'flex';
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('loginForm').reset();
+            document.getElementById('errorMsg').style.display = 'none';
+        }
+
+        // Add loading animation on PDF download
+        const originalDownloadPDF = downloadPDF;
+        window.downloadPDF = async function(sectionId) {
+            const btn = event.target;
+            btn.textContent = '⏳ Generating...';
+            btn.disabled = true;
+            
+            await originalDownloadPDF(sectionId);
+            
+            btn.textContent = '📊 Download Metrics';
+            btn.disabled = false;
+        };
+    </script>
 </body>
 </html>
