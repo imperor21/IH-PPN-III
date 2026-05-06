@@ -440,3 +440,20 @@ return (s||"").toLowerCase()==="done"
 ? '<span class="badge badge-done">✓ Done</span>'
 : '<span class="badge badge-belum">⏳ Belum</span>';
 }
+// ====== LOGOUT HANDLER ======
+document.addEventListener("DOMContentLoaded", function() {
+  const logoutBtn = document.getElementById("logoutBtn");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", function(){
+      sessionStorage.removeItem("hse_logged_in");
+      document.querySelector(".sidebar").style.display = "none";
+      document.querySelector(".main").style.display = "none";
+      document.getElementById("loginOverlay").style.display = "flex";
+      document.body.style.overflow = "hidden";
+      // Reset input login jika perlu
+      document.getElementById("username").value = "";
+      document.getElementById("password").value = "";
+      document.getElementById("loginError").style.display = "none";
+    });
+  }
+});
