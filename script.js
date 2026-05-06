@@ -20,7 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
 setupNav();
 setupSidebar();
 loadData();
-setInterval(loadData, 30000);
+setInterval(loadData, 300000);
 document.getElementById("btnRefresh").addEventListener("click", loadData);
 });
 
