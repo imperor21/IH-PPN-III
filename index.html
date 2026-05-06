@@ -3,21 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DASHBOARD IH</title>
+<title>HSE Marine Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <link rel="stylesheet" href="style.css">
-
-<!-- AUTH GUARD: redirect ke login jika belum login -->
-<script>
-  (function() {
-    var auth = sessionStorage.getItem('ppn3_auth');
-    if (!auth) { window.location.replace('login.html'); }
-  })();
-</script>
 </head>
 <body>
 
@@ -26,7 +18,7 @@
   <div class="sidebar-brand">
     <div class="brand-icon"><i class="fas fa-anchor"></i></div>
     <div>
-      <span class="brand-title">Health PPN III</span>
+      <span class="brand-title">HSE Marine</span>
       <span class="brand-sub">Dashboard System</span>
     </div>
   </div>
@@ -34,8 +26,8 @@
   <div class="sidebar-user">
     <div class="user-avatar"><i class="fas fa-user-tie" style="font-size:16px"></i></div>
     <div>
-      <div class="user-name" id="sidebarUserName">IH Admin</div>
-      <div class="user-role" id="sidebarUserRole">Super Admin</div>
+      <div class="user-name">HSE Admin</div>
+      <div class="user-role">Super Admin</div>
     </div>
   </div>
 
@@ -43,7 +35,7 @@
     <div class="nav-label">Monitoring</div>
     <a href="#" class="nav-item active" data-menu="hra" data-title="Dashboard HRA & IH">
       <span class="nav-icon"><i class="fas fa-lungs"></i></span>
-      <span class="nav-text">HRA & IH</span>
+      <span class="nav-text">Dashboard HRA & IH</span>
     </a>
     <a href="#" class="nav-item" data-menu="dat" data-title="Drugs & Alcohol Test">
       <span class="nav-icon"><i class="fas fa-vial"></i></span>
@@ -76,14 +68,9 @@
   <div class="sidebar-footer">
     <div class="refresh-info">
       <i class="fas fa-circle-dot pulse-dot"></i>
-      <span>Live — auto refresh 10 mnt</span>
+      <span>Live — auto refresh 30s</span>
     </div>
     <div class="last-updated" id="lastUpdated">Menghubungkan...</div>
-
-    <!-- Logout button -->
-    <button class="btn-logout" id="btnLogout" title="Keluar dari dashboard">
-      <i class="fas fa-right-from-bracket"></i> Logout
-    </button>
   </div>
 </aside>
 
@@ -132,10 +119,9 @@
         <label>Bulan</label>
         <select id="hra-filter-bulan" onchange="applyHRAFilters()">
           <option value="">Semua Bulan</option>
-          <option>Januari</option><option>Februari</option><option>Maret</option>
-          <option>April</option><option>Mei</option><option>Juni</option>
-          <option>Juli</option><option>Agustus</option><option>September</option>
-          <option>Oktober</option><option>November</option><option>Desember</option>
+          <option>Mei</option><option>Juni</option><option>Juli</option>
+          <option>Agustus</option><option>September</option><option>Oktober</option>
+          <option>November</option><option>Desember</option>
         </select>
       </div>
       <div class="filter-group">
@@ -223,10 +209,9 @@
           <span class="chart-title"><i class="fas fa-triangle-exclamation"></i> Top Hazard</span>
           <select id="hra-hazard-bulan" onchange="renderHRAHazard()" style="font-size:11px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:var(--font)">
             <option value="">Semua</option>
-            <option>Januari</option><option>Februari</option><option>Maret</option>
-            <option>April</option><option>Mei</option><option>Juni</option>
-            <option>Juli</option><option>Agustus</option><option>September</option>
-            <option>Oktober</option><option>November</option><option>Desember</option>
+            <option>Mei</option><option>Juni</option><option>Juli</option>
+            <option>Agustus</option><option>September</option><option>Oktober</option>
+            <option>November</option><option>Desember</option>
           </select>
         </div>
         <div id="hazardList" class="hazard-list"></div>
@@ -263,13 +248,11 @@
     <div class="filter-bar">
       <div class="filter-group">
         <label>Bulan</label>
-        <!-- DAT: Januari - Desember 2026 -->
         <select id="dat-filter-bulan" onchange="applyDATFilters()">
           <option value="">Semua Bulan</option>
-          <option>Januari</option><option>Februari</option><option>Maret</option>
-          <option>April</option><option>Mei</option><option>Juni</option>
-          <option>Juli</option><option>Agustus</option><option>September</option>
-          <option>Oktober</option><option>November</option><option>Desember</option>
+          <option>Mei</option><option>Juni</option><option>Juli</option>
+          <option>Agustus</option><option>September</option><option>Oktober</option>
+          <option>November</option><option>Desember</option>
         </select>
       </div>
       <div class="filter-group">
@@ -362,7 +345,7 @@
               <tr>
                 <th onclick="sortDATTable(0)">Kapal <i class="fas fa-sort fa-xs"></i></th>
                 <th onclick="sortDATTable(1)">Fleet <i class="fas fa-sort fa-xs"></i></th>
-                <th onclick="sortDATTable(2)">Bulan <i class="fas fa-sort fa-xs"></i></th>
+                <th onclick="sortDATTable(2)">Tanggal <i class="fas fa-sort fa-xs"></i></th>
                 <th onclick="sortDATTable(3)">Crew Diperiksa <i class="fas fa-sort fa-xs"></i></th>
                 <th onclick="sortDATTable(4)">Hasil <i class="fas fa-sort fa-xs"></i></th>
                 <th onclick="sortDATTable(5)">Crew Positif <i class="fas fa-sort fa-xs"></i></th>
@@ -412,30 +395,6 @@
   </section>
 
 </main>
-
-<script>
-  // ---- Auth: tampilkan info user di sidebar ----
-  (function() {
-    var raw = sessionStorage.getItem('ppn3_auth');
-    if (raw) {
-      try {
-        var auth = JSON.parse(raw);
-        var nameEl = document.getElementById('sidebarUserName');
-        var roleEl = document.getElementById('sidebarUserRole');
-        if (nameEl) nameEl.textContent = auth.username || 'User';
-        if (roleEl) roleEl.textContent = auth.role || 'Staff';
-      } catch(e) {}
-    }
-  })();
-
-  // ---- Logout ----
-  document.getElementById('btnLogout').addEventListener('click', function() {
-    if (confirm('Yakin ingin logout dari dashboard?')) {
-      sessionStorage.removeItem('ppn3_auth');
-      window.location.href = 'login.html';
-    }
-  });
-</script>
 
 <script src="script.js"></script>
 </body>
