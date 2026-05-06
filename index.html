@@ -13,29 +13,13 @@
 </head>
 <body>
 
-<!-- ============= LOGIN OVERLAY ============= -->
-<div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:#f0f4f8;display:flex;align-items:center;justify-content:center;">
-  <form id="loginForm" style="background:#fff;padding:32px 32px 24px 32px;border-radius:18px;box-shadow:0 8px 40px rgba(0,0,0,.18);min-width:320px;display:flex;flex-direction:column;gap:18px;">
-    <div style="text-align:center;">
-      <div style="font-size:32px;color:#1976D2;margin-bottom:12px;"><i class="fas fa-user-shield"></i></div>
-      <div style="font-size:19px;font-weight:700;color:#1976D2;margin-bottom:3px;">Masuk Portal HSE</div>
-      <div style="font-size:13px;color:#607D8B;">Silakan login terlebih dahulu</div>
-    </div>
-    <input type="text" id="username" placeholder="Username" style="padding:10px 13px;font-size:15px;border-radius:7px;border:1.5px solid #c9d6e3;font-family:inherit" autocomplete="username" required>
-    <input type="password" id="password" placeholder="Password" style="padding:10px 13px;font-size:15px;border-radius:7px;border:1.5px solid #c9d6e3;font-family:inherit" autocomplete="current-password" required>
-    <div id="loginError" style="color:#D32F2F;font-size:12.7px;display:none;text-align:center"></div>
-    <button type="submit" style="margin-top:5px;background:#1976D2;color:#fff;font-weight:700;font-size:15px;padding:10px 0;border-radius:7px;border:none;cursor:pointer;box-shadow:0 2px 6px rgba(25,118,210,.07)">Masuk</button>
-  </form>
-</div>
-<!-- ============= END LOGIN OVERLAY ============= -->
-
 <!-- SIDEBAR -->
 <aside class="sidebar" id="sidebar">
 <div class="sidebar-brand">
 <div class="brand-icon"><i class="fas fa-anchor"></i></div>
 <div>
-      <span class="brand-title">Dashboard</span>
-      <span class="brand-title">Health PPN III</span>
+<span class="brand-title">Dashboard</span>
+<span class="brand-title">Health PPN III</span>
 <span class="brand-sub">Dashboard System</span>
 </div>
 </div>
@@ -50,9 +34,10 @@
 
 <nav class="sidebar-nav">
 <div class="nav-label">Monitoring</div>
+<a href="#" class="nav-item active" data-menu="hra" data-title="Dashboard HRA & IH">
 <a href="#" class="nav-item active" data-menu="hra" data-title="HRA & IH">
 <span class="nav-icon"><i class="fas fa-lungs"></i></span>
-      <span class="nav-text">HRA & IH</span>
+<span class="nav-text">HRA & IH</span>
 </a>
 <a href="#" class="nav-item" data-menu="dat" data-title="Drugs & Alcohol Test">
 <span class="nav-icon"><i class="fas fa-vial"></i></span>
@@ -85,7 +70,7 @@
 <div class="sidebar-footer">
 <div class="refresh-info">
 <i class="fas fa-circle-dot pulse-dot"></i>
-      <span>Live — auto refresh 10 Mnt</span>
+<span>Live — auto refresh 10 Mnt</span>
 </div>
 <div class="last-updated" id="lastUpdated">Menghubungkan...</div>
 </div>
@@ -93,57 +78,326 @@
 
 <!-- MAIN -->
 <main class="main" id="mainContent">
-<!-- ... seluruh kode MAIN dashboard tetap ... -->
-<!-- (isi main TIDAK diubah dari file asli, seperti pada input Anda!) -->
-<!-- ... -->
+
+<!-- TOPBAR -->
 <header class="topbar">
-<!-- ... -->
+<div class="topbar-left">
+<button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
+<div class="page-breadcrumb">
+<span class="breadcrumb-home"><i class="fas fa-house"></i></span>
+<span class="breadcrumb-sep">/</span>
+        <span class="page-title" id="pageTitle">Dashboard HRA & IH</span>
+<span class="page-title" id="pageTitle">HEALTH PPN III</span>
+</div>
+</div>
+<div class="topbar-right">
+<div class="topbar-icon-btn" title="Notifikasi"><i class="fas fa-bell"></i></div>
+<div class="topbar-icon-btn" title="Pengaturan"><i class="fas fa-gear"></i></div>
+<button class="btn-refresh" id="btnRefresh">
+<i class="fas fa-rotate-right"></i> Refresh
+</button>
+</div>
 </header>
-<!-- ... dst ... -->
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loadingOverlay">
+<div class="loading-inner">
+<div class="spinner"></div>
+<p style="font-weight:700;font-size:14px;margin-top:8px">Memuat data...</p>
+</div>
+</div>
+
+<!-- ERROR -->
+<div class="error-banner" id="errorBanner" style="display:none">
+<i class="fas fa-triangle-exclamation"></i>
+<span id="errorMsg">Gagal memuat data. Periksa API URL di script.js</span>
+<button onclick="document.getElementById('errorBanner').style.display='none'"><i class="fas fa-xmark"></i></button>
+</div>
+
+<!-- ===== PAGE HRA ===== -->
+<section class="page-content active" id="page-hra">
+
+<div class="filter-bar">
+<div class="filter-group">
+<label>Bulan</label>
+<select id="hra-filter-bulan" onchange="applyHRAFilters()">
+<option value="">Semua Bulan</option>
+<option>Januari</option><option>Februari</option><option>Maret</option><option>April</option><option>Mei</option><option>Juni</option><option>Juli</option>
+<option>Agustus</option><option>September</option><option>Oktober</option>
+<option>November</option><option>Desember</option>
+</select>
+</div>
+<div class="filter-group">
+<label>Jenis Fleet</label>
+<select id="hra-filter-fleet" onchange="applyHRAFilters()">
+<option value="">Semua Fleet</option>
+<option>FP I</option><option>FP II</option><option>FC</option><option>FGP</option>
+</select>
+</div>
+<div class="filter-group">
+<label>Nama Kapal</label>
+<input type="text" id="hra-filter-kapal" placeholder="Cari nama kapal..." oninput="applyHRAFilters()">
+</div>
+<button class="btn-clear" onclick="clearHRAFilters()"><i class="fas fa-xmark"></i> Reset</button>
+</div>
+
+<!-- KPI -->
+<div class="kpi-grid">
+<div class="kpi-card blue">
+<a class="kpi-link" href="#">View Detail</a>
+<div class="kpi-icon"><i class="fas fa-ship"></i></div>
+<div class="kpi-body">
+<div class="kpi-value" id="hra-total">85</div>
+<div class="kpi-label">Total Kapal</div>
+</div>
+</div>
+<div class="kpi-card green">
+<a class="kpi-link" href="#">View Detail</a>
+<div class="kpi-icon"><i class="fas fa-circle-check"></i></div>
+<div class="kpi-body">
+<div class="kpi-value" id="hra-done">—</div>
+<div class="kpi-label">Sudah Monitoring</div>
+</div>
+</div>
+<div class="kpi-card orange">
+<a class="kpi-link" href="#">View Detail</a>
+<div class="kpi-icon"><i class="fas fa-clock"></i></div>
+<div class="kpi-body">
+<div class="kpi-value" id="hra-belum">—</div>
+<div class="kpi-label">Belum Monitoring</div>
+</div>
+</div>
+<div class="kpi-card purple">
+<a class="kpi-link" href="#">View Detail</a>
+<div class="kpi-icon"><i class="fas fa-sack-dollar"></i></div>
+<div class="kpi-body">
+<div class="kpi-value" id="hra-budget">—</div>
+<div class="kpi-label">Est. Budget</div>
+</div>
+</div>
+<div class="kpi-card teal">
+<a class="kpi-link" href="#">View Detail</a>
+<div class="kpi-icon"><i class="fas fa-percent"></i></div>
+<div class="kpi-body">
+<div class="kpi-value" id="hra-coverage">—</div>
+<div class="kpi-label">Coverage</div>
+</div>
+</div>
+</div>
+
+<!-- CHARTS -->
+<div class="chart-row">
+<div class="chart-card">
+<div class="chart-header">
+<span class="chart-title"><i class="fas fa-chart-column"></i> Monitoring per Bulan</span>
+<div class="pill-group">
+<button class="pill active">Bar</button>
+<button class="pill" onclick="toggleHRAChartType(this,'line')">Line</button>
+</div>
+</div>
+<div class="chart-body"><canvas id="hraBarChart" role="img" aria-label="Bar chart monitoring per bulan"></canvas></div>
+</div>
+<div class="chart-card">
+<div class="chart-header">
+<span class="chart-title"><i class="fas fa-chart-pie"></i> Distribusi Fleet</span>
+</div>
+<div class="chart-body"><canvas id="hraDonutChart" role="img" aria-label="Donut chart distribusi fleet"></canvas></div>
+</div>
+</div>
+
+<!-- BOTTOM -->
+<div class="bottom-row">
+<div class="hazard-card">
+<div class="chart-header">
+<span class="chart-title"><i class="fas fa-triangle-exclamation"></i> Top Hazard</span>
+<select id="hra-hazard-bulan" onchange="renderHRAHazard()" style="font-size:11px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:var(--font)">
+<option value="">Semua</option>
+<option>Mei</option><option>Juni</option><option>Juli</option>
+<option>Agustus</option><option>September</option><option>Oktober</option>
+<option>November</option><option>Desember</option>
+</select>
+</div>
+<div id="hazardList" class="hazard-list"></div>
+</div>
+
+<div class="table-card">
+<div class="chart-header">
+<span class="chart-title"><i class="fas fa-table-list"></i> Data Monitoring IH</span>
+<input type="text" id="hra-search" placeholder="🔍 Cari data..." oninput="searchHRATable()" class="search-input">
+</div>
+<div class="table-wrap">
+<table class="data-table" id="hraTable">
+<thead>
+<tr>
+<th onclick="sortHRATable(0)">Kapal <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortHRATable(1)">Fleet <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortHRATable(2)">Bulan <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortHRATable(3)">Vendor <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortHRATable(4)">Status <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortHRATable(5)">Est. Budget <i class="fas fa-sort fa-xs"></i></th>
+</tr>
+</thead>
+<tbody id="hraTableBody"></tbody>
+</table>
+</div>
+<div class="table-footer" id="hraTableFooter">Memuat data...</div>
+</div>
+</div>
+</section>
+
+<!-- ===== PAGE DAT ===== -->
+<section class="page-content" id="page-dat">
+
+<div class="filter-bar">
+<div class="filter-group">
+<label>Bulan</label>
+<select id="dat-filter-bulan" onchange="applyDATFilters()">
+<option value="">Semua Bulan</option>
+<option>Januari</option><option>Februari</option><option>Maret</option><option>April</option><option>Mei</option><option>Juni</option><option>Juli</option>
+<option>Agustus</option><option>September</option><option>Oktober</option>
+<option>November</option><option>Desember</option>
+</select>
+</div>
+<div class="filter-group">
+<label>Jenis Fleet</label>
+<select id="dat-filter-fleet" onchange="applyDATFilters()">
+<option value="">Semua Fleet</option>
+<option>FP I</option><option>FP II</option><option>FC</option><option>FGP</option>
+</select>
+</div>
+<div class="filter-group">
+<label>Nama Kapal</label>
+<input type="text" id="dat-filter-kapal" placeholder="Cari nama kapal..." oninput="applyDATFilters()">
+</div>
+<button class="btn-clear" onclick="clearDATFilters()"><i class="fas fa-xmark"></i> Reset</button>
+</div>
+
+<div class="kpi-grid">
+<div class="kpi-card blue">
+<a class="kpi-link" href="#">View Detail</a>
+<div class="kpi-icon"><i class="fas fa-ship"></i></div>
+<div class="kpi-body"><div class="kpi-value">85</div><div class="kpi-label">Total Kapal</div></div>
+</div>
+<div class="kpi-card green">
+<a class="kpi-link" href="#">View Detail</a>
+<div class="kpi-icon"><i class="fas fa-circle-check"></i></div>
+<div class="kpi-body"><div class="kpi-value" id="dat-done">—</div><div class="kpi-label">Sudah DAT</div></div>
+</div>
+<div class="kpi-card orange">
+<a class="kpi-link" href="#">View Detail</a>
+<div class="kpi-icon"><i class="fas fa-clock"></i></div>
+<div class="kpi-body"><div class="kpi-value" id="dat-belum">—</div><div class="kpi-label">Belum DAT</div></div>
+</div>
+<div class="kpi-card red">
+<a class="kpi-link" href="#">View Detail</a>
+<div class="kpi-icon"><i class="fas fa-person-falling-burst"></i></div>
+<div class="kpi-body"><div class="kpi-value" id="dat-positif">—</div><div class="kpi-label">Crew Positif</div></div>
+</div>
+<div class="kpi-card teal">
+<a class="kpi-link" href="#">View Detail</a>
+<div class="kpi-icon"><i class="fas fa-users"></i></div>
+<div class="kpi-body"><div class="kpi-value" id="dat-crew">—</div><div class="kpi-label">Total Crew Diperiksa</div></div>
+</div>
+<div class="kpi-card purple">
+<a class="kpi-link" href="#">View Detail</a>
+<div class="kpi-icon"><i class="fas fa-sack-dollar"></i></div>
+<div class="kpi-body"><div class="kpi-value" id="dat-biaya">—</div><div class="kpi-label">Est. Total Biaya</div></div>
+</div>
+<div class="kpi-card indigo">
+<a class="kpi-link" href="#">View Detail</a>
+<div class="kpi-icon"><i class="fas fa-percent"></i></div>
+<div class="kpi-body"><div class="kpi-value" id="dat-coverage">—</div><div class="kpi-label">Coverage</div></div>
+</div>
+</div>
+
+<div class="chart-row">
+<div class="chart-card">
+<div class="chart-header">
+<span class="chart-title"><i class="fas fa-chart-line"></i> Crew Test per Bulan</span>
+<div class="pill-group">
+<button class="pill active">Bar</button>
+<button class="pill" onclick="toggleDATChartType(this,'line')">Line</button>
+</div>
+</div>
+<div class="chart-body"><canvas id="datBarChart" role="img" aria-label="Bar chart crew test per bulan"></canvas></div>
+</div>
+<div class="chart-card">
+<div class="chart-header">
+<span class="chart-title"><i class="fas fa-chart-pie"></i> Hasil Test (Negatif/Positif)</span>
+</div>
+<div class="chart-body"><canvas id="datDonutChart" role="img" aria-label="Donut chart hasil DAT"></canvas></div>
+</div>
+</div>
+
+<div class="bottom-row">
+<div class="hazard-card">
+<div class="chart-header">
+<span class="chart-title"><i class="fas fa-arrow-trend-down"></i> Tindak Lanjut</span>
+</div>
+<div id="datTindakLanjut"></div>
+</div>
+
+<div class="table-card">
+<div class="chart-header">
+<span class="chart-title"><i class="fas fa-table-list"></i> Data Drugs & Alcohol Test</span>
+<input type="text" id="dat-search" placeholder="🔍 Cari data..." oninput="searchDATTable()" class="search-input">
+</div>
+<div class="table-wrap">
+<table class="data-table">
+<thead>
+<tr>
+<th onclick="sortDATTable(0)">Kapal <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortDATTable(1)">Fleet <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortDATTable(2)">Tanggal <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortDATTable(3)">Crew Diperiksa <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortDATTable(4)">Hasil <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortDATTable(5)">Crew Positif <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortDATTable(6)">Tindak Lanjut <i class="fas fa-sort fa-xs"></i></th>
+</tr>
+</thead>
+<tbody id="datTableBody"></tbody>
+</table>
+</div>
+<div class="table-footer" id="datTableFooter">Memuat data...</div>
+</div>
+</div>
+</section>
+
+<!-- ===== PLACEHOLDERS ===== -->
+<section class="page-content" id="page-pest">
+<div class="placeholder-page">
+<div class="placeholder-icon"><i class="fas fa-bug"></i></div>
+<h2>Pest & Rodent Control</h2>
+<p>Dashboard ini sedang dalam pengembangan. Sheet data sudah tersedia di Google Sheets dan siap diisi.</p>
+<div class="placeholder-tag">Coming Soon</div>
+</div>
+</section>
+<section class="page-content" id="page-p3k">
+<div class="placeholder-page">
+<div class="placeholder-icon"><i class="fas fa-kit-medical"></i></div>
+<h2>P3K & AED Office</h2>
+<p>Dashboard ini sedang dalam pengembangan. Sheet data sudah tersedia di Google Sheets dan siap diisi.</p>
+<div class="placeholder-tag">Coming Soon</div>
+</div>
+</section>
+<section class="page-content" id="page-menu5">
+<div class="placeholder-page">
+<div class="placeholder-icon"><i class="fas fa-chart-pie"></i></div>
+<h2>Sebaran Alkes Kapal</h2>
+<p>Modul belum tersedia. Hubungi tim HSE untuk pengembangan lebih lanjut.</p>
+<div class="placeholder-tag">Coming Soon</div>
+</div>
+</section>
+<section class="page-content" id="page-menu6">
+<div class="placeholder-page">
+<div class="placeholder-icon"><i class="fas fa-table-cells"></i></div>
+<h2>Pedoman IH Update</h2>
+<p>Modul belum tersedia. Hubungi tim HSE untuk pengembangan lebih lanjut.</p>
+<div class="placeholder-tag">Coming Soon</div>
+</div>
+</section>
+
 </main>
-
-<!-- ============= SCRIPT LOGIN SEDERHANA ============= -->
-<script>
-// --- LOGIN LOGIKA SEDERHANA ---
-const loginForm = document.getElementById("loginForm");
-const loginOverlay = document.getElementById("loginOverlay");
-const loginError = document.getElementById("loginError");
-// Isi username & password di bawah (silakan edit sesuai kebutuhan)
-const LOGIN_USER = "admin";
-const LOGIN_PASS = "admin123";
-
-loginForm.addEventListener("submit", function(e){
-  e.preventDefault();
-  const u = document.getElementById("username").value.trim();
-  const p = document.getElementById("password").value;
-  if(u === LOGIN_USER && p === LOGIN_PASS){
-    sessionStorage.setItem("hse_logged_in", "1");
-    loginOverlay.style.display = "none";
-    document.body.style.overflow = "";
-    // Show dashboard
-    document.querySelector(".sidebar").style.display = "";
-    document.querySelector(".main").style.display = "";
-  } else {
-    loginError.style.display = "block";
-    loginError.textContent = "Username atau Password salah.";
-  }
-});
-
-window.addEventListener("DOMContentLoaded", ()=>{
-  if(sessionStorage.getItem("hse_logged_in") === "1"){
-    loginOverlay.style.display = "none";
-    document.body.style.overflow = "";
-    document.querySelector(".sidebar").style.display = "";
-    document.querySelector(".main").style.display = "";
-  } else {
-    loginOverlay.style.display = "flex";
-    document.body.style.overflow = "hidden";
-    document.querySelector(".sidebar").style.display = "none";
-    document.querySelector(".main").style.display = "none";
-  }
-});
-</script>
-<!-- ============= END SCRIPT LOGIN ============= -->
 
 <script src="script.js"></script>
 </body>
