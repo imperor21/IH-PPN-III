@@ -183,23 +183,23 @@ const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,5);
 const el = document.getElementById("hazardList");
 if (!sorted.length) { el.innerHTML='<div class="hazard-empty"><i class="fas fa-inbox" style="font-size:24px;opacity:.3;margin-bottom:8px;display:block"></i>Tidak ada data hazard</div>'; return; }
 el.innerHTML = sorted.map(([name,count],i) => `
-   <div class="hazard-item">
-     <div class="hazard-rank r${i+1}">${i+1}</div>
-     <div class="hazard-name">${esc(name)}</div>
-     <div class="hazard-count">${count}x</div>
-   </div>`).join("");
+  <div class="hazard-item">
+    <div class="hazard-rank r${i+1}">${i+1}</div>
+    <div class="hazard-name">${esc(name)}</div>
+    <div class="hazard-count">${count}x</div>
+  </div>`).join("");
 }
 
 function renderHRATable(data) {
 document.getElementById("hraTableBody").innerHTML = data.map(r => `
-   <tr>
-     <td><strong style="color:var(--sidebar-bg)">${esc(r["Nama Kapal"]||"")}</strong></td>
-     <td><span style="background:#E3F2FD;color:#1565C0;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">${esc(r["Jenis Fleet"]||"")}</span></td>
-     <td>${esc(r["Bulan Pelaksanaan"]||"")}</td>
-     <td>${esc(r["Vendor Pelaksana"]||"")}</td>
-     <td>${statusBadge(r["Status"])}</td>
-     <td style="font-weight:700">Rp ${fmtNum(parseFloat(r["Est Budget"]||0))}</td>
-   </tr>`).join("");
+  <tr>
+    <td><strong style="color:var(--sidebar-bg)">${esc(r["Nama Kapal"]||"")}</strong></td>
+    <td><span style="background:#E3F2FD;color:#1565C0;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">${esc(r["Jenis Fleet"]||"")}</span></td>
+    <td>${esc(r["Bulan Pelaksanaan"]||"")}</td>
+    <td>${esc(r["Vendor Pelaksana"]||"")}</td>
+    <td>${statusBadge(r["Status"])}</td>
+    <td style="font-weight:700">Rp ${fmtNum(parseFloat(r["Est Budget"]||0))}</td>
+  </tr>`).join("");
 document.getElementById("hraTableFooter").textContent = `Menampilkan ${data.length} dari ${rawHRA.length} entri kapal`;
 }
 
@@ -315,28 +315,28 @@ const diturunkan = data.filter(r=>(r["Tindak Lanjut"]||"").toLowerCase().include
 .reduce((s,r)=>s+parseInt(r["Jumlah Crew Positif"]||0),0);
 const total_tl = data.filter(r=>r["Tindak Lanjut"]).length;
 document.getElementById("datTindakLanjut").innerHTML = `
-   <div class="stat-row">
-     <div class="stat-item">
-       <div>
-         <div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:3px">
-           <i class="fas fa-arrow-down-from-line" style="color:#C62828;margin-right:5px"></i>
-           Crew Diturunkan
-         </div>
-         <div class="stat-label">Hasil positif ditindaklanjuti</div>
-       </div>
-       <div class="stat-val">${diturunkan}</div>
-     </div>
-     <div class="stat-item">
-       <div>
-         <div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:3px">
-           <i class="fas fa-file-medical" style="color:#E65100;margin-right:5px"></i>
-           Entri Tindak Lanjut
-         </div>
-         <div class="stat-label">Kapal dengan tindak lanjut</div>
-       </div>
-       <div class="stat-val" style="color:#E65100">${total_tl}</div>
-     </div>
-   </div>`;
+  <div class="stat-row">
+    <div class="stat-item">
+      <div>
+        <div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:3px">
+          <i class="fas fa-arrow-down-from-line" style="color:#C62828;margin-right:5px"></i>
+          Crew Diturunkan
+        </div>
+        <div class="stat-label">Hasil positif ditindaklanjuti</div>
+      </div>
+      <div class="stat-val">${diturunkan}</div>
+    </div>
+    <div class="stat-item">
+      <div>
+        <div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:3px">
+          <i class="fas fa-file-medical" style="color:#E65100;margin-right:5px"></i>
+          Entri Tindak Lanjut
+        </div>
+        <div class="stat-label">Kapal dengan tindak lanjut</div>
+      </div>
+      <div class="stat-val" style="color:#E65100">${total_tl}</div>
+    </div>
+  </div>`;
 }
 
 function renderDATTable(data) {
@@ -346,14 +346,14 @@ const badge = h==="negatif" ? '<span class="badge badge-neg">Negatif</span>'
 : h==="positif" ? '<span class="badge badge-pos">Positif</span>'
 : esc(r["Hasil"]||"—");
 return `<tr>
-     <td><strong style="color:var(--sidebar-bg)">${esc(r["Nama Kapal"]||"")}</strong></td>
-     <td><span style="background:#E8F5E9;color:#2E7D32;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">${esc(r["Jenis Fleet"]||"")}</span></td>
-     <td>${esc(r["Tanggal Pelaksanaan"]||"")}</td>
-     <td style="text-align:right;font-weight:700">${fmtNum(parseInt(r["Total Crew Diperiksa"]||0))}</td>
-     <td>${badge}</td>
-     <td style="text-align:right;font-weight:700;color:#C62828">${r["Jumlah Crew Positif"]||0}</td>
-     <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis">${esc(r["Tindak Lanjut"]||"—")}</td>
-   </tr>`;
+    <td><strong style="color:var(--sidebar-bg)">${esc(r["Nama Kapal"]||"")}</strong></td>
+    <td><span style="background:#E8F5E9;color:#2E7D32;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">${esc(r["Jenis Fleet"]||"")}</span></td>
+    <td>${esc(r["Tanggal Pelaksanaan"]||"")}</td>
+    <td style="text-align:right;font-weight:700">${fmtNum(parseInt(r["Total Crew Diperiksa"]||0))}</td>
+    <td>${badge}</td>
+    <td style="text-align:right;font-weight:700;color:#C62828">${r["Jumlah Crew Positif"]||0}</td>
+    <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis">${esc(r["Tindak Lanjut"]||"—")}</td>
+  </tr>`;
 }).join("");
 document.getElementById("datTableFooter").textContent = `Menampilkan ${data.length} dari ${rawDAT.length} entri`;
 }
@@ -440,20 +440,3 @@ return (s||"").toLowerCase()==="done"
 ? '<span class="badge badge-done">✓ Done</span>'
 : '<span class="badge badge-belum">⏳ Belum</span>';
 }
-// ====== LOGOUT HANDLER ======
-document.addEventListener("DOMContentLoaded", function() {
-  const logoutBtn = document.getElementById("logoutBtn");
-  if (logoutBtn) {
-    logoutBtn.addEventListener("click", function(){
-      sessionStorage.removeItem("hse_logged_in");
-      document.querySelector(".sidebar").style.display = "none";
-      document.querySelector(".main").style.display = "none";
-      document.getElementById("loginOverlay").style.display = "flex";
-      document.body.style.overflow = "hidden";
-      // Reset input login jika perlu
-      document.getElementById("username").value = "";
-      document.getElementById("password").value = "";
-      document.getElementById("loginError").style.display = "none";
-    });
-  }
-});
