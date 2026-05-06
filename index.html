@@ -10,8 +10,404 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <link rel="stylesheet" href="style.css">
+
+<!-- ===== LOGIN STYLES (INLINE) ===== -->
+<style>
+  /* ---- Login Overlay ---- */
+  #loginOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0a1628;
+    overflow: hidden;
+    font-family: 'Rubik', sans-serif;
+  }
+
+  /* Animated ocean background */
+  #loginOverlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 80%, rgba(0,140,180,0.18) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 80% 20%, rgba(14,70,120,0.22) 0%, transparent 60%),
+      linear-gradient(160deg, #0a1628 0%, #0d2445 50%, #071830 100%);
+    z-index: 0;
+  }
+
+  /* Floating particles */
+  .login-particle {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(0, 180, 220, 0.12);
+    animation: floatUp linear infinite;
+    z-index: 0;
+  }
+
+  @keyframes floatUp {
+    0%   { transform: translateY(110vh) scale(0.8); opacity: 0; }
+    10%  { opacity: 1; }
+    90%  { opacity: 0.6; }
+    100% { transform: translateY(-10vh) scale(1.1); opacity: 0; }
+  }
+
+  /* Anchor watermark */
+  .login-watermark {
+    position: absolute;
+    font-size: 340px;
+    color: rgba(255,255,255,0.025);
+    right: -60px;
+    bottom: -60px;
+    z-index: 0;
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  /* Card */
+  .login-card {
+    position: relative;
+    z-index: 10;
+    width: 420px;
+    max-width: calc(100vw - 32px);
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 24px;
+    padding: 44px 40px 36px;
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    box-shadow:
+      0 8px 40px rgba(0,0,0,0.5),
+      0 0 0 1px rgba(0,150,200,0.08) inset,
+      0 1px 0 rgba(255,255,255,0.07) inset;
+    animation: cardIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(28px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* Brand */
+  .login-brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 32px;
+  }
+
+  .login-brand-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #0ea5e9, #0369a1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(14,165,233,0.35);
+    flex-shrink: 0;
+  }
+
+  .login-brand-text {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .login-brand-title {
+    font-family: 'Rubik', sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+    color: #e2f0fb;
+    letter-spacing: 0.3px;
+    line-height: 1.2;
+  }
+
+  .login-brand-sub {
+    font-size: 12px;
+    color: rgba(180,210,230,0.55);
+    font-weight: 400;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  /* Heading */
+  .login-heading {
+    margin-bottom: 8px;
+  }
+
+  .login-heading h2 {
+    font-family: 'Rubik', sans-serif;
+    font-weight: 600;
+    font-size: 22px;
+    color: #e8f4fb;
+    margin: 0 0 4px;
+  }
+
+  .login-heading p {
+    font-size: 13px;
+    color: rgba(180,210,230,0.5);
+    margin: 0 0 28px;
+  }
+
+  /* Form fields */
+  .login-field {
+    margin-bottom: 18px;
+  }
+
+  .login-field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(180,215,240,0.65);
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .login-input-wrap {
+    position: relative;
+  }
+
+  .login-input-wrap .field-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: rgba(100,180,220,0.45);
+    font-size: 14px;
+    pointer-events: none;
+    transition: color 0.2s;
+  }
+
+  .login-input-wrap input {
+    width: 100%;
+    box-sizing: border-box;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 12px 42px 12px 40px;
+    font-size: 14px;
+    color: #e0f0fa;
+    font-family: 'Rubik', sans-serif;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    -webkit-text-fill-color: #e0f0fa;
+  }
+
+  .login-input-wrap input::placeholder {
+    color: rgba(150,190,210,0.3);
+  }
+
+  .login-input-wrap input:focus {
+    border-color: rgba(14,165,233,0.6);
+    background: rgba(14,165,233,0.06);
+    box-shadow: 0 0 0 3px rgba(14,165,233,0.12);
+  }
+
+  .login-input-wrap input:focus + .field-icon,
+  .login-input-wrap:focus-within .field-icon {
+    color: rgba(14,165,233,0.8);
+  }
+
+  /* Toggle password */
+  .toggle-pw {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: rgba(100,180,220,0.4);
+    font-size: 14px;
+    padding: 4px;
+    transition: color 0.2s;
+    line-height: 1;
+  }
+
+  .toggle-pw:hover { color: rgba(14,165,233,0.8); }
+
+  /* Error message */
+  #loginError {
+    display: none;
+    background: rgba(239,68,68,0.12);
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #fca5a5;
+    margin-bottom: 18px;
+    animation: shakeError 0.4s ease;
+  }
+
+  @keyframes shakeError {
+    0%, 100% { transform: translateX(0); }
+    20%       { transform: translateX(-6px); }
+    40%       { transform: translateX(6px); }
+    60%       { transform: translateX(-4px); }
+    80%       { transform: translateX(4px); }
+  }
+
+  /* Login button */
+  .btn-login {
+    width: 100%;
+    padding: 13px;
+    background: linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%);
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    font-family: 'Rubik', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+    transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+    box-shadow: 0 4px 18px rgba(14,165,233,0.35);
+    margin-top: 4px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-login::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.12), transparent);
+    pointer-events: none;
+  }
+
+  .btn-login:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 24px rgba(14,165,233,0.45);
+  }
+
+  .btn-login:active:not(:disabled) {
+    transform: translateY(1px);
+    box-shadow: 0 2px 10px rgba(14,165,233,0.3);
+  }
+
+  .btn-login:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  /* Footer note */
+  .login-footer-note {
+    text-align: center;
+    font-size: 11.5px;
+    color: rgba(150,185,210,0.35);
+    margin-top: 22px;
+    letter-spacing: 0.3px;
+  }
+
+  /* Divider line */
+  .login-divider {
+    height: 1px;
+    background: rgba(255,255,255,0.07);
+    margin: 24px 0 18px;
+  }
+
+  /* Hide dashboard until logged in */
+  #appWrapper {
+    display: none;
+  }
+
+  /* Slide-out login animation */
+  #loginOverlay.logging-out {
+    animation: overlayOut 0.5s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+  }
+
+  @keyframes overlayOut {
+    from { opacity: 1; transform: scale(1); }
+    to   { opacity: 0; transform: scale(1.03); }
+  }
+
+  /* App fade-in */
+  #appWrapper.visible {
+    display: flex;
+    animation: appIn 0.4s ease both;
+  }
+
+  @keyframes appIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+</style>
 </head>
 <body>
+
+<!-- ===== LOGIN OVERLAY ===== -->
+<div id="loginOverlay">
+
+  <!-- Particles -->
+  <div class="login-particle" style="width:80px;height:80px;left:8%;animation-duration:14s;animation-delay:0s;"></div>
+  <div class="login-particle" style="width:40px;height:40px;left:25%;animation-duration:11s;animation-delay:2s;"></div>
+  <div class="login-particle" style="width:120px;height:120px;left:55%;animation-duration:17s;animation-delay:1s;"></div>
+  <div class="login-particle" style="width:60px;height:60px;left:75%;animation-duration:12s;animation-delay:4s;"></div>
+  <div class="login-particle" style="width:30px;height:30px;left:90%;animation-duration:9s;animation-delay:0.5s;"></div>
+  <div class="login-particle" style="width:50px;height:50px;left:42%;animation-duration:15s;animation-delay:3s;"></div>
+
+  <!-- Watermark -->
+  <div class="login-watermark"><i class="fas fa-anchor"></i></div>
+
+  <!-- Card -->
+  <div class="login-card">
+
+    <div class="login-brand">
+      <div class="login-brand-icon"><i class="fas fa-anchor"></i></div>
+      <div class="login-brand-text">
+        <span class="login-brand-title">Health PPN III</span>
+        <span class="login-brand-sub">Dashboard System</span>
+      </div>
+    </div>
+
+    <div class="login-heading">
+      <h2>Selamat Datang 👋</h2>
+      <p>Masukkan kredensial Anda untuk melanjutkan</p>
+    </div>
+
+    <div id="loginError">
+      <i class="fas fa-circle-exclamation"></i>&nbsp; Username atau password salah. Coba lagi.
+    </div>
+
+    <div class="login-field">
+      <label>Username</label>
+      <div class="login-input-wrap">
+        <input type="text" id="inputUsername" placeholder="Masukkan username" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
+        <i class="fas fa-user field-icon"></i>
+      </div>
+    </div>
+
+    <div class="login-field">
+      <label>Password</label>
+      <div class="login-input-wrap">
+        <input type="password" id="inputPassword" placeholder="Masukkan password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+        <i class="fas fa-lock field-icon"></i>
+        <button class="toggle-pw" type="button" onclick="togglePassword()" title="Tampilkan/Sembunyikan password">
+          <i class="fas fa-eye" id="pwEyeIcon"></i>
+        </button>
+      </div>
+    </div>
+
+    <button class="btn-login" id="btnLogin" onclick="doLogin()">
+      <i class="fas fa-right-to-bracket"></i>&nbsp; Masuk
+    </button>
+
+    <div class="login-divider"></div>
+
+    <div class="login-footer-note">
+      &copy; 2025 &nbsp;·&nbsp; PPN III Health Dashboard &nbsp;·&nbsp; Hak Akses Terbatas
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== APP WRAPPER ===== -->
+<div id="appWrapper">
 
 <!-- SIDEBAR -->
 <aside class="sidebar" id="sidebar">
@@ -26,7 +422,7 @@
   <div class="sidebar-user">
     <div class="user-avatar"><i class="fas fa-user-tie" style="font-size:16px"></i></div>
     <div>
-      <div class="user-name">Health Admin</div>
+      <div class="user-name" id="sidebarUsername">Health Admin</div>
       <div class="user-role">Super Admin</div>
     </div>
   </div>
@@ -71,6 +467,16 @@
       <span>Live — auto refresh 5 Mnt</span>
     </div>
     <div class="last-updated" id="lastUpdated">Menghubungkan...</div>
+    <!-- Logout button -->
+    <button onclick="doLogout()" style="
+      margin-top:10px;width:100%;padding:8px 0;
+      background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.25);
+      border-radius:8px;color:#fca5a5;font-size:12px;font-weight:600;
+      cursor:pointer;font-family:'Rubik',sans-serif;letter-spacing:0.3px;
+      transition:background 0.2s;
+    " onmouseover="this.style.background='rgba(239,68,68,0.22)'" onmouseout="this.style.background='rgba(239,68,68,0.12)'">
+      <i class="fas fa-right-from-bracket"></i>&nbsp; Logout
+    </button>
   </div>
 </aside>
 
@@ -395,7 +801,119 @@
   </section>
 
 </main>
+</div><!-- /#appWrapper -->
 
 <script src="script.js"></script>
+
+<!-- ===== LOGIN SCRIPT (INLINE) ===== -->
+<script>
+  // ── Credentials ──────────────────────────────────────
+  const VALID_USERNAME = 'Samirah2026';
+  const VALID_PASSWORD = '12345';
+
+  // ── DOM refs ─────────────────────────────────────────
+  const loginOverlay   = document.getElementById('loginOverlay');
+  const appWrapper     = document.getElementById('appWrapper');
+  const inputUsername  = document.getElementById('inputUsername');
+  const inputPassword  = document.getElementById('inputPassword');
+  const loginError     = document.getElementById('loginError');
+  const btnLogin       = document.getElementById('btnLogin');
+  const sidebarUsernameEl = document.getElementById('sidebarUsername');
+
+  // ── Auto-login jika sudah ada sesi ───────────────────
+  window.addEventListener('DOMContentLoaded', () => {
+    if (sessionStorage.getItem('ppn3_auth') === 'true') {
+      const savedUser = sessionStorage.getItem('ppn3_user') || VALID_USERNAME;
+      showDashboard(savedUser);
+    }
+    // Focus username field
+    setTimeout(() => inputUsername.focus(), 300);
+  });
+
+  // ── Fungsi login ─────────────────────────────────────
+  function doLogin() {
+    const username = inputUsername.value.trim();
+    const password = inputPassword.value;
+
+    // Reset error
+    loginError.style.display = 'none';
+
+    if (username === VALID_USERNAME && password === VALID_PASSWORD) {
+      // Simpan sesi
+      sessionStorage.setItem('ppn3_auth', 'true');
+      sessionStorage.setItem('ppn3_user', username);
+
+      // Animasi keluar login
+      btnLogin.disabled = true;
+      btnLogin.innerHTML = '<i class="fas fa-spinner fa-spin"></i>&nbsp; Masuk...';
+
+      setTimeout(() => {
+        loginOverlay.classList.add('logging-out');
+        setTimeout(() => {
+          loginOverlay.style.display = 'none';
+          showDashboard(username);
+        }, 450);
+      }, 600);
+
+    } else {
+      // Tampilkan error
+      loginError.style.display = 'block';
+      // Re-trigger animation
+      loginError.style.animation = 'none';
+      loginError.offsetHeight; // reflow
+      loginError.style.animation = '';
+
+      // Shake input
+      inputPassword.value = '';
+      inputUsername.style.borderColor = 'rgba(239,68,68,0.6)';
+      inputPassword.style.borderColor = 'rgba(239,68,68,0.6)';
+      setTimeout(() => {
+        inputUsername.style.borderColor = '';
+        inputPassword.style.borderColor = '';
+      }, 1500);
+
+      inputPassword.focus();
+    }
+  }
+
+  // ── Tampilkan dashboard ───────────────────────────────
+  function showDashboard(username) {
+    if (sidebarUsernameEl) sidebarUsernameEl.textContent = username;
+    appWrapper.classList.add('visible');
+  }
+
+  // ── Logout ────────────────────────────────────────────
+  function doLogout() {
+    sessionStorage.removeItem('ppn3_auth');
+    sessionStorage.removeItem('ppn3_user');
+
+    appWrapper.classList.remove('visible');
+    appWrapper.style.display = 'none';
+
+    loginOverlay.style.display = 'flex';
+    loginOverlay.classList.remove('logging-out');
+    loginOverlay.style.animation = 'none';
+    loginOverlay.offsetHeight;
+    loginOverlay.style.animation = '';
+
+    btnLogin.disabled = false;
+    btnLogin.innerHTML = '<i class="fas fa-right-to-bracket"></i>&nbsp; Masuk';
+    inputUsername.value = '';
+    inputPassword.value = '';
+    loginError.style.display = 'none';
+
+    setTimeout(() => inputUsername.focus(), 300);
+  }
+
+  // ── Toggle show/hide password ─────────────────────────
+  function togglePassword() {
+    const pwInput   = document.getElementById('inputPassword');
+    const eyeIcon   = document.getElementById('pwEyeIcon');
+    const isHidden  = pwInput.type === 'password';
+    pwInput.type    = isHidden ? 'text' : 'password';
+    eyeIcon.className = isHidden ? 'fas fa-eye-slash' : 'fas fa-eye';
+  }
+</script>
+
 </body>
 </html>
