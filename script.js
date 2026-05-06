@@ -3,11 +3,11 @@
 // ============================================================
 // ⚠️  GANTI URL INI DENGAN URL GOOGLE APPS SCRIPT ANDA
 // ============================================================
-const API_URL = "https://script.google.com/macros/s/PASTE_YOUR_DEPLOYMENT_ID_HERE/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzqv37CKDtxFsypoDUqbPBzlWx41fKQo5q-kZ2iIe4f-GMtRVLLd_dXeuW70iTGmXOKeg/exec";
 // ============================================================
 
 const TOTAL_KAPAL = 85;
-const BULAN_ORDER = ["Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+const BULAN_ORDER = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 
 let rawHRA = [], rawDAT = [];
 let filteredHRA = [], filteredDAT = [];
