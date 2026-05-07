@@ -11,8 +11,8 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzqv37CKDtxFsypoDUqbPBz
 // Format: { username: "...", password: "...", displayName: "..." }
 // ============================================================
 const USERS = [
-  { username: "admin",    password: "ppn2025",   displayName: "Health Admin" },
-  { username: "hse",      password: "hse@ppn3",  displayName: "HSE Officer"  },
+  { username: "ppn3",    password: "ppn2026",   displayName: "IH Admin" },
+  { username: "hsse",      password: "hsseppn3",  displayName: "IH Officer"  },
 ];
 // ============================================================
 
