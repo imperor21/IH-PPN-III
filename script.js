@@ -448,7 +448,7 @@ return `<tr>
     <td><strong style="color:var(--sidebar-bg)">${esc(r["Nama Kapal"]||"")}</strong></td>
     <td><span style="background:#E8F5E9;color:#2E7D32;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">${esc(r["Jenis Fleet"]||"")}</span></td>
     <td>${esc(r["Bulan Pelaksanaan"]||"")}</td>
-    <td style="text-align:right;font-weight:700">${fmtNum(parseInt(r["Vendor Pelaksana"]||0))}</td>
+    <td style="text-align:right;font-weight:700">${fmtNum(parseInt(r["Vendor Pelaksana"]||"—"))}</td>
     <td>${badge}</td>
     <td style="text-align:right;font-weight:700;color:#C62828">${r["Jumlah Crew Positif"]||0}</td>
     <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis">${esc(r["Tindak Lanjut"]||"—")}</td>
