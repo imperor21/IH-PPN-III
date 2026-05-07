@@ -13,6 +13,50 @@
 </head>
 <body>
 
+<!-- ===== LOGIN PAGE ===== -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="login-brand-icon"><i class="fas fa-anchor"></i></div>
+      <div>
+        <div class="login-brand-title">Dashboard Health</div>
+        <div class="login-brand-sub">PPN III — Pertamina Patra Niaga</div>
+      </div>
+    </div>
+    <div class="login-body">
+      <h2 class="login-heading">Selamat Datang</h2>
+      <p class="login-sub">Masuk untuk mengakses dashboard HSE Marine</p>
+      <div class="login-error" id="loginError" style="display:none">
+        <i class="fas fa-circle-exclamation"></i>
+        <span id="loginErrorMsg">Username atau password salah.</span>
+      </div>
+      <div class="login-field">
+        <label>Username</label>
+        <div class="login-input-wrap">
+          <i class="fas fa-user"></i>
+          <input type="text" id="loginUsername" placeholder="Masukkan username" autocomplete="username">
+        </div>
+      </div>
+      <div class="login-field">
+        <label>Password</label>
+        <div class="login-input-wrap">
+          <i class="fas fa-lock"></i>
+          <input type="password" id="loginPassword" placeholder="Masukkan password" autocomplete="current-password">
+          <button type="button" class="toggle-pw" id="togglePw" onclick="togglePassword()">
+            <i class="fas fa-eye" id="togglePwIcon"></i>
+          </button>
+        </div>
+      </div>
+      <button class="btn-login" id="btnLogin" onclick="doLogin()">
+        <i class="fas fa-right-to-bracket"></i> Masuk
+      </button>
+    </div>
+    <div class="login-footer">
+      <i class="fas fa-shield-halved"></i> HSE Marine Health System &copy; 2025
+    </div>
+  </div>
+</div>
+
 <!-- SIDEBAR -->
 <aside class="sidebar" id="sidebar">
 <div class="sidebar-brand">
@@ -27,7 +71,7 @@
 <div class="sidebar-user">
 <div class="user-avatar"><i class="fas fa-user-tie" style="font-size:16px"></i></div>
 <div>
-<div class="user-name">Health Admin</div>
+<div class="user-name" id="sidebarUsername">Health Admin</div>
 <div class="user-role">Super Admin</div>
 </div>
 </div>
@@ -72,6 +116,9 @@
       <span>Live — auto refresh 5 Mnt</span>
 </div>
 <div class="last-updated" id="lastUpdated">Menghubungkan...</div>
+<button class="btn-logout" onclick="doLogout()">
+  <i class="fas fa-right-from-bracket"></i> Logout
+</button>
 </div>
 </aside>
 
