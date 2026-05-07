@@ -189,6 +189,16 @@
 <div class="chart-header">
 <span class="chart-title"><i class="fas fa-chart-column"></i> Monitoring per Bulan</span>
 <div class="pill-group">
+  <button class="pill active" onclick="toggleHRAChartType(this,'bar')">Bar</button>
+  <button class="pill" onclick="toggleHRAChartType(this,'line')">Line</button>
+</div>
+      <div class="chart-header">
+  <span class="chart-title"><i class="fas fa-chart-line"></i> Crew Test per Bulan</span>
+  <div class="pill-group">
+    <button class="pill active" onclick="toggleDATChartType(this,'bar')">Bar</button>
+    <button class="pill" onclick="toggleDATChartType(this,'line')">Line</button>
+  </div>
+</div>
 <button class="pill active">Bar</button>
 <button class="pill" onclick="toggleHRAChartType(this,'line')">Line</button>
 </div>
