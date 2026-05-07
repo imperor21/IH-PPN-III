@@ -6,6 +6,91 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbzqv37CKDtxFsypoDUqbPBzlWx41fKQo5q-kZ2iIe4f-GMtRVLLd_dXeuW70iTGmXOKeg/exec";
 // ============================================================
 
+// ============================================================
+// 🔐 AKUN LOGIN — Tambah/ubah user di sini
+// Format: { username: "...", password: "...", displayName: "..." }
+// ============================================================
+const USERS = [
+  { username: "admin",    password: "ppn2025",   displayName: "Health Admin" },
+  { username: "hse",      password: "hse@ppn3",  displayName: "HSE Officer"  },
+];
+// ============================================================
+
+// ====== LOGIN / LOGOUT ======
+function checkAuth() {
+  const session = sessionStorage.getItem("ppn_user");
+  if (session) {
+    const user = JSON.parse(session);
+    document.getElementById("loginOverlay").classList.add("hidden");
+    document.getElementById("sidebarUsername").textContent = user.displayName;
+  } else {
+    document.getElementById("loginOverlay").classList.remove("hidden");
+  }
+}
+
+function doLogin() {
+  const username = document.getElementById("loginUsername").value.trim();
+  const password = document.getElementById("loginPassword").value;
+  const errEl    = document.getElementById("loginError");
+  const btn      = document.getElementById("btnLogin");
+
+  if (!username || !password) {
+    showLoginError("Username dan password tidak boleh kosong.");
+    return;
+  }
+
+  const user = USERS.find(u => u.username === username && u.password === password);
+  if (!user) {
+    showLoginError("Username atau password salah.");
+    // Shake animation
+    const card = document.querySelector(".login-card");
+    card.style.animation = "shake .4s ease";
+    setTimeout(() => { card.style.animation = ""; }, 400);
+    return;
+  }
+
+  // Login sukses
+  sessionStorage.setItem("ppn_user", JSON.stringify(user));
+  errEl.style.display = "none";
+  btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Memuat...';
+  btn.disabled = true;
+
+  setTimeout(() => {
+    document.getElementById("loginOverlay").classList.add("hidden");
+    document.getElementById("sidebarUsername").textContent = user.displayName;
+    btn.innerHTML = '<i class="fas fa-right-to-bracket"></i> Masuk';
+    btn.disabled = false;
+    loadData();
+  }, 600);
+}
+
+function doLogout() {
+  if (!confirm("Yakin ingin logout?")) return;
+  sessionStorage.removeItem("ppn_user");
+  document.getElementById("loginUsername").value = "";
+  document.getElementById("loginPassword").value = "";
+  document.getElementById("loginError").style.display = "none";
+  document.getElementById("loginOverlay").classList.remove("hidden");
+}
+
+function showLoginError(msg) {
+  const el = document.getElementById("loginError");
+  document.getElementById("loginErrorMsg").textContent = msg;
+  el.style.display = "flex";
+}
+
+function togglePassword() {
+  const input = document.getElementById("loginPassword");
+  const icon  = document.getElementById("togglePwIcon");
+  if (input.type === "password") {
+    input.type = "text";
+    icon.className = "fas fa-eye-slash";
+  } else {
+    input.type = "password";
+    icon.className = "fas fa-eye";
+  }
+}
+
 const TOTAL_KAPAL = 85;
 const BULAN_ORDER = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 
@@ -17,11 +102,25 @@ let hraChartType = 'bar', datChartType = 'bar';
 
 // ====== INIT ======
 document.addEventListener("DOMContentLoaded", () => {
-setupNav();
-setupSidebar();
-loadData();
-setInterval(loadData, 300000);
-document.getElementById("btnRefresh").addEventListener("click", loadData);
+  // Enter key untuk login
+  ["loginUsername","loginPassword"].forEach(id => {
+    document.getElementById(id).addEventListener("keydown", e => {
+      if (e.key === "Enter") doLogin();
+    });
+  });
+
+  checkAuth();
+  setupNav();
+  setupSidebar();
+
+  // Hanya load data jika sudah login
+  if (sessionStorage.getItem("ppn_user")) {
+    loadData();
+    setInterval(loadData, 300000);
+  }
+  document.getElementById("btnRefresh").addEventListener("click", () => {
+    if (sessionStorage.getItem("ppn_user")) loadData();
+  });
 });
 
 // ====== NAV ======
