@@ -447,7 +447,7 @@ const badge = h==="negatif" ? '<span class="badge badge-neg">Negatif</span>'
 return `<tr>
     <td><strong style="color:var(--sidebar-bg)">${esc(r["Nama Kapal"]||"")}</strong></td>
     <td><span style="background:#E8F5E9;color:#2E7D32;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">${esc(r["Jenis Fleet"]||"")}</span></td>
-    <td>${esc(r["Tanggal Pelaksanaan"]||"")}</td>
+    <td>${esc(r["Bulan Pelaksanaan"]||"")}</td>
     <td style="text-align:right;font-weight:700">${fmtNum(parseInt(r["Total Crew Diperiksa"]||0))}</td>
     <td>${badge}</td>
     <td style="text-align:right;font-weight:700;color:#C62828">${r["Jumlah Crew Positif"]||0}</td>
@@ -482,7 +482,7 @@ row.style.display=row.textContent.toLowerCase().includes(q)?"":"none";
 }
 function sortDATTable(col) {
 if(datSortCol===col) datSortDir*=-1; else{datSortCol=col;datSortDir=1;}
-const keys=["Nama Kapal","Jenis Fleet","Tanggal Pelaksanaan","Total Crew Diperiksa","Hasil","Jumlah Crew Positif","Tindak Lanjut"];
+const keys=["Nama Kapal","Jenis Fleet","Bulan Pelaksanaan","Total Crew Diperiksa","Hasil","Jumlah Crew Positif","Tindak Lanjut"];
 filteredDAT.sort((a,b)=>String(a[keys[col]]||"").localeCompare(String(b[keys[col]]||""),"id")*datSortDir);
 renderDATTable(filteredDAT);
 }
