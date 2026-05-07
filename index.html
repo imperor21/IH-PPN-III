@@ -192,16 +192,6 @@
   <button class="pill active" onclick="toggleHRAChartType(this,'bar')">Bar</button>
   <button class="pill" onclick="toggleHRAChartType(this,'line')">Line</button>
 </div>
-      <div class="chart-header">
-  <span class="chart-title"><i class="fas fa-chart-line"></i> Crew Test per Bulan</span>
-  <div class="pill-group">
-    <button class="pill active" onclick="toggleDATChartType(this,'bar')">Bar</button>
-    <button class="pill" onclick="toggleDATChartType(this,'line')">Line</button>
-  </div>
-</div>
-<button class="pill active">Bar</button>
-<button class="pill" onclick="toggleHRAChartType(this,'line')">Line</button>
-</div>
 </div>
 <div class="chart-body"><canvas id="hraBarChart" role="img" aria-label="Bar chart monitoring per bulan"></canvas></div>
 </div>
@@ -220,6 +210,7 @@
 <span class="chart-title"><i class="fas fa-triangle-exclamation"></i> Top Hazard</span>
 <select id="hra-hazard-bulan" onchange="renderHRAHazard()" style="font-size:11px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:var(--font)">
 <option value="">Semua</option>
+<option>Januari</option><option>Februari</option><option>Maret</option><option>April</option>
 <option>Mei</option><option>Juni</option><option>Juli</option>
 <option>Agustus</option><option>September</option><option>Oktober</option>
 <option>November</option><option>Desember</option>
@@ -323,7 +314,7 @@
 <div class="chart-header">
 <span class="chart-title"><i class="fas fa-chart-line"></i> Crew Test per Bulan</span>
 <div class="pill-group">
-<button class="pill active">Bar</button>
+<button class="pill active" onclick="toggleDATChartType(this,'bar')">Bar</button>
 <button class="pill" onclick="toggleDATChartType(this,'line')">Line</button>
 </div>
 </div>
