@@ -94,11 +94,12 @@ function togglePassword() {
 const TOTAL_KAPAL = 85;
 const BULAN_ORDER = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 
-let rawHRA = [], rawDAT = [];
-let filteredHRA = [], filteredDAT = [];
+let rawHRA = [], rawDAT = [], rawPest = [];
+let filteredHRA = [], filteredDAT = [], filteredPest = [];
 let hraBarChart, hraDonutChart, datBarChart, datDonutChart;
-let hraSortCol = -1, hraSortDir = 1, datSortCol = -1, datSortDir = 1;
-let hraChartType = 'bar', datChartType = 'bar';
+let pestBarChart, pestDonutChart, pestTemuanChart, pestBiayaChart;
+let hraSortCol = -1, hraSortDir = 1, datSortCol = -1, datSortDir = 1, pestSortCol = -1, pestSortDir = 1;
+let hraChartType = 'bar', datChartType = 'bar', pestChartType = 'bar';
 
 // ====== INIT ======
 document.addEventListener("DOMContentLoaded", () => {
@@ -120,6 +121,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   document.getElementById("btnRefresh").addEventListener("click", () => {
     if (sessionStorage.getItem("ppn_user")) loadData();
+  });
+
+  // Init Pedoman IH pada saat nav diklik
+  document.querySelectorAll('.nav-item[data-menu="menu6"]').forEach(item => {
+    item.addEventListener("click", () => setTimeout(renderPedomanList, 80));
   });
 });
 
@@ -168,8 +174,10 @@ if (!res.ok) throw new Error("HTTP " + res.status);
 const data = await res.json();
 rawHRA = data.hra || [];
 rawDAT = data.dat || [];
+rawPest = data.pest || [];
 filteredHRA = [...rawHRA];
 filteredDAT = [...rawDAT];
+filteredPest = [...rawPest];
 const now = new Date();
 document.getElementById("lastUpdated").textContent =
 "Update: " + now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
@@ -177,12 +185,13 @@ document.getElementById("lastUpdated").textContent =
 console.error("API Error:", err);
 showError("Gagal memuat data. Pastikan API_URL di script.js sudah benar dan Apps Script sudah di-deploy sebagai Web App (Anyone).");
 // Tampilkan UI kosong agar layout tetap terlihat
-rawHRA = []; rawDAT = [];
-filteredHRA = []; filteredDAT = [];
+rawHRA = []; rawDAT = []; rawPest = [];
+filteredHRA = []; filteredDAT = []; filteredPest = [];
 document.getElementById("lastUpdated").textContent = "Gagal terhubung";
 }
 renderHRAPage();
 renderDATPage();
+renderPestPage();
 showLoading(false);
 }
 
@@ -539,4 +548,390 @@ function statusBadge(s) {
 return (s||"").toLowerCase()==="done"
 ? '<span class="badge badge-done">✓ Done</span>'
 : '<span class="badge badge-belum">⏳ Belum</span>';
+}
+
+// ====================================================
+// PEST & RODENT CONTROL PAGE
+// ====================================================
+function renderPestPage() {
+  const data = filteredPest;
+
+  const totalPelaksanaan = data.length;
+  const lokSet = new Set(data.map(r => (r["Lokasi"] || "").trim()).filter(Boolean));
+  // Biaya — gunakan key yang sudah dinormalisasi oleh Code.gs
+  const totalBiaya = data.reduce((s, r) => s + parseFloat(r["Est Biaya"] || 0), 0);
+
+  // Temuan count
+  const temuanAll = [];
+  data.forEach(r => {
+    const t = (r["Temuan / Keluhan"] || "").trim();
+    if (t) temuanAll.push(t);
+  });
+
+  // Hama dominan — cari keyword terbanyak dari kolom Temuan
+  const hamaMap = {};
+  temuanAll.forEach(t => {
+    const low = t.toLowerCase();
+    ["tikus","kecoa","semut","lalat","nyamuk","kutu","rayap","cicak"].forEach(h => {
+      if (low.includes(h)) hamaMap[h] = (hamaMap[h] || 0) + 1;
+    });
+  });
+  const hamaDominan = Object.entries(hamaMap).sort((a,b)=>b[1]-a[1])[0];
+
+  document.getElementById("pest-total").textContent = fmtNum(totalPelaksanaan);
+  document.getElementById("pest-lokasi").textContent = fmtNum(lokSet.size);
+  document.getElementById("pest-temuan").textContent = fmtNum(temuanAll.length);
+  document.getElementById("pest-hama-dominan").textContent = hamaDominan ? hamaDominan[0].charAt(0).toUpperCase()+hamaDominan[0].slice(1) : "—";
+  document.getElementById("pest-biaya").textContent = formatRupiah(totalBiaya);
+
+  // Populate lokasi filter
+  const lokasiSel = document.getElementById("pest-filter-lokasi");
+  const currentLok = lokasiSel.value;
+  const uniqueLok = [...lokSet].sort();
+  lokasiSel.innerHTML = '<option value="">Semua Lokasi</option>' + uniqueLok.map(l => `<option${l===currentLok?' selected':''}>${esc(l)}</option>`).join("");
+
+  renderPestBarChart(data);
+  renderPestDonutChart(data);
+  renderPestTemuanChart(data);
+  renderPestBiayaChart(data);
+  renderPestTindakLanjut(data);
+  renderPestTable(data);
+}
+
+function renderPestBarChart(data) {
+  const counts = {};
+  BULAN_ORDER.forEach(b => counts[b] = 0);
+  data.forEach(r => {
+    const b = (r["Bulan"] || "").trim();
+    if (b && counts[b] !== undefined) counts[b]++;
+  });
+  const ctx = document.getElementById("pestBarChart").getContext("2d");
+  if (pestBarChart) pestBarChart.destroy();
+  const colors = BULAN_ORDER.map((_, i) => `hsl(${210 + i*5}, 70%, ${50 + i*1.5}%)`);
+  pestBarChart = new Chart(ctx, {
+    type: pestChartType,
+    data: {
+      labels: BULAN_ORDER,
+      datasets: [{
+        label: "Pelaksanaan",
+        data: BULAN_ORDER.map(b => counts[b]),
+        backgroundColor: pestChartType === 'line' ? 'rgba(21,101,192,0.12)' : colors,
+        borderColor: '#1565C0',
+        borderWidth: pestChartType === 'line' ? 2.5 : 1,
+        borderRadius: pestChartType === 'bar' ? 6 : 0,
+        fill: pestChartType === 'line',
+        tension: 0.4,
+        pointBackgroundColor: '#1565C0',
+        pointRadius: pestChartType === 'line' ? 5 : 0,
+      }]
+    },
+    options: chartOpts()
+  });
+}
+
+function renderPestDonutChart(data) {
+  const lokMap = {};
+  data.forEach(r => {
+    const l = (r["Lokasi"] || "Tidak Diketahui").trim();
+    lokMap[l] = (lokMap[l] || 0) + 1;
+  });
+  const entries = Object.entries(lokMap).sort((a,b) => b[1]-a[1]).slice(0,7);
+  const ctx = document.getElementById("pestDonutChart").getContext("2d");
+  if (pestDonutChart) pestDonutChart.destroy();
+  const palette = ['#1565C0','#E65100','#2E7D32','#6A1B9A','#00695C','#C62828','#F9A825'];
+  pestDonutChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: entries.map(e => e[0]),
+      datasets: [{
+        data: entries.map(e => e[1]),
+        backgroundColor: palette,
+        borderColor: '#fff', borderWidth: 3, hoverOffset: 10
+      }]
+    },
+    options: donutOpts()
+  });
+}
+
+function renderPestTemuanChart(data) {
+  const temuanMap = {};
+  data.forEach(r => {
+    const t = (r["Temuan / Keluhan"] || "").trim();
+    if (t) temuanMap[t] = (temuanMap[t] || 0) + 1;
+  });
+  const top = Object.entries(temuanMap).sort((a,b) => b[1]-a[1]).slice(0, 8);
+  const ctx = document.getElementById("pestTemuanChart").getContext("2d");
+  if (pestTemuanChart) pestTemuanChart.destroy();
+  pestTemuanChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: top.map(e => e[0].length > 25 ? e[0].substring(0,25)+'...' : e[0]),
+      datasets: [{
+        label: "Jumlah Temuan",
+        data: top.map(e => e[1]),
+        backgroundColor: ['#C62828','#E65100','#F57C00','#F9A825','#388E3C','#1565C0','#6A1B9A','#00695C'],
+        borderRadius: 6,
+        borderWidth: 0,
+      }]
+    },
+    options: {
+      ...chartOpts(),
+      indexAxis: 'y',
+      plugins: { ...chartOpts().plugins, legend: { display: false } }
+    }
+  });
+}
+
+function renderPestBiayaChart(data) {
+  const biayaMap = {};
+  BULAN_ORDER.forEach(b => biayaMap[b] = 0);
+  data.forEach(r => {
+    const b = (r["Bulan"] || "").trim();
+    const biaya = parseFloat(r["Est Biaya"] || 0);
+    if (b && biayaMap[b] !== undefined) biayaMap[b] += biaya;
+  });
+  const ctx = document.getElementById("pestBiayaChart").getContext("2d");
+  if (pestBiayaChart) pestBiayaChart.destroy();
+  pestBiayaChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: BULAN_ORDER,
+      datasets: [{
+        label: "Est. Biaya (Rp)",
+        data: BULAN_ORDER.map(b => biayaMap[b]),
+        backgroundColor: 'rgba(106,27,154,0.10)',
+        borderColor: '#6A1B9A',
+        borderWidth: 2.5,
+        fill: true,
+        tension: 0.4,
+        pointBackgroundColor: '#6A1B9A',
+        pointRadius: 5,
+        pointHoverRadius: 8,
+      }]
+    },
+    options: {
+      ...chartOpts(),
+      plugins: {
+        ...chartOpts().plugins,
+        legend: { display: false },
+        tooltip: {
+          ...chartOpts().plugins.tooltip,
+          callbacks: {
+            label: ctx => 'Rp ' + formatRupiah(ctx.raw)
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderPestTindakLanjut(data) {
+  const tlMap = {};
+  data.forEach(r => {
+    const tl = (r["Tindak Lanjut"] || "").trim();
+    if (tl) tlMap[tl] = (tlMap[tl] || 0) + 1;
+  });
+  const top = Object.entries(tlMap).sort((a,b) => b[1]-a[1]).slice(0,6);
+  const colors = ['r1','r2','r3','r4','r5','r1'];
+  const el = document.getElementById("pestTindakLanjutList");
+  if (!top.length) {
+    el.innerHTML = '<div class="hazard-empty">Tidak ada data tindak lanjut</div>';
+    return;
+  }
+  el.innerHTML = top.map((e,i) => `
+    <div class="hazard-item">
+      <span class="hazard-rank ${colors[i]}">${i+1}</span>
+      <span class="hazard-name">${esc(e[0])}</span>
+      <span class="hazard-count">${e[1]}x</span>
+    </div>`).join("");
+}
+
+function renderPestTable(data) {
+  document.getElementById("pestTableBody").innerHTML = data.map(r => {
+    const biaya = parseFloat(r["Est Biaya"] || 0);
+    // Bulan: coba kolom "Bulan" dulu (sudah dinormalisasi)
+    const bulan = r["Bulan"] || "—";
+    return `<tr>
+      <td><strong style="color:var(--sidebar-bg)">${esc(r["Lokasi"]||"—")}</strong></td>
+      <td>${esc(r["Tanggal"]||"—")}</td>
+      <td><span style="background:#E3F2FD;color:#1565C0;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">${esc(bulan)}</span></td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis">${esc(r["Temuan / Keluhan"]||"—")}</td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis">${esc(r["Tindak Lanjut"]||"—")}</td>
+      <td style="text-align:right;font-weight:700;color:#6A1B9A">${biaya ? formatRupiah(biaya) : "—"}</td>
+    </tr>`;
+  }).join("");
+  document.getElementById("pestTableFooter").textContent = `Menampilkan ${data.length} dari ${rawPest.length} entri`;
+}
+
+function applyPestFilters() {
+  const b = document.getElementById("pest-filter-bulan").value;
+  const l = document.getElementById("pest-filter-lokasi").value;
+  const t = document.getElementById("pest-filter-temuan").value.toLowerCase();
+  filteredPest = rawPest.filter(r =>
+    (!b || r["Bulan"] === b) &&
+    (!l || r["Lokasi"] === l) &&
+    (!t || (r["Temuan / Keluhan"] || "").toLowerCase().includes(t))
+  );
+  renderPestPage();
+}
+
+function clearPestFilters() {
+  ["pest-filter-bulan","pest-filter-lokasi"].forEach(id => document.getElementById(id).value = "");
+  document.getElementById("pest-filter-temuan").value = "";
+  filteredPest = [...rawPest];
+  renderPestPage();
+}
+
+function searchPestTable() {
+  const q = document.getElementById("pest-search").value.toLowerCase();
+  document.querySelectorAll("#pestTableBody tr").forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(q) ? "" : "none";
+  });
+}
+
+function sortPestTable(col) {
+  if (pestSortCol === col) pestSortDir *= -1; else { pestSortCol = col; pestSortDir = 1; }
+  const keys = ["Lokasi","Tanggal","Bulan","Temuan / Keluhan","Tindak Lanjut","Est Biaya"];
+  filteredPest.sort((a,b) => String(a[keys[col]]||"").localeCompare(String(b[keys[col]]||""),"id") * pestSortDir);
+  renderPestTable(filteredPest);
+}
+
+function togglePestChartType(btn, type) {
+  pestChartType = type;
+  btn.closest('.pill-group').querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  renderPestBarChart(filteredPest);
+}
+
+// ====================================================
+// PEDOMAN IH — PDF Upload & Download Portal
+// ====================================================
+const PEDOMAN_KEY = "pedoman_ih_files";
+
+function getPedomanFiles() {
+  try {
+    return JSON.parse(localStorage.getItem(PEDOMAN_KEY) || "[]");
+  } catch(e) { return []; }
+}
+
+function savePedomanFiles(files) {
+  try {
+    localStorage.setItem(PEDOMAN_KEY, JSON.stringify(files));
+  } catch(e) {
+    alert("Penyimpanan penuh. Harap hapus beberapa file terlebih dahulu.");
+  }
+}
+
+function handlePdfUpload(event) {
+  const files = event.target.files;
+  if (!files || !files.length) return;
+  const file = files[0];
+  if (file.type !== "application/pdf") {
+    alert("Hanya file PDF yang diizinkan.");
+    event.target.value = "";
+    return;
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    alert("Ukuran file maksimal 10 MB.");
+    event.target.value = "";
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    // Prompt untuk nama dan kategori
+    const namaDoc = prompt("Nama dokumen / judul pedoman:", file.name.replace(".pdf",""));
+    if (!namaDoc) { event.target.value = ""; return; }
+    const kategori = prompt("Kategori (Pedoman Umum / Prosedur Kerja / Regulasi / Formulir / Lainnya):", "Pedoman Umum") || "Lainnya";
+
+    const existing = getPedomanFiles();
+    existing.unshift({
+      id: Date.now(),
+      nama: namaDoc.trim(),
+      kategori: kategori.trim(),
+      filename: file.name,
+      size: file.size,
+      uploadDate: new Date().toLocaleDateString("id-ID", {day:"2-digit",month:"short",year:"numeric"}),
+      data: e.target.result,
+      downloads: 0
+    });
+    savePedomanFiles(existing);
+    event.target.value = "";
+    renderPedomanList();
+  };
+  reader.readAsDataURL(file);
+}
+
+function downloadPedoman(id) {
+  const files = getPedomanFiles();
+  const f = files.find(x => x.id === id);
+  if (!f) return;
+  f.downloads = (f.downloads || 0) + 1;
+  savePedomanFiles(files);
+
+  const link = document.createElement("a");
+  link.href = f.data;
+  link.download = f.filename || f.nama + ".pdf";
+  link.click();
+  renderPedomanList();
+}
+
+function deletePedoman(id) {
+  if (!confirm("Yakin ingin menghapus file ini?")) return;
+  const files = getPedomanFiles().filter(x => x.id !== id);
+  savePedomanFiles(files);
+  renderPedomanList();
+}
+
+function renderPedomanList() {
+  const q = (document.getElementById("pedomanSearch") || {}).value || "";
+  const kat = (document.getElementById("pedomanFilterKat") || {}).value || "";
+  let files = getPedomanFiles();
+
+  if (q) files = files.filter(f => f.nama.toLowerCase().includes(q.toLowerCase()) || f.kategori.toLowerCase().includes(q.toLowerCase()));
+  if (kat) files = files.filter(f => f.kategori === kat);
+
+  const allFiles = getPedomanFiles();
+  const totalDownloads = allFiles.reduce((s,f) => s + (f.downloads||0), 0);
+  document.getElementById("pedoman-count").textContent = allFiles.length;
+  document.getElementById("pedoman-downloads").textContent = fmtNum(totalDownloads);
+  document.getElementById("pedoman-last").textContent = allFiles.length ? allFiles[0].uploadDate : "—";
+
+  const grid = document.getElementById("pedomanGrid");
+  const empty = document.getElementById("pedomanEmpty");
+
+  if (!files.length) {
+    if (empty) empty.style.display = "flex";
+    grid.querySelectorAll(".pedoman-card").forEach(c => c.remove());
+    return;
+  }
+  if (empty) empty.style.display = "none";
+
+  grid.querySelectorAll(".pedoman-card").forEach(c => c.remove());
+  files.forEach(f => {
+    const card = document.createElement("div");
+    card.className = "pedoman-card";
+    card.innerHTML = `
+      <div class="pedoman-card-top">
+        <div class="pedoman-pdf-icon"><i class="fas fa-file-pdf"></i></div>
+        <div class="pedoman-card-info">
+          <div class="pedoman-card-name">${esc(f.nama)}</div>
+          <span class="pedoman-kat-badge">${esc(f.kategori)}</span>
+        </div>
+      </div>
+      <div class="pedoman-card-meta">
+        <span><i class="fas fa-calendar fa-xs"></i> ${f.uploadDate}</span>
+        <span><i class="fas fa-weight-hanging fa-xs"></i> ${(f.size/1024/1024).toFixed(1)} MB</span>
+        <span><i class="fas fa-download fa-xs"></i> ${f.downloads||0}x</span>
+      </div>
+      <div class="pedoman-card-actions">
+        <button class="btn-pedoman-dl" onclick="downloadPedoman(${f.id})">
+          <i class="fas fa-download"></i> Download
+        </button>
+        <button class="btn-pedoman-del" onclick="deletePedoman(${f.id})" title="Hapus">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>`;
+    grid.appendChild(card);
+  });
 }
