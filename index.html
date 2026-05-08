@@ -87,10 +87,9 @@
 <span class="nav-text">Drugs & Alcohol Test</span>
 </a>
 <div class="nav-label">Facility</div>
-<a href="#" class="nav-item placeholder" data-menu="pest" data-title="Pest & Rodent Control">
+<a href="#" class="nav-item" data-menu="pest" data-title="Pest & Rodent Control">
 <span class="nav-icon"><i class="fas fa-bug"></i></span>
 <span class="nav-text">Pest & Rodent Control</span>
-<span class="nav-badge">Soon</span>
 </a>
 <a href="#" class="nav-item placeholder" data-menu="p3k" data-title="P3K & AED Office">
 <span class="nav-icon"><i class="fas fa-kit-medical"></i></span>
@@ -103,10 +102,9 @@
 <span class="nav-text">Sebaran Alkes Kapal</span>
 <span class="nav-badge">Soon</span>
 </a>
-<a href="#" class="nav-item placeholder" data-menu="menu6" data-title="Menu Placeholder 6">
+<a href="#" class="nav-item" data-menu="menu6" data-title="Pedoman IH">
 <span class="nav-icon"><i class="fas fa-table-cells"></i></span>
 <span class="nav-text">Pedoman IH</span>
-<span class="nav-badge">Soon</span>
 </a>
 </nav>
 
@@ -410,13 +408,139 @@
 </section>
 
 <!-- ===== PLACEHOLDERS ===== -->
+<!-- ===== PAGE PEST & RODENT CONTROL ===== -->
 <section class="page-content" id="page-pest">
-<div class="placeholder-page">
-<div class="placeholder-icon"><i class="fas fa-bug"></i></div>
-<h2>Pest & Rodent Control</h2>
-<p>Dashboard ini sedang dalam pengembangan. Sheet data sudah tersedia di Google Sheets dan siap diisi.</p>
-<div class="placeholder-tag">Coming Soon</div>
-</div>
+
+  <div class="filter-bar">
+    <div class="filter-group">
+      <label>Bulan</label>
+      <select id="pest-filter-bulan" onchange="applyPestFilters()">
+        <option value="">Semua Bulan</option>
+        <option>Januari</option><option>Februari</option><option>Maret</option><option>April</option>
+        <option>Mei</option><option>Juni</option><option>Juli</option>
+        <option>Agustus</option><option>September</option><option>Oktober</option>
+        <option>November</option><option>Desember</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Lokasi</label>
+      <select id="pest-filter-lokasi" onchange="applyPestFilters()">
+        <option value="">Semua Lokasi</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Temuan</label>
+      <input type="text" id="pest-filter-temuan" placeholder="Cari temuan..." oninput="applyPestFilters()">
+    </div>
+    <button class="btn-clear" onclick="clearPestFilters()"><i class="fas fa-xmark"></i> Reset</button>
+  </div>
+
+  <!-- KPI -->
+  <div class="kpi-grid">
+    <div class="kpi-card blue">
+      <div class="kpi-icon"><i class="fas fa-calendar-check"></i></div>
+      <div class="kpi-body">
+        <div class="kpi-value" id="pest-total">0</div>
+        <div class="kpi-label">Total Pelaksanaan</div>
+      </div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-icon"><i class="fas fa-location-dot"></i></div>
+      <div class="kpi-body">
+        <div class="kpi-value" id="pest-lokasi">0</div>
+        <div class="kpi-label">Total Lokasi</div>
+      </div>
+    </div>
+    <div class="kpi-card orange">
+      <div class="kpi-icon"><i class="fas fa-triangle-exclamation"></i></div>
+      <div class="kpi-body">
+        <div class="kpi-value" id="pest-temuan">0</div>
+        <div class="kpi-label">Total Temuan</div>
+      </div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-icon"><i class="fas fa-bug"></i></div>
+      <div class="kpi-body">
+        <div class="kpi-value" id="pest-hama-dominan">—</div>
+        <div class="kpi-label">Hama Dominan</div>
+      </div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="kpi-icon"><i class="fas fa-sack-dollar"></i></div>
+      <div class="kpi-body">
+        <div class="kpi-value" id="pest-biaya">0</div>
+        <div class="kpi-label">Est. Total Biaya</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHART ROW 1 -->
+  <div class="chart-row">
+    <div class="chart-card">
+      <div class="chart-header">
+        <span class="chart-title"><i class="fas fa-chart-bar"></i> Frekuensi Pelaksanaan per Bulan</span>
+        <div class="pill-group">
+          <button class="pill active" onclick="togglePestChartType(this,'bar')">Bar</button>
+          <button class="pill" onclick="togglePestChartType(this,'line')">Line</button>
+        </div>
+      </div>
+      <div class="chart-body"><canvas id="pestBarChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <span class="chart-title"><i class="fas fa-chart-pie"></i> Distribusi per Lokasi</span>
+      </div>
+      <div class="chart-body"><canvas id="pestDonutChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- CHART ROW 2 -->
+  <div class="chart-row">
+    <div class="chart-card">
+      <div class="chart-header">
+        <span class="chart-title"><i class="fas fa-chart-column"></i> Top Temuan / Keluhan</span>
+      </div>
+      <div class="chart-body"><canvas id="pestTemuanChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <span class="chart-title"><i class="fas fa-chart-line"></i> Trend Est. Biaya per Bulan</span>
+      </div>
+      <div class="chart-body"><canvas id="pestBiayaChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- BOTTOM -->
+  <div class="bottom-row">
+    <div class="hazard-card">
+      <div class="chart-header">
+        <span class="chart-title"><i class="fas fa-clipboard-list"></i> Tindak Lanjut &amp; Rekomendasi</span>
+      </div>
+      <div id="pestTindakLanjutList" class="hazard-list"></div>
+    </div>
+    <div class="table-card">
+      <div class="chart-header">
+        <span class="chart-title"><i class="fas fa-table-list"></i> Data Pest &amp; Rodent Control</span>
+        <input type="text" id="pest-search" placeholder="Cari data..." oninput="searchPestTable()" class="search-input">
+      </div>
+      <div class="table-wrap">
+        <table class="data-table" id="pestTable">
+          <thead>
+            <tr>
+              <th onclick="sortPestTable(0)">Lokasi <i class="fas fa-sort fa-xs"></i></th>
+              <th onclick="sortPestTable(1)">Tanggal <i class="fas fa-sort fa-xs"></i></th>
+              <th onclick="sortPestTable(2)">Bulan <i class="fas fa-sort fa-xs"></i></th>
+              <th onclick="sortPestTable(3)">Temuan / Keluhan <i class="fas fa-sort fa-xs"></i></th>
+              <th onclick="sortPestTable(4)">Tindak Lanjut <i class="fas fa-sort fa-xs"></i></th>
+              <th onclick="sortPestTable(5)">Est. Biaya <i class="fas fa-sort fa-xs"></i></th>
+            </tr>
+          </thead>
+          <tbody id="pestTableBody"></tbody>
+        </table>
+      </div>
+      <div class="table-footer" id="pestTableFooter">Memuat data...</div>
+    </div>
+  </div>
 </section>
 <section class="page-content" id="page-p3k">
 <div class="placeholder-page">
@@ -434,13 +558,65 @@
 <div class="placeholder-tag">Coming Soon</div>
 </div>
 </section>
+<!-- ===== PAGE PEDOMAN IH ===== -->
 <section class="page-content" id="page-menu6">
-<div class="placeholder-page">
-<div class="placeholder-icon"><i class="fas fa-table-cells"></i></div>
-<h2>Pedoman IH Update</h2>
-<p>Modul belum tersedia. Hubungi tim HSSE untuk pengembangan lebih lanjut.</p>
-<div class="placeholder-tag">Coming Soon</div>
-</div>
+  <div class="pedoman-header-bar">
+    <div>
+      <h2 class="pedoman-title"><i class="fas fa-book-open" style="color:var(--sidebar-bg);margin-right:10px"></i>Portal Pedoman IH</h2>
+      <p class="pedoman-sub">Upload, simpan dan download file pedoman Industrial Hygiene</p>
+    </div>
+    <label class="btn-upload-pdf" for="pdfUploadInput">
+      <i class="fas fa-cloud-arrow-up"></i> Upload Pedoman PDF
+    </label>
+    <input type="file" id="pdfUploadInput" accept=".pdf" style="display:none" onchange="handlePdfUpload(event)">
+  </div>
+
+  <div class="pedoman-search-bar">
+    <div class="pedoman-search-wrap">
+      <i class="fas fa-magnifying-glass"></i>
+      <input type="text" id="pedomanSearch" placeholder="Cari nama pedoman atau kategori..." oninput="renderPedomanList()">
+    </div>
+    <select id="pedomanFilterKat" onchange="renderPedomanList()">
+      <option value="">Semua Kategori</option>
+      <option>Pedoman Umum</option>
+      <option>Prosedur Kerja</option>
+      <option>Regulasi</option>
+      <option>Formulir</option>
+      <option>Lainnya</option>
+    </select>
+  </div>
+
+  <div class="pedoman-stats-row">
+    <div class="pedoman-stat-card">
+      <i class="fas fa-file-pdf" style="color:#C62828"></i>
+      <div>
+        <div class="pedoman-stat-num" id="pedoman-count">0</div>
+        <div class="pedoman-stat-lbl">Total File</div>
+      </div>
+    </div>
+    <div class="pedoman-stat-card">
+      <i class="fas fa-download" style="color:#1565C0"></i>
+      <div>
+        <div class="pedoman-stat-num" id="pedoman-downloads">0</div>
+        <div class="pedoman-stat-lbl">Total Download</div>
+      </div>
+    </div>
+    <div class="pedoman-stat-card">
+      <i class="fas fa-clock" style="color:#E65100"></i>
+      <div>
+        <div class="pedoman-stat-num" id="pedoman-last">—</div>
+        <div class="pedoman-stat-lbl">Upload Terakhir</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="pedomanGrid" class="pedoman-grid">
+    <div class="pedoman-empty" id="pedomanEmpty">
+      <i class="fas fa-file-circle-plus" style="font-size:52px;color:var(--border);margin-bottom:18px;display:block"></i>
+      <p style="font-size:15px;font-weight:700;color:var(--text-muted)">Belum ada file pedoman</p>
+      <p style="font-size:13px;color:var(--text-muted);margin-top:6px">Klik tombol <strong>Upload Pedoman PDF</strong> untuk menambahkan file</p>
+    </div>
+  </div>
 </section>
 
 </main>
