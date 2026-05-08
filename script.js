@@ -728,12 +728,12 @@ function renderPestBiayaChart(data) {
 function renderPestTindakLanjut(data) {
   var el = document.getElementById("pestTindakLanjutList");
   var entries = data
-    .filter(function(r){ return (r["Tindak Lanjut"] || "").trim(); })
+    .filter(function(r){ return getPestTL(r); })
     .map(function(r){
       return {
-        lokasi: (r["Lokasi"] || "").trim() || "—",
-        tanggal: formatTanggalPelaksanaan(r["Tanggal"]),
-        tl: (r["Tindak Lanjut"] || "").trim()
+        lokasi : (r["Lokasi"] || "—").trim(),
+        tanggal: getPestTanggalDisplay(r),
+        tl     : getPestTL(r)
       };
     });
   if (!entries.length) {
@@ -745,12 +745,12 @@ function renderPestTindakLanjut(data) {
     return '<div class="hazard-item" style="align-items:flex-start;gap:10px">' +
       '<span class="hazard-rank ' + colors[i % colors.length] + '" style="margin-top:2px;flex-shrink:0">' + (i+1) + '</span>' +
       '<div style="flex:1;min-width:0">' +
-        '<div style="font-size:11px;color:var(--text-muted);font-weight:600;margin-bottom:2px">' +
+        '<div style="font-size:11px;color:var(--text-muted);font-weight:600;margin-bottom:3px">' +
           '<i class="fas fa-location-dot fa-xs" style="color:#1565C0;margin-right:3px"></i>' + esc(e.lokasi) +
           ' &nbsp;&middot;&nbsp; ' +
           '<i class="fas fa-calendar-day fa-xs" style="color:#E65100;margin-right:3px"></i>' + esc(e.tanggal) +
         '</div>' +
-        '<div class="hazard-name" style="white-space:normal;line-height:1.4">' + esc(e.tl) + '</div>' +
+        '<div class="hazard-name" style="white-space:normal;line-height:1.45;font-size:12.5px">' + esc(e.tl) + '</div>' +
       '</div>' +
     '</div>';
   }).join("");
@@ -774,18 +774,40 @@ function formatTanggalPelaksanaan(raw) {
   return `${dd} ${bln} ${yyyy}`;
 }
 
+// Helper: ambil nilai Tindak Lanjut dari baris apapun nama kolomnya
+function getPestTL(r) {
+  return (
+    r["Tindak Lanjut"] ||
+    r["Tindak Lanjut & Rekomendasi"] ||
+    r["Tindak Lanjut &amp; Rekomendasi"] ||
+    r["Tindak Lanjut dan Rekomendasi"] ||
+    r["Rekomendasi"] ||
+    r["Follow Up"] ||
+    r["follow up"] ||
+    ""
+  ).trim();
+}
+
+// Helper: tampilkan tanggal lengkap, fallback ke Bulan jika Tanggal kosong
+function getPestTanggalDisplay(r) {
+  const tgl = formatTanggalPelaksanaan(r["Tanggal"] || r["Tanggal Pelaksanaan"] || "");
+  if (tgl && tgl !== "—") return tgl;
+  // fallback: tampilkan bulan saja jika tanggal tidak ada
+  const bulan = (r["Bulan"] || r["Bulan Pelaksanaan"] || "").trim();
+  return bulan || "—";
+}
+
 function renderPestTable(data) {
   document.getElementById("pestTableBody").innerHTML = data.map(r => {
     const biaya = parseFloat(r["Est Biaya"] || 0);
-    const bulan = r["Bulan"] || "—";
-    const tglFormatted = formatTanggalPelaksanaan(r["Tanggal"]);
-    const tindakLanjut = (r["Tindak Lanjut"] || "—").trim();
+    const tglDisplay   = getPestTanggalDisplay(r);
+    const tindakLanjut = getPestTL(r) || "—";
+    const temuan       = (r["Temuan / Keluhan"] || r["Temuan"] || r["Keluhan"] || "—").trim();
     return `<tr>
       <td><strong style="color:var(--sidebar-bg)">${esc(r["Lokasi"]||"—")}</strong></td>
-      <td style="white-space:nowrap">${tglFormatted}</td>
-      <td><span style="background:#E3F2FD;color:#1565C0;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">${esc(bulan)}</span></td>
-      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis">${esc(r["Temuan / Keluhan"]||"—")}</td>
-      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis" title="${esc(tindakLanjut)}">${esc(tindakLanjut)}</td>
+      <td style="white-space:nowrap;font-weight:600">${esc(tglDisplay)}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis" title="${esc(temuan)}">${esc(temuan)}</td>
+      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis" title="${esc(tindakLanjut)}">${esc(tindakLanjut)}</td>
       <td style="text-align:right;font-weight:700;color:#6A1B9A">${biaya ? formatRupiah(biaya) : "—"}</td>
     </tr>`;
   }).join("");
@@ -820,7 +842,8 @@ function searchPestTable() {
 
 function sortPestTable(col) {
   if (pestSortCol === col) pestSortDir *= -1; else { pestSortCol = col; pestSortDir = 1; }
-  const keys = ["Lokasi","Tanggal","Bulan","Temuan / Keluhan","Tindak Lanjut","Est Biaya"];
+  // Kolom: 0=Lokasi, 1=Tanggal, 2=Temuan/Keluhan, 3=Tindak Lanjut, 4=Est Biaya
+  const keys = ["Lokasi","Tanggal","Temuan / Keluhan","Tindak Lanjut","Est Biaya"];
   filteredPest.sort((a,b) => String(a[keys[col]]||"").localeCompare(String(b[keys[col]]||""),"id") * pestSortDir);
   renderPestTable(filteredPest);
 }
