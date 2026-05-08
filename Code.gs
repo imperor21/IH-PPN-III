@@ -43,6 +43,7 @@ const PEST_HEADER_MAP = {
   "temuan"                            : "Temuan / Keluhan",
   "temuan / keluhan"                  : "Temuan / Keluhan",
   "temuan/keluhan"                    : "Temuan / Keluhan",
+  "temuan/ keluhan"                   : "Temuan / Keluhan",
   "keluhan"                           : "Temuan / Keluhan",
   "finding"                           : "Temuan / Keluhan",
   "tindak lanjut"                     : "Tindak Lanjut",
@@ -51,6 +52,9 @@ const PEST_HEADER_MAP = {
   "tindak lanjut dan rekomendasi"     : "Tindak Lanjut",
   "tindaklanjut"                      : "Tindak Lanjut",
   "tindak lanjut& rekomendasi"        : "Tindak Lanjut",
+  "tindak lanjut &rekomendasi"        : "Tindak Lanjut",
+  "tindaklanjut & rekomendasi"        : "Tindak Lanjut",
+  "tindaklanjut dan rekomendasi"      : "Tindak Lanjut",
   "rekomendasi"                       : "Tindak Lanjut",
   "follow up"                         : "Tindak Lanjut",
   "followup"                          : "Tindak Lanjut",
@@ -156,3 +160,26 @@ function buildResponse(data) {
 // ============================================================
 function testDoGet()   { Logger.log(doGet({ parameter: { sheet: "all"  } }).getContent()); }
 function testPestOnly(){ Logger.log(doGet({ parameter: { sheet: "pest" } }).getContent()); }
+
+// ============================================================
+// DEBUG HEADERS — jalankan ini jika data tidak muncul di dashboard
+// Akan menampilkan nama kolom ASLI dari sheet "Pest & Rodent"
+// beserta hasil normalisasinya
+// ============================================================
+function debugPestHeaders() {
+  const ss    = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_CONFIG.pest);
+  if (!sheet) { Logger.log("Sheet tidak ditemukan: " + SHEET_CONFIG.pest); return; }
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  Logger.log("=== NAMA KOLOM ASLI DI SHEET ===");
+  headers.forEach((h, i) => {
+    const clean = String(h).trim();
+    const normalized = PEST_HEADER_MAP[clean.toLowerCase()] || "(tidak di-mapping → pakai nama asli)";
+    Logger.log(`Kolom ${i+1}: "${clean}" → "${normalized}"`);
+  });
+  Logger.log("=== SAMPLE DATA BARIS 2 ===");
+  if (sheet.getLastRow() >= 2) {
+    const row = sheet.getRange(2, 1, 1, sheet.getLastColumn()).getValues()[0];
+    row.forEach((v, i) => Logger.log(`  [${i+1}] "${v}"`));
+  }
+}
