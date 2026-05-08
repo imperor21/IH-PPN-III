@@ -1,14 +1,17 @@
 /**
  * ============================================================
  *  HSE Marine Dashboard — Google Apps Script
- *  File: Code.gs
+ *  File: Code.gs  |  v2.0 (fixed + Pest & Rodent aktif)
  *
  *  CARA DEPLOY:
  *  1. Buka Google Sheets → Extensions → Apps Script
- *  2. Paste seluruh kode ini
+ *  2. Paste seluruh kode ini (ganti yang lama)
  *  3. Klik Deploy → New Deployment → Web App
  *  4. Execute as: Me | Who has access: Anyone
  *  5. Copy URL deployment → tempel ke script.js (API_URL)
+ *
+ *  STRUKTUR KOLOM SHEET "Pest & Rodent":
+ *  | Lokasi | Tanggal | Bulan | Temuan / Keluhan | Tindak Lanjut | Est Biaya |
  * ============================================================
  */
 
@@ -25,33 +28,52 @@ const SHEET_CONFIG = {
 };
 
 // ============================================================
+// NORMALISASI HEADER PEST
+// Mapping fleksibel: header apapun di spreadsheet → nama standar
+// ============================================================
+const PEST_HEADER_MAP = {
+  "lokasi"                       : "Lokasi",
+  "location"                     : "Lokasi",
+  "tanggal"                      : "Tanggal",
+  "tanggal pelaksanaan"          : "Tanggal",
+  "date"                         : "Tanggal",
+  "bulan"                        : "Bulan",
+  "bulan pelaksanaan"            : "Bulan",
+  "month"                        : "Bulan",
+  "temuan"                       : "Temuan / Keluhan",
+  "temuan / keluhan"             : "Temuan / Keluhan",
+  "temuan/keluhan"               : "Temuan / Keluhan",
+  "keluhan"                      : "Temuan / Keluhan",
+  "finding"                      : "Temuan / Keluhan",
+  "tindak lanjut"                : "Tindak Lanjut",
+  "tindak lanjut & rekomendasi"  : "Tindak Lanjut",
+  "tindaklanjut"                 : "Tindak Lanjut",
+  "rekomendasi"                  : "Tindak Lanjut",
+  "follow up"                    : "Tindak Lanjut",
+  "est biaya"                    : "Est Biaya",
+  "est. biaya"                   : "Est Biaya",
+  "estimasi biaya"               : "Est Biaya",
+  "biaya"                        : "Est Biaya",
+  "cost"                         : "Est Biaya",
+  "budget"                       : "Est Biaya"
+};
+
+// ============================================================
 // MAIN HANDLER
 // ============================================================
 function doGet(e) {
   const params = e && e.parameter ? e.parameter : {};
-  const sheet  = params.sheet || "all";   // ?sheet=hra  OR  all
+  const sheet  = params.sheet || "all";
 
   try {
-    let payload = {};
+    const payload = {};
 
-    if (sheet === "all" || sheet === "hra") {
-      payload.hra = getSheetData(SHEET_CONFIG.hra);
-    }
-    if (sheet === "all" || sheet === "dat") {
-      payload.dat = getSheetData(SHEET_CONFIG.dat);
-    }
-    if (sheet === "all" || sheet === "pest") {
-      payload.pest = getSheetData(SHEET_CONFIG.pest);
-    }
-    if (sheet === "all" || sheet === "p3k") {
-      payload.p3k = getSheetData(SHEET_CONFIG.p3k);
-    }
-    if (sheet === "all" || sheet === "menu5") {
-      payload.menu5 = getSheetData(SHEET_CONFIG.menu5);
-    }
-    if (sheet === "all" || sheet === "menu6") {
-      payload.menu6 = getSheetData(SHEET_CONFIG.menu6);
-    }
+    if (sheet === "all" || sheet === "hra")   payload.hra   = getSheetData(SHEET_CONFIG.hra,   null);
+    if (sheet === "all" || sheet === "dat")   payload.dat   = getSheetData(SHEET_CONFIG.dat,   null);
+    if (sheet === "all" || sheet === "pest")  payload.pest  = getSheetData(SHEET_CONFIG.pest,  PEST_HEADER_MAP);
+    if (sheet === "all" || sheet === "p3k")   payload.p3k   = getSheetData(SHEET_CONFIG.p3k,   null);
+    if (sheet === "all" || sheet === "menu5") payload.menu5 = getSheetData(SHEET_CONFIG.menu5, null);
+    if (sheet === "all" || sheet === "menu6") payload.menu6 = getSheetData(SHEET_CONFIG.menu6, null);
 
     payload.status    = "ok";
     payload.timestamp = new Date().toISOString();
@@ -59,79 +81,59 @@ function doGet(e) {
     return buildResponse(payload);
 
   } catch (err) {
-    return buildResponse({
-      status: "error",
-      message: err.toString(),
-      timestamp: new Date().toISOString()
-    });
+    return buildResponse({ status: "error", message: err.toString(), timestamp: new Date().toISOString() });
   }
 }
 
 // ============================================================
-// HELPER: Baca sheet dan konversi ke array of objects
+// HELPER: Baca sheet → array of objects
+// headerMap: normalisasi nama kolom (null = pakai nama asli)
 // ============================================================
-function getSheetData(sheetName) {
+function getSheetData(sheetName, headerMap) {
   const ss    = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName(sheetName);
-
-  if (!sheet) {
-    return [];  // Sheet tidak ada → kembalikan array kosong
-  }
+  if (!sheet) return [];
 
   const lastRow = sheet.getLastRow();
   const lastCol = sheet.getLastColumn();
+  if (lastRow < 2 || lastCol < 1) return [];
 
-  if (lastRow < 2 || lastCol < 1) return [];  // Hanya header atau kosong
-
-  const range   = sheet.getRange(1, 1, lastRow, lastCol);
-  const values  = range.getValues();
-  const headers = values[0].map(h => String(h).trim());
+  const values  = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+  const headers = values[0].map(h => {
+    const clean = String(h).trim();
+    if (!headerMap) return clean;
+    return headerMap[clean.toLowerCase()] || clean;
+  });
 
   const rows = [];
   for (let i = 1; i < values.length; i++) {
     const row = values[i];
-
-    // Skip baris kosong (semua kolom kosong)
-    const isEmpty = row.every(cell => cell === "" || cell === null || cell === undefined);
-    if (isEmpty) continue;
+    if (row.every(c => c === "" || c === null || c === undefined)) continue;
 
     const obj = {};
     headers.forEach((header, j) => {
       let val = row[j];
-
-      // Format tanggal jika Date object
       if (val instanceof Date) {
         val = Utilities.formatDate(val, Session.getScriptTimeZone(), "dd/MM/yyyy");
       }
-
-      // Konversi angka agar tetap number
-      if (typeof val === "number") {
-        obj[header] = val;
-      } else {
-        obj[header] = String(val === null || val === undefined ? "" : val).trim();
-      }
+      obj[header] = (typeof val === "number") ? val : String(val === null || val === undefined ? "" : val).trim();
     });
-
     rows.push(obj);
   }
-
   return rows;
 }
 
 // ============================================================
-// HELPER: Build JSON response dengan CORS headers
+// HELPER: JSON response
 // ============================================================
 function buildResponse(data) {
-  const output = ContentService
+  return ContentService
     .createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
-  return output;
 }
 
 // ============================================================
-// TEST FUNCTION — jalankan manual untuk debug
+// TEST — jalankan di editor Apps Script untuk debug
 // ============================================================
-function testDoGet() {
-  const result = doGet({ parameter: { sheet: "all" } });
-  Logger.log(result.getContent());
-}
+function testDoGet()   { Logger.log(doGet({ parameter: { sheet: "all"  } }).getContent()); }
+function testPestOnly(){ Logger.log(doGet({ parameter: { sheet: "pest" } }).getContent()); }
