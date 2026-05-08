@@ -32,30 +32,34 @@ const SHEET_CONFIG = {
 // Mapping fleksibel: header apapun di spreadsheet → nama standar
 // ============================================================
 const PEST_HEADER_MAP = {
-  "lokasi"                       : "Lokasi",
-  "location"                     : "Lokasi",
-  "tanggal"                      : "Tanggal",
-  "tanggal pelaksanaan"          : "Tanggal",
-  "date"                         : "Tanggal",
-  "bulan"                        : "Bulan",
-  "bulan pelaksanaan"            : "Bulan",
-  "month"                        : "Bulan",
-  "temuan"                       : "Temuan / Keluhan",
-  "temuan / keluhan"             : "Temuan / Keluhan",
-  "temuan/keluhan"               : "Temuan / Keluhan",
-  "keluhan"                      : "Temuan / Keluhan",
-  "finding"                      : "Temuan / Keluhan",
-  "tindak lanjut"                : "Tindak Lanjut",
-  "tindak lanjut & rekomendasi"  : "Tindak Lanjut",
-  "tindaklanjut"                 : "Tindak Lanjut",
-  "rekomendasi"                  : "Tindak Lanjut",
-  "follow up"                    : "Tindak Lanjut",
-  "est biaya"                    : "Est Biaya",
-  "est. biaya"                   : "Est Biaya",
-  "estimasi biaya"               : "Est Biaya",
-  "biaya"                        : "Est Biaya",
-  "cost"                         : "Est Biaya",
-  "budget"                       : "Est Biaya"
+  "lokasi"                            : "Lokasi",
+  "location"                          : "Lokasi",
+  "tanggal"                           : "Tanggal",
+  "tanggal pelaksanaan"               : "Tanggal",
+  "date"                              : "Tanggal",
+  "bulan"                             : "Bulan",
+  "bulan pelaksanaan"                 : "Bulan",
+  "month"                             : "Bulan",
+  "temuan"                            : "Temuan / Keluhan",
+  "temuan / keluhan"                  : "Temuan / Keluhan",
+  "temuan/keluhan"                    : "Temuan / Keluhan",
+  "keluhan"                           : "Temuan / Keluhan",
+  "finding"                           : "Temuan / Keluhan",
+  "tindak lanjut"                     : "Tindak Lanjut",
+  "tindak lanjut & rekomendasi"       : "Tindak Lanjut",
+  "tindak lanjut &amp; rekomendasi"   : "Tindak Lanjut",
+  "tindak lanjut dan rekomendasi"     : "Tindak Lanjut",
+  "tindaklanjut"                      : "Tindak Lanjut",
+  "tindak lanjut& rekomendasi"        : "Tindak Lanjut",
+  "rekomendasi"                       : "Tindak Lanjut",
+  "follow up"                         : "Tindak Lanjut",
+  "followup"                          : "Tindak Lanjut",
+  "est biaya"                         : "Est Biaya",
+  "est. biaya"                        : "Est Biaya",
+  "estimasi biaya"                    : "Est Biaya",
+  "biaya"                             : "Est Biaya",
+  "cost"                              : "Est Biaya",
+  "budget"                            : "Est Biaya"
 };
 
 // ============================================================
@@ -105,6 +109,9 @@ function getSheetData(sheetName, headerMap) {
     return headerMap[clean.toLowerCase()] || clean;
   });
 
+  const BULAN_ID = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+  const tz = Session.getScriptTimeZone();
+
   const rows = [];
   for (let i = 1; i < values.length; i++) {
     const row = values[i];
@@ -114,10 +121,22 @@ function getSheetData(sheetName, headerMap) {
     headers.forEach((header, j) => {
       let val = row[j];
       if (val instanceof Date) {
-        val = Utilities.formatDate(val, Session.getScriptTimeZone(), "dd/MM/yyyy");
+        // Format tanggal → dd/MM/yyyy
+        val = Utilities.formatDate(val, tz, "dd/MM/yyyy");
       }
       obj[header] = (typeof val === "number") ? val : String(val === null || val === undefined ? "" : val).trim();
     });
+
+    // Auto-derive Bulan dari Tanggal jika kolom Bulan kosong (khusus Pest)
+    if (headerMap && (!obj["Bulan"] || obj["Bulan"] === "")) {
+      const tgl = obj["Tanggal"] || "";
+      const m = tgl.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+      if (m) {
+        const monthIdx = parseInt(m[2], 10) - 1;
+        if (monthIdx >= 0 && monthIdx < 12) obj["Bulan"] = BULAN_ID[monthIdx];
+      }
+    }
+
     rows.push(obj);
   }
   return rows;
