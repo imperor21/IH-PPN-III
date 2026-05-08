@@ -726,37 +726,66 @@ function renderPestBiayaChart(data) {
 }
 
 function renderPestTindakLanjut(data) {
-  const tlMap = {};
-  data.forEach(r => {
-    const tl = (r["Tindak Lanjut"] || "").trim();
-    if (tl) tlMap[tl] = (tlMap[tl] || 0) + 1;
-  });
-  const top = Object.entries(tlMap).sort((a,b) => b[1]-a[1]).slice(0,6);
-  const colors = ['r1','r2','r3','r4','r5','r1'];
-  const el = document.getElementById("pestTindakLanjutList");
-  if (!top.length) {
-    el.innerHTML = '<div class="hazard-empty">Tidak ada data tindak lanjut</div>';
+  var el = document.getElementById("pestTindakLanjutList");
+  var entries = data
+    .filter(function(r){ return (r["Tindak Lanjut"] || "").trim(); })
+    .map(function(r){
+      return {
+        lokasi: (r["Lokasi"] || "").trim() || "—",
+        tanggal: formatTanggalPelaksanaan(r["Tanggal"]),
+        tl: (r["Tindak Lanjut"] || "").trim()
+      };
+    });
+  if (!entries.length) {
+    el.innerHTML = '<div class="hazard-empty">Tidak ada data tindak lanjut &amp; rekomendasi</div>';
     return;
   }
-  el.innerHTML = top.map((e,i) => `
-    <div class="hazard-item">
-      <span class="hazard-rank ${colors[i]}">${i+1}</span>
-      <span class="hazard-name">${esc(e[0])}</span>
-      <span class="hazard-count">${e[1]}x</span>
-    </div>`).join("");
+  var colors = ['r1','r2','r3','r4','r5'];
+  el.innerHTML = entries.slice(0,10).map(function(e,i){
+    return '<div class="hazard-item" style="align-items:flex-start;gap:10px">' +
+      '<span class="hazard-rank ' + colors[i % colors.length] + '" style="margin-top:2px;flex-shrink:0">' + (i+1) + '</span>' +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="font-size:11px;color:var(--text-muted);font-weight:600;margin-bottom:2px">' +
+          '<i class="fas fa-location-dot fa-xs" style="color:#1565C0;margin-right:3px"></i>' + esc(e.lokasi) +
+          ' &nbsp;&middot;&nbsp; ' +
+          '<i class="fas fa-calendar-day fa-xs" style="color:#E65100;margin-right:3px"></i>' + esc(e.tanggal) +
+        '</div>' +
+        '<div class="hazard-name" style="white-space:normal;line-height:1.4">' + esc(e.tl) + '</div>' +
+      '</div>' +
+    '</div>';
+  }).join("");
+}
+
+function formatTanggalPelaksanaan(raw) {
+  if (!raw || raw === "—") return "—";
+  const BULAN_ID = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+  // Coba parse berbagai format: dd/MM/yyyy, yyyy-MM-dd, dd-MM-yyyy
+  let d = null;
+  const s = String(raw).trim();
+  const m1 = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  const m2 = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+  if (m1) d = new Date(+m1[3], +m1[2]-1, +m1[1]);
+  else if (m2) d = new Date(+m2[1], +m2[2]-1, +m2[3]);
+  else { d = new Date(s); }
+  if (!d || isNaN(d.getTime())) return esc(s);
+  const dd   = String(d.getDate()).padStart(2,"0");
+  const bln  = BULAN_ID[d.getMonth()];
+  const yyyy = d.getFullYear();
+  return `${dd} ${bln} ${yyyy}`;
 }
 
 function renderPestTable(data) {
   document.getElementById("pestTableBody").innerHTML = data.map(r => {
     const biaya = parseFloat(r["Est Biaya"] || 0);
-    // Bulan: coba kolom "Bulan" dulu (sudah dinormalisasi)
     const bulan = r["Bulan"] || "—";
+    const tglFormatted = formatTanggalPelaksanaan(r["Tanggal"]);
+    const tindakLanjut = (r["Tindak Lanjut"] || "—").trim();
     return `<tr>
       <td><strong style="color:var(--sidebar-bg)">${esc(r["Lokasi"]||"—")}</strong></td>
-      <td>${esc(r["Tanggal"]||"—")}</td>
+      <td style="white-space:nowrap">${tglFormatted}</td>
       <td><span style="background:#E3F2FD;color:#1565C0;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">${esc(bulan)}</span></td>
       <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis">${esc(r["Temuan / Keluhan"]||"—")}</td>
-      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis">${esc(r["Tindak Lanjut"]||"—")}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis" title="${esc(tindakLanjut)}">${esc(tindakLanjut)}</td>
       <td style="text-align:right;font-weight:700;color:#6A1B9A">${biaya ? formatRupiah(biaya) : "—"}</td>
     </tr>`;
   }).join("");
@@ -862,6 +891,74 @@ function handlePdfUpload(event) {
   reader.readAsDataURL(file);
 }
 
+function viewPedoman(id) {
+  const files = getPedomanFiles();
+  const f = files.find(x => x.id === id);
+  if (!f) return;
+
+  // Buat modal overlay untuk view PDF
+  const existing = document.getElementById("pedomanViewModal");
+  if (existing) {
+    // Revoke blob URL lama jika ada
+    const oldIframe = existing.querySelector("iframe");
+    if (oldIframe && oldIframe._blobUrl) URL.revokeObjectURL(oldIframe._blobUrl);
+    existing.remove();
+  }
+
+  // Konversi base64 data: URL → Blob URL (agar tidak diblokir Chrome/Firefox)
+  let blobUrl = "";
+  try {
+    const base64 = f.data.split(",")[1];
+    const binary = atob(base64);
+    const bytes  = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const blob = new Blob([bytes], { type: "application/pdf" });
+    blobUrl = URL.createObjectURL(blob);
+  } catch(e) {
+    alert("Gagal membuka file PDF. Coba download terlebih dahulu.");
+    return;
+  }
+
+  const modal = document.createElement("div");
+  modal.id = "pedomanViewModal";
+  modal.style.cssText = "position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.72);display:flex;align-items:center;justify-content:center;padding:16px";
+
+  const HEADER_H = 56; // px, tinggi header modal
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:14px;width:100%;max-width:960px;height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.4);overflow:hidden">
+      <div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:10px 20px;height:${HEADER_H}px;background:var(--sidebar-bg,#1565C0);color:#fff;gap:12px">
+        <div style="display:flex;align-items:center;gap:10px;min-width:0;overflow:hidden">
+          <i class="fas fa-file-pdf" style="font-size:18px;color:#ff6b6b;flex-shrink:0"></i>
+          <div style="min-width:0;overflow:hidden">
+            <div style="font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(f.nama)}</div>
+            <div style="font-size:11px;opacity:.75">${esc(f.kategori)} &nbsp;·&nbsp; ${(f.size/1024/1024).toFixed(1)} MB &nbsp;·&nbsp; ${esc(f.uploadDate)}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0">
+          <button onclick="downloadPedoman(${f.id})" style="background:rgba(255,255,255,.18);border:none;color:#fff;padding:7px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px;font-family:inherit">
+            <i class="fas fa-download"></i> Download
+          </button>
+          <button id="pedomanViewClose" style="background:rgba(255,255,255,.18);border:none;color:#fff;padding:7px 13px;border-radius:8px;cursor:pointer;font-size:15px;font-weight:700;font-family:inherit" title="Tutup">
+            <i class="fas fa-xmark"></i>
+          </button>
+        </div>
+      </div>
+      <div style="flex:1;background:#525659;overflow:hidden">
+        <iframe id="pedomanViewIframe" src="${blobUrl}" style="width:100%;height:100%;display:block;border:none;" title="${esc(f.nama)}"></iframe>
+      </div>
+    </div>`;
+
+  // Simpan blobUrl di iframe element untuk cleanup nanti
+  const closeModal = function() {
+    URL.revokeObjectURL(blobUrl);
+    modal.remove();
+  };
+
+  modal.addEventListener("click", function(ev) { if (ev.target === modal) closeModal(); });
+  modal.querySelector("#pedomanViewClose").addEventListener("click", closeModal);
+  document.body.appendChild(modal);
+}
+
 function downloadPedoman(id) {
   const files = getPedomanFiles();
   const f = files.find(x => x.id === id);
@@ -925,6 +1022,9 @@ function renderPedomanList() {
         <span><i class="fas fa-download fa-xs"></i> ${f.downloads||0}x</span>
       </div>
       <div class="pedoman-card-actions">
+        <button class="btn-pedoman-view" onclick="viewPedoman(${f.id})">
+          <i class="fas fa-eye"></i> View
+        </button>
         <button class="btn-pedoman-dl" onclick="downloadPedoman(${f.id})">
           <i class="fas fa-download"></i> Download
         </button>
