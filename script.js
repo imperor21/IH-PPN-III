@@ -1,13 +1,25 @@
-/* HSE Marine Dashboard — script.js v3.0 SECURE */
-/* ✅ Password DIHAPUS dari sini — login via server (Code.gs) */
-/* ✅ Setiap request data bawa token dari server              */
-/* ✅ Token expired otomatis 8 jam                           */
-/* ✅ Rate limiting: kunci setelah 5x salah                  */
+/* HSE Marine Dashboard — script.js v3.1 CORS FIX */
+/* ✅ Semua fetch pakai Content-Type: text/plain + redirect:follow */
+/* ✅ Fix CORS untuk GitHub Pages → Google Apps Script           */
 
 // ============================================================
 // ⚠️  GANTI URL INI DENGAN URL GOOGLE APPS SCRIPT ANDA
 // ============================================================
-const API_URL = "https://script.google.com/macros/s/AKfycbx3pYfV1hZw9zHy8L5LOPKQIJ5aAjJ6LQtPkuIjQnkl9onO61Ci6Xv2Mrknazb776JGJg/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbx8NW-J5eCkQLfueB-bC7BYATgFG_Rq-gJh7TE8l0XKBpvt78xgQ5ZJ2Nlf-Nd9IQUssQ/exec";
+
+// ============================================================
+// HELPER FETCH — satu fungsi untuk semua request ke GAS
+// Solusi CORS: pakai text/plain + redirect:follow
+// ============================================================
+async function gasPost(payload) {
+  const res = await fetch(API_URL, {
+    method:   "POST",
+    redirect: "follow",
+    headers:  { "Content-Type": "text/plain;charset=utf-8" },
+    body:     JSON.stringify(payload)
+  });
+  return res.json();
+}
 
 // ============================================================
 // 🗄️  IndexedDB
@@ -58,13 +70,13 @@ async function idbDelete(store, id) {
 }
 
 // ============================================================
-// 🔐 AUTH — Token disimpan di sessionStorage (hilang saat tab ditutup)
+// 🔐 AUTH — Token disimpan di sessionStorage
 // ============================================================
-function getToken()              { return sessionStorage.getItem("ppn_token"); }
-function getSession()            { const s = sessionStorage.getItem("ppn_user"); return s ? JSON.parse(s) : null; }
+function getToken()               { return sessionStorage.getItem("ppn_token"); }
+function getSession()             { const s = sessionStorage.getItem("ppn_user"); return s ? JSON.parse(s) : null; }
 function saveSession(data, token) {
-  sessionStorage.setItem("ppn_token", token);
-  sessionStorage.setItem("ppn_user",  JSON.stringify({ displayName: data.displayName, role: data.role }));
+  sessionStorage.setItem("ppn_token",      token);
+  sessionStorage.setItem("ppn_user",       JSON.stringify({ displayName: data.displayName, role: data.role }));
   sessionStorage.setItem("ppn_login_time", Date.now().toString());
 }
 function clearSession() {
@@ -73,15 +85,11 @@ function clearSession() {
   sessionStorage.removeItem("ppn_login_time");
 }
 
-// Cek apakah sesi masih valid (maks 8 jam)
 function isSessionValid() {
   const token     = getToken();
   const loginTime = parseInt(sessionStorage.getItem("ppn_login_time") || "0");
   if (!token) return false;
-  if (Date.now() - loginTime > 8 * 60 * 60 * 1000) {
-    clearSession();
-    return false;
-  }
+  if (Date.now() - loginTime > 8 * 60 * 60 * 1000) { clearSession(); return false; }
   return true;
 }
 
@@ -97,9 +105,9 @@ function checkAuth() {
 }
 
 // ============================================================
-// 🔐 LOGIN — kirim ke server, terima token
+// 🔐 LOGIN
 // ============================================================
-let loginAttempts = 0;
+let loginAttempts    = 0;
 let loginLockedUntil = 0;
 
 async function doLogin() {
@@ -107,7 +115,6 @@ async function doLogin() {
   const password = document.getElementById("loginPassword").value;
   const btn      = document.getElementById("btnLogin");
 
-  // Cek rate limiting lokal (cadangan)
   if (Date.now() < loginLockedUntil) {
     const sisa = Math.ceil((loginLockedUntil - Date.now()) / 60000);
     showLoginError("Terlalu banyak percobaan. Tunggu " + sisa + " menit.");
@@ -120,22 +127,14 @@ async function doLogin() {
   btn.disabled  = true;
 
   try {
-    const res = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "login", username, password })
-    });
-    const data = await res.json();
+    const data = await gasPost({ action: "login", username, password });
 
     if (data.status === "ok") {
-      // Login berhasil
       loginAttempts = 0;
       saveSession(data, data.token);
       document.getElementById("loginError").style.display = "none";
       document.getElementById("loginOverlay").classList.add("hidden");
       document.getElementById("sidebarUsername").textContent = data.displayName;
-      btn.innerHTML = '<i class="fas fa-right-to-bracket"></i> Masuk';
-      btn.disabled  = false;
       loadData();
 
     } else if (data.status === "locked") {
@@ -144,7 +143,6 @@ async function doLogin() {
       shakeCard();
 
     } else {
-      // Login gagal
       loginAttempts++;
       if (loginAttempts >= 5) loginLockedUntil = Date.now() + 15 * 60 * 1000;
       showLoginError(data.message || "Username atau password salah.");
@@ -153,6 +151,7 @@ async function doLogin() {
 
   } catch (err) {
     showLoginError("Tidak dapat terhubung ke server. Periksa koneksi internet.");
+    console.error("Login error:", err);
   }
 
   btn.innerHTML = '<i class="fas fa-right-to-bracket"></i> Masuk';
@@ -166,18 +165,13 @@ function shakeCard() {
 }
 
 // ============================================================
-// 🚪 LOGOUT — beritahu server & hapus sesi lokal
+// 🚪 LOGOUT
 // ============================================================
 async function doLogout() {
   if (!confirm("Yakin ingin logout?")) return;
   const token = getToken();
-  // Beritahu server untuk hapus token (best-effort, tidak perlu tunggu)
   if (token) {
-    fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "logout", token })
-    }).catch(() => {});
+    gasPost({ action: "logout", token }).catch(() => {});
   }
   clearSession();
   document.getElementById("loginUsername").value = "";
@@ -207,7 +201,7 @@ let filteredHRA = [], filteredDAT = [], filteredPest = [];
 let hraBarChart, hraDonutChart, datBarChart, datDonutChart;
 let pestBarChart, pestDonutChart, pestTemuanChart, pestBiayaChart;
 let hraSortCol = -1, hraSortDir = 1, datSortCol = -1, datSortDir = 1, pestSortCol = -1, pestSortDir = 1;
-let hraChartType = 'bar', datChartType = 'bar', pestChartType = 'bar';
+let hraChartType = "bar", datChartType = "bar", pestChartType = "bar";
 
 // ====== INIT ======
 document.addEventListener("DOMContentLoaded", () => {
@@ -225,7 +219,6 @@ document.addEventListener("DOMContentLoaded", () => {
   if (isSessionValid()) {
     loadData();
     setInterval(() => {
-      // Auto-cek sesi tiap 5 menit
       if (!isSessionValid()) {
         alert("Sesi Anda telah habis (8 jam). Silakan login kembali.");
         clearSession();
@@ -283,7 +276,7 @@ function closeSidebar() {
   document.getElementById("sidebarOverlay").classList.remove("show");
 }
 
-// ====== DATA LOAD — dengan token ======
+// ====== DATA LOAD ======
 async function loadData() {
   if (!isSessionValid()) {
     showError("Sesi habis. Silakan login kembali.");
@@ -292,12 +285,7 @@ async function loadData() {
   }
   showLoading(true); hideError();
   try {
-    const res = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "getData", sheet: "all", token: getToken() })
-    });
-    const data = await res.json();
+    const data = await gasPost({ action: "getData", sheet: "all", token: getToken() });
 
     if (data.status === "unauthorized") {
       clearSession();
@@ -314,6 +302,7 @@ async function loadData() {
     filteredHRA  = [...rawHRA];
     filteredDAT  = [...rawDAT];
     filteredPest = [...rawPest];
+
     const now = new Date();
     document.getElementById("lastUpdated").textContent =
       "Update: " + now.toLocaleTimeString("id-ID", { hour:"2-digit", minute:"2-digit" });
@@ -333,7 +322,7 @@ async function loadData() {
 
 function showLoading(v) { document.getElementById("loadingOverlay").style.display = v ? "flex" : "none"; }
 function showError(msg) { document.getElementById("errorBanner").style.display="flex"; document.getElementById("errorMsg").textContent=msg; }
-function hideError() { document.getElementById("errorBanner").style.display="none"; }
+function hideError()    { document.getElementById("errorBanner").style.display="none"; }
 
 // ====================================================
 // HRA PAGE
@@ -364,7 +353,7 @@ function renderHRABarChart(data) {
   if (hraBarChart) hraBarChart.destroy();
   hraBarChart = new Chart(ctx, {
     type:hraChartType,
-    data:{labels:BULAN_ORDER,datasets:[{label:"Monitoring",data:BULAN_ORDER.map(b=>counts[b]),backgroundColor:hraChartType==='line'?'rgba(21,101,192,0.12)':'#1976D2',borderColor:'#1565C0',borderWidth:hraChartType==='line'?2.5:1,borderRadius:hraChartType==='bar'?6:0,fill:hraChartType==='line',tension:0.4,pointBackgroundColor:'#1565C0',pointRadius:hraChartType==='line'?4:0}]},
+    data:{labels:BULAN_ORDER,datasets:[{label:"Monitoring",data:BULAN_ORDER.map(b=>counts[b]),backgroundColor:hraChartType==="line"?"rgba(21,101,192,0.12)":"#1976D2",borderColor:"#1565C0",borderWidth:hraChartType==="line"?2.5:1,borderRadius:hraChartType==="bar"?6:0,fill:hraChartType==="line",tension:0.4,pointBackgroundColor:"#1565C0",pointRadius:hraChartType==="line"?4:0}]},
     options:chartOpts()
   });
 }
@@ -374,10 +363,10 @@ function renderHRADonutChart(data) {
   data.forEach(r=>{const f=r["Jenis Fleet"];if(f&&fleets[f]!==undefined)fleets[f]++;});
   const ctx = document.getElementById("hraDonutChart").getContext("2d");
   if (hraDonutChart) hraDonutChart.destroy();
-  hraDonutChart = new Chart(ctx,{type:"doughnut",data:{labels:Object.keys(fleets),datasets:[{data:Object.values(fleets),backgroundColor:['#1976D2','#43A047','#FB8C00','#8E24AA'],borderColor:'#fff',borderWidth:3,hoverOffset:8}]},options:donutOpts()});
+  hraDonutChart = new Chart(ctx,{type:"doughnut",data:{labels:Object.keys(fleets),datasets:[{data:Object.values(fleets),backgroundColor:["#1976D2","#43A047","#FB8C00","#8E24AA"],borderColor:"#fff",borderWidth:3,hoverOffset:8}]},options:donutOpts()});
 }
 
-function toggleHRAChartType(btn,type){hraChartType=type;btn.closest('.pill-group').querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));btn.classList.add('active');renderHRABarChart(filteredHRA);}
+function toggleHRAChartType(btn,type){hraChartType=type;btn.closest(".pill-group").querySelectorAll(".pill").forEach(p=>p.classList.remove("active"));btn.classList.add("active");renderHRABarChart(filteredHRA);}
 
 function renderHRAHazard() {
   const bulan=document.getElementById("hra-hazard-bulan").value;
@@ -425,16 +414,11 @@ function renderDATPage() {
   renderDATTable(data);
 }
 
-function renderDATBarChart(data){const crews={};BULAN_ORDER.forEach(b=>crews[b]=0);data.forEach(r=>{const b=r["Bulan Pelaksanaan"];if(b&&crews[b]!==undefined)crews[b]+=parseInt(r["Total Crew Diperiksa"]||0);});const ctx=document.getElementById("datBarChart").getContext("2d");if(datBarChart)datBarChart.destroy();datBarChart=new Chart(ctx,{type:datChartType,data:{labels:BULAN_ORDER,datasets:[{label:"Crew Diperiksa",data:BULAN_ORDER.map(b=>crews[b]),backgroundColor:datChartType==='line'?'rgba(46,125,50,0.12)':'#43A047',borderColor:'#2E7D32',borderWidth:datChartType==='line'?2.5:1,borderRadius:datChartType==='bar'?6:0,fill:datChartType==='line',tension:0.4,pointBackgroundColor:'#2E7D32',pointRadius:datChartType==='line'?4:0}]},options:chartOpts()});}
-
-function renderDATDonutChart(data,crew,pos){const neg=crew-pos;const ctx=document.getElementById("datDonutChart").getContext("2d");if(datDonutChart)datDonutChart.destroy();datDonutChart=new Chart(ctx,{type:"doughnut",data:{labels:["Negatif","Positif"],datasets:[{data:[neg,pos],backgroundColor:['#43A047','#E53935'],borderColor:'#fff',borderWidth:3,hoverOffset:8}]},options:donutOpts()});}
-
-function toggleDATChartType(btn,type){datChartType=type;btn.closest('.pill-group').querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));btn.classList.add('active');renderDATBarChart(filteredDAT);}
-
+function renderDATBarChart(data){const crews={};BULAN_ORDER.forEach(b=>crews[b]=0);data.forEach(r=>{const b=r["Bulan Pelaksanaan"];if(b&&crews[b]!==undefined)crews[b]+=parseInt(r["Total Crew Diperiksa"]||0);});const ctx=document.getElementById("datBarChart").getContext("2d");if(datBarChart)datBarChart.destroy();datBarChart=new Chart(ctx,{type:datChartType,data:{labels:BULAN_ORDER,datasets:[{label:"Crew Diperiksa",data:BULAN_ORDER.map(b=>crews[b]),backgroundColor:datChartType==="line"?"rgba(46,125,50,0.12)":"#43A047",borderColor:"#2E7D32",borderWidth:datChartType==="line"?2.5:1,borderRadius:datChartType==="bar"?6:0,fill:datChartType==="line",tension:0.4,pointBackgroundColor:"#2E7D32",pointRadius:datChartType==="line"?4:0}]},options:chartOpts()});}
+function renderDATDonutChart(data,crew,pos){const neg=crew-pos;const ctx=document.getElementById("datDonutChart").getContext("2d");if(datDonutChart)datDonutChart.destroy();datDonutChart=new Chart(ctx,{type:"doughnut",data:{labels:["Negatif","Positif"],datasets:[{data:[neg,pos],backgroundColor:["#43A047","#E53935"],borderColor:"#fff",borderWidth:3,hoverOffset:8}]},options:donutOpts()});}
+function toggleDATChartType(btn,type){datChartType=type;btn.closest(".pill-group").querySelectorAll(".pill").forEach(p=>p.classList.remove("active"));btn.classList.add("active");renderDATBarChart(filteredDAT);}
 function renderDATTindakLanjut(data){const diturunkan=data.filter(r=>(r["Tindak Lanjut"]||"").toLowerCase().includes("turun")).reduce((s,r)=>s+parseInt(r["Jumlah Crew Positif"]||0),0);const total_tl=data.filter(r=>r["Tindak Lanjut"]).length;document.getElementById("datTindakLanjut").innerHTML=`<div class="stat-row"><div class="stat-item"><div><div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:3px"><i class="fas fa-arrow-down-from-line" style="color:#C62828;margin-right:5px"></i>Crew Diturunkan</div><div class="stat-label">Hasil positif ditindaklanjuti</div></div><div class="stat-val">${diturunkan}</div></div><div class="stat-item"><div><div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:3px"><i class="fas fa-file-medical" style="color:#E65100;margin-right:5px"></i>Entri Tindak Lanjut</div><div class="stat-label">Kapal dengan tindak lanjut</div></div><div class="stat-val" style="color:#E65100">${total_tl}</div></div></div>`;}
-
 function renderDATTable(data){document.getElementById("datTableBody").innerHTML=data.map(r=>{const h=(r["Hasil"]||"").toLowerCase();const badge=h==="negatif"?'<span class="badge badge-neg">Negatif</span>':h==="positif"?'<span class="badge badge-pos">Positif</span>':esc(r["Hasil"]||"—");return`<tr><td><strong style="color:var(--sidebar-bg)">${esc(r["Nama Kapal"]||"")}</strong></td><td><span style="background:#E8F5E9;color:#2E7D32;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">${esc(r["Jenis Fleet"]||"")}</span></td><td>${esc(r["Bulan Pelaksanaan"]||"")}</td><td>${esc(r["Vendor Pelaksana"]||"—")}</td><td style="text-align:right;font-weight:700">${fmtNum(parseInt(r["Total Crew Diperiksa"]||0))}</td><td>${badge}</td><td style="text-align:right;font-weight:700;color:#C62828">${r["Jumlah Crew Positif"]||0}</td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis">${esc(r["Tindak Lanjut"]||"—")}</td></tr>`;}).join("");document.getElementById("datTableFooter").textContent=`Menampilkan ${data.length} dari ${rawDAT.length} entri`;}
-
 function applyDATFilters(){const b=document.getElementById("dat-filter-bulan").value;const f=document.getElementById("dat-filter-fleet").value;const k=document.getElementById("dat-filter-kapal").value.toLowerCase();filteredDAT=rawDAT.filter(r=>(!b||r["Bulan Pelaksanaan"]===b)&&(!f||r["Jenis Fleet"]===f)&&(!k||(r["Nama Kapal"]||"").toLowerCase().includes(k)));renderDATPage();}
 function clearDATFilters(){["dat-filter-bulan","dat-filter-fleet"].forEach(id=>document.getElementById(id).value="");document.getElementById("dat-filter-kapal").value="";filteredDAT=[...rawDAT];renderDATPage();}
 function searchDATTable(){const q=document.getElementById("dat-search").value.toLowerCase();document.querySelectorAll("#datTableBody tr").forEach(row=>{row.style.display=row.textContent.toLowerCase().includes(q)?"":"none";});}
@@ -447,12 +431,12 @@ function getPestTanggalDisplay(r){return r["Tanggal"]||r["Tanggal Pelaksanaan"]|
 function getPestTL(r){return r["Tindak Lanjut"]||r["Tindak Lanjut & Rekomendasi"]||r["Tindak Lanjut dan Rekomendasi"]||"";}
 
 function renderPestPage() {
-  const data            = filteredPest;
-  const totalPelaksanaan= data.length;
-  const lokSet          = new Set(data.map(r=>(r["Lokasi"]||"").trim()).filter(Boolean));
-  const totalBiaya      = data.reduce((s,r)=>s+parseFloat(r["Est Biaya"]||0),0);
-  const temuanAll       = data.map(r=>(r["Temuan / Keluhan"]||"").trim()).filter(Boolean);
-  const hamaMap         = {};
+  const data             = filteredPest;
+  const totalPelaksanaan = data.length;
+  const lokSet           = new Set(data.map(r=>(r["Lokasi"]||"").trim()).filter(Boolean));
+  const totalBiaya       = data.reduce((s,r)=>s+parseFloat(r["Est Biaya"]||0),0);
+  const temuanAll        = data.map(r=>(r["Temuan / Keluhan"]||"").trim()).filter(Boolean);
+  const hamaMap          = {};
   temuanAll.forEach(t=>{const low=t.toLowerCase();["tikus","kecoa","semut","lalat","nyamuk","kutu","rayap","cicak"].forEach(h=>{if(low.includes(h))hamaMap[h]=(hamaMap[h]||0)+1;});});
   const hamaDominan = Object.entries(hamaMap).sort((a,b)=>b[1]-a[1])[0];
 
@@ -465,7 +449,7 @@ function renderPestPage() {
   const lokasiSel  = document.getElementById("pest-filter-lokasi");
   const currentLok = lokasiSel.value;
   const uniqueLok  = [...lokSet].sort();
-  lokasiSel.innerHTML = '<option value="">Semua Lokasi</option>'+uniqueLok.map(l=>`<option${l===currentLok?' selected':''}>${esc(l)}</option>`).join("");
+  lokasiSel.innerHTML = '<option value="">Semua Lokasi</option>'+uniqueLok.map(l=>`<option${l===currentLok?" selected":""}>${esc(l)}</option>`).join("");
 
   renderPestBarChart(data);
   renderPestDonutChart(data);
@@ -475,29 +459,23 @@ function renderPestPage() {
   renderPestTable(data);
 }
 
-function renderPestBarChart(data){const counts={};BULAN_ORDER.forEach(b=>counts[b]=0);data.forEach(r=>{const b=(r["Bulan"]||"").trim();if(b&&counts[b]!==undefined)counts[b]++;});const ctx=document.getElementById("pestBarChart").getContext("2d");if(pestBarChart)pestBarChart.destroy();const colors=BULAN_ORDER.map((_,i)=>`hsl(${210+i*5},70%,${50+i*1.5}%)`);pestBarChart=new Chart(ctx,{type:pestChartType,data:{labels:BULAN_ORDER,datasets:[{label:"Pelaksanaan",data:BULAN_ORDER.map(b=>counts[b]),backgroundColor:pestChartType==='line'?'rgba(21,101,192,0.12)':colors,borderColor:'#1565C0',borderWidth:pestChartType==='line'?2.5:1,borderRadius:pestChartType==='bar'?6:0,fill:pestChartType==='line',tension:0.4,pointBackgroundColor:'#1565C0',pointRadius:pestChartType==='line'?4:0}]},options:chartOpts()});}
-
-function renderPestDonutChart(data){const lokMap={};data.forEach(r=>{const l=(r["Lokasi"]||"").trim();if(l)lokMap[l]=(lokMap[l]||0)+1;});const sorted=Object.entries(lokMap).sort((a,b)=>b[1]-a[1]).slice(0,8);const ctx=document.getElementById("pestDonutChart").getContext("2d");if(pestDonutChart)pestDonutChart.destroy();const palette=['#1976D2','#43A047','#FB8C00','#8E24AA','#00838F','#E53935','#F9A825','#5E35B1'];pestDonutChart=new Chart(ctx,{type:"doughnut",data:{labels:sorted.map(([k])=>k),datasets:[{data:sorted.map(([,v])=>v),backgroundColor:palette,borderColor:'#fff',borderWidth:3,hoverOffset:8}]},options:donutOpts()});}
-
-function renderPestTemuanChart(data){const tMap={};data.forEach(r=>{const t=(r["Temuan / Keluhan"]||"").trim();if(t)tMap[t]=(tMap[t]||0)+1;});const sorted=Object.entries(tMap).sort((a,b)=>b[1]-a[1]).slice(0,6);const ctx=document.getElementById("pestTemuanChart").getContext("2d");if(pestTemuanChart)pestTemuanChart.destroy();pestTemuanChart=new Chart(ctx,{type:"bar",data:{labels:sorted.map(([k])=>k.length>30?k.slice(0,30)+"…":k),datasets:[{label:"Frekuensi",data:sorted.map(([,v])=>v),backgroundColor:'#8E24AA',borderRadius:6}]},options:{...chartOpts(),indexAxis:'y'}});}
-
-function renderPestBiayaChart(data){const biayaMap={};BULAN_ORDER.forEach(b=>biayaMap[b]=0);data.forEach(r=>{const b=(r["Bulan"]||"").trim();if(b&&biayaMap[b]!==undefined)biayaMap[b]+=parseFloat(r["Est Biaya"]||0);});const ctx=document.getElementById("pestBiayaChart").getContext("2d");if(pestBiayaChart)pestBiayaChart.destroy();pestBiayaChart=new Chart(ctx,{type:"line",data:{labels:BULAN_ORDER,datasets:[{label:"Est. Biaya",data:BULAN_ORDER.map(b=>biayaMap[b]),backgroundColor:'rgba(142,36,170,0.1)',borderColor:'#8E24AA',borderWidth:2.5,fill:true,tension:0.4,pointBackgroundColor:'#8E24AA',pointRadius:4}]},options:chartOpts()});}
-
+function renderPestBarChart(data){const counts={};BULAN_ORDER.forEach(b=>counts[b]=0);data.forEach(r=>{const b=(r["Bulan"]||"").trim();if(b&&counts[b]!==undefined)counts[b]++;});const ctx=document.getElementById("pestBarChart").getContext("2d");if(pestBarChart)pestBarChart.destroy();const colors=BULAN_ORDER.map((_,i)=>`hsl(${210+i*5},70%,${50+i*1.5}%)`);pestBarChart=new Chart(ctx,{type:pestChartType,data:{labels:BULAN_ORDER,datasets:[{label:"Pelaksanaan",data:BULAN_ORDER.map(b=>counts[b]),backgroundColor:pestChartType==="line"?"rgba(21,101,192,0.12)":colors,borderColor:"#1565C0",borderWidth:pestChartType==="line"?2.5:1,borderRadius:pestChartType==="bar"?6:0,fill:pestChartType==="line",tension:0.4,pointBackgroundColor:"#1565C0",pointRadius:pestChartType==="line"?4:0}]},options:chartOpts()});}
+function renderPestDonutChart(data){const lokMap={};data.forEach(r=>{const l=(r["Lokasi"]||"").trim();if(l)lokMap[l]=(lokMap[l]||0)+1;});const sorted=Object.entries(lokMap).sort((a,b)=>b[1]-a[1]).slice(0,8);const ctx=document.getElementById("pestDonutChart").getContext("2d");if(pestDonutChart)pestDonutChart.destroy();const palette=["#1976D2","#43A047","#FB8C00","#8E24AA","#00838F","#E53935","#F9A825","#5E35B1"];pestDonutChart=new Chart(ctx,{type:"doughnut",data:{labels:sorted.map(([k])=>k),datasets:[{data:sorted.map(([,v])=>v),backgroundColor:palette,borderColor:"#fff",borderWidth:3,hoverOffset:8}]},options:donutOpts()});}
+function renderPestTemuanChart(data){const tMap={};data.forEach(r=>{const t=(r["Temuan / Keluhan"]||"").trim();if(t)tMap[t]=(tMap[t]||0)+1;});const sorted=Object.entries(tMap).sort((a,b)=>b[1]-a[1]).slice(0,6);const ctx=document.getElementById("pestTemuanChart").getContext("2d");if(pestTemuanChart)pestTemuanChart.destroy();pestTemuanChart=new Chart(ctx,{type:"bar",data:{labels:sorted.map(([k])=>k.length>30?k.slice(0,30)+"…":k),datasets:[{label:"Frekuensi",data:sorted.map(([,v])=>v),backgroundColor:"#8E24AA",borderRadius:6}]},options:{...chartOpts(),indexAxis:"y"}});}
+function renderPestBiayaChart(data){const biayaMap={};BULAN_ORDER.forEach(b=>biayaMap[b]=0);data.forEach(r=>{const b=(r["Bulan"]||"").trim();if(b&&biayaMap[b]!==undefined)biayaMap[b]+=parseFloat(r["Est Biaya"]||0);});const ctx=document.getElementById("pestBiayaChart").getContext("2d");if(pestBiayaChart)pestBiayaChart.destroy();pestBiayaChart=new Chart(ctx,{type:"line",data:{labels:BULAN_ORDER,datasets:[{label:"Est. Biaya",data:BULAN_ORDER.map(b=>biayaMap[b]),backgroundColor:"rgba(142,36,170,0.1)",borderColor:"#8E24AA",borderWidth:2.5,fill:true,tension:0.4,pointBackgroundColor:"#8E24AA",pointRadius:4}]},options:chartOpts()});}
 function renderPestTindakLanjut(data){const el=document.getElementById("pestTindakLanjutList");const items=data.map(r=>getPestTL(r)).filter(Boolean).slice(0,6);if(!items.length){el.innerHTML='<div class="hazard-empty">Tidak ada data tindak lanjut</div>';return;}el.innerHTML=items.map((t,i)=>`<div class="hazard-item"><div class="hazard-rank r${(i%5)+1}">${i+1}</div><div class="hazard-name" style="white-space:normal;line-height:1.4">${esc(t.length>80?t.slice(0,80)+"…":t)}</div></div>`).join("");}
-
 function renderPestTable(data){document.getElementById("pestTableBody").innerHTML=data.map(r=>{const biaya=parseFloat(r["Est Biaya"]||0);const tglDisplay=getPestTanggalDisplay(r);const tindakLanjut=getPestTL(r)||"—";const temuan=(r["Temuan / Keluhan"]||r["Temuan"]||r["Keluhan"]||"—").trim();return`<tr><td><strong style="color:var(--sidebar-bg)">${esc(r["Lokasi"]||"—")}</strong></td><td style="white-space:nowrap;font-weight:600">${esc(tglDisplay)}</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis" title="${esc(temuan)}">${esc(temuan)}</td><td style="max-width:220px;overflow:hidden;text-overflow:ellipsis" title="${esc(tindakLanjut)}">${esc(tindakLanjut)}</td><td style="text-align:right;font-weight:700;color:#6A1B9A">${biaya?formatRupiah(biaya):"—"}</td></tr>`;}).join("");document.getElementById("pestTableFooter").textContent=`Menampilkan ${data.length} dari ${rawPest.length} entri`;}
-
 function applyPestFilters(){const b=document.getElementById("pest-filter-bulan").value;const l=document.getElementById("pest-filter-lokasi").value;const t=document.getElementById("pest-filter-temuan").value.toLowerCase();filteredPest=rawPest.filter(r=>(!b||r["Bulan"]===b)&&(!l||r["Lokasi"]===l)&&(!t||(r["Temuan / Keluhan"]||"").toLowerCase().includes(t)));renderPestPage();}
 function clearPestFilters(){["pest-filter-bulan","pest-filter-lokasi"].forEach(id=>document.getElementById(id).value="");document.getElementById("pest-filter-temuan").value="";filteredPest=[...rawPest];renderPestPage();}
 function searchPestTable(){const q=document.getElementById("pest-search").value.toLowerCase();document.querySelectorAll("#pestTableBody tr").forEach(row=>{row.style.display=row.textContent.toLowerCase().includes(q)?"":"none";});}
 function sortPestTable(col){if(pestSortCol===col)pestSortDir*=-1;else{pestSortCol=col;pestSortDir=1;}const keys=["Lokasi","Tanggal","Temuan / Keluhan","Tindak Lanjut","Est Biaya"];filteredPest.sort((a,b)=>String(a[keys[col]]||"").localeCompare(String(b[keys[col]]||""),"id")*pestSortDir);renderPestTable(filteredPest);}
-function togglePestChartType(btn,type){pestChartType=type;btn.closest('.pill-group').querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));btn.classList.add('active');renderPestBarChart(filteredPest);}
+function togglePestChartType(btn,type){pestChartType=type;btn.closest(".pill-group").querySelectorAll(".pill").forEach(p=>p.classList.remove("active"));btn.classList.add("active");renderPestBarChart(filteredPest);}
 
 // ====================================================
 // CHART HELPERS
 // ====================================================
-function chartOpts(){return{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1565C0',titleColor:'#fff',bodyColor:'rgba(255,255,255,0.8)',padding:10,cornerRadius:8,displayColors:false}},scales:{x:{grid:{color:'#F0F4F8'},ticks:{color:'#90A4AE',font:{size:11,family:'Nunito'}}},y:{grid:{color:'#F0F4F8'},ticks:{color:'#90A4AE',font:{size:11,family:'Nunito'}},beginAtZero:true}}};}
-function donutOpts(){return{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{position:'bottom',labels:{color:'#607D8B',font:{size:12,family:'Nunito',weight:'700'},padding:14,boxWidth:12}},tooltip:{backgroundColor:'#1565C0',titleColor:'#fff',bodyColor:'rgba(255,255,255,0.8)',padding:10,cornerRadius:8}}};}
+function chartOpts(){return{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:"#1565C0",titleColor:"#fff",bodyColor:"rgba(255,255,255,0.8)",padding:10,cornerRadius:8,displayColors:false}},scales:{x:{grid:{color:"#F0F4F8"},ticks:{color:"#90A4AE",font:{size:11,family:"Nunito"}}},y:{grid:{color:"#F0F4F8"},ticks:{color:"#90A4AE",font:{size:11,family:"Nunito"}},beginAtZero:true}}};}
+function donutOpts(){return{responsive:true,maintainAspectRatio:false,cutout:"65%",plugins:{legend:{position:"bottom",labels:{color:"#607D8B",font:{size:12,family:"Nunito",weight:"700"},padding:14,boxWidth:12}},tooltip:{backgroundColor:"#1565C0",titleColor:"#fff",bodyColor:"rgba(255,255,255,0.8)",padding:10,cornerRadius:8}}};}
 
 // ====================================================
 // HELPERS
@@ -508,9 +486,8 @@ function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").repl
 function statusBadge(s){return(s||"").toLowerCase()==="done"?'<span class="badge badge-done">✓ Done</span>':'<span class="badge badge-belum">⏳ Belum</span>';}
 
 // ====================================================
-// PEDOMAN IH — IndexedDB (menggantikan localStorage)
+// PEDOMAN IH — IndexedDB
 // ====================================================
-
 function handlePdfUpload(event) {
   const files = event.target.files;
   if (!files || !files.length) return;
@@ -523,7 +500,6 @@ function handlePdfUpload(event) {
     const namaDoc = prompt("Nama dokumen / judul pedoman:", file.name.replace(".pdf",""));
     if (!namaDoc) { event.target.value=""; return; }
     const kategori = prompt("Kategori (Pedoman Umum / STK / Regulasi / Formulir / TKO):", "Pedoman Umum") || "Lainnya";
-
     const obj = {
       id:         Date.now(),
       nama:       namaDoc.trim(),
@@ -539,7 +515,7 @@ function handlePdfUpload(event) {
       event.target.value = "";
       renderPedomanList();
     } catch(err) {
-      alert("Gagal menyimpan file. Coba hapus beberapa file lama terlebih dahulu.\n\n" + err);
+      alert("Gagal menyimpan file.\n\n" + err);
     }
   };
   reader.readAsDataURL(file);
@@ -549,10 +525,8 @@ async function viewPedoman(id) {
   const files = await idbGetAll("pedoman");
   const f = files.find(x => x.id === id);
   if (!f) return;
-
   const existing = document.getElementById("pedomanViewModal");
-  if (existing) { const oldI=existing.querySelector("iframe"); if(oldI&&oldI._blobUrl)URL.revokeObjectURL(oldI._blobUrl); existing.remove(); }
-
+  if (existing) existing.remove();
   let blobUrl = "";
   try {
     const base64 = f.data.split(",")[1];
@@ -614,23 +588,18 @@ async function renderPedomanList() {
   const kat = (document.getElementById("pedomanFilterKat")||{}).value||"";
   let allFiles = await idbGetAll("pedoman");
   allFiles.sort((a,b)=>b.id-a.id);
-
   let files = allFiles;
   if (q)   files = files.filter(f=>f.nama.toLowerCase().includes(q.toLowerCase())||f.kategori.toLowerCase().includes(q.toLowerCase()));
   if (kat) files = files.filter(f=>f.kategori===kat);
-
   const totalDownloads = allFiles.reduce((s,f)=>s+(f.downloads||0),0);
   document.getElementById("pedoman-count").textContent     = allFiles.length;
   document.getElementById("pedoman-downloads").textContent = fmtNum(totalDownloads);
   document.getElementById("pedoman-last").textContent      = allFiles.length ? allFiles[0].uploadDate : "—";
-
   const grid  = document.getElementById("pedomanGrid");
   const empty = document.getElementById("pedomanEmpty");
   grid.querySelectorAll(".pedoman-card").forEach(c=>c.remove());
-
   if (!files.length) { if(empty)empty.style.display="flex"; return; }
   if (empty) empty.style.display="none";
-
   files.forEach(f => {
     const card = document.createElement("div");
     card.className = "pedoman-card";
@@ -656,7 +625,6 @@ async function renderPedomanList() {
   });
 }
 
-// EXPORT / IMPORT PEDOMAN
 async function exportPedomanBackup() {
   const files = await idbGetAll("pedoman");
   if (!files.length) { alert("Tidak ada file untuk di-export."); return; }
@@ -666,7 +634,7 @@ async function exportPedomanBackup() {
   const link = document.createElement("a");
   link.href = url; link.download = "pedoman_ih_backup_"+Date.now()+".json"; link.click();
   setTimeout(()=>URL.revokeObjectURL(url), 5000);
-  alert(`Berhasil export ${files.length} file pedoman.\n\nKirimkan file JSON ini ke device lain, lalu gunakan tombol "Import Backup".`);
+  alert(`Berhasil export ${files.length} file pedoman.`);
 }
 
 async function importPedomanBackup(event) {
@@ -677,14 +645,11 @@ async function importPedomanBackup(event) {
     try {
       const parsed = JSON.parse(e.target.result);
       if (parsed.type !== "pedoman_backup" || !Array.isArray(parsed.data)) { alert("File backup tidak valid."); return; }
-      const confirm_import = confirm(`Ditemukan ${parsed.data.length} file pedoman dalam backup.\n\nImport akan MENAMBAHKAN file ke database (tidak menghapus yang sudah ada).\n\nLanjutkan?`);
-      if (!confirm_import) { event.target.value=""; return; }
+      if (!confirm(`Ditemukan ${parsed.data.length} file pedoman. Import sekarang?`)) { event.target.value=""; return; }
       let count = 0;
       for (const f of parsed.data) {
-        // Beri ID baru jika sudah ada konflik
         const existing = await idbGetAll("pedoman");
-        const idExists  = existing.some(x=>x.id===f.id);
-        if (idExists) f.id = Date.now() + Math.random()*1000|0;
+        if (existing.some(x=>x.id===f.id)) f.id = Date.now() + Math.random()*1000|0;
         await idbPut("pedoman", f);
         count++;
       }
@@ -713,11 +678,9 @@ function switchDokFolder(btn) {
 async function handleDokUpload(event) {
   const files = event.target.files;
   if (!files || !files.length) return;
-
   for (const file of files) {
-    if (!file.type.startsWith("image/")) { alert("Hanya file gambar yang diizinkan: "+file.name); continue; }
+    if (!file.type.startsWith("image/")) { alert("Hanya file gambar: "+file.name); continue; }
     if (file.size > 10 * 1024 * 1024)   { alert("File terlalu besar (maks 10 MB): "+file.name); continue; }
-
     await new Promise((resolve) => {
       const reader = new FileReader();
       reader.onload = async function(e) {
@@ -746,19 +709,15 @@ async function handleDokUpload(event) {
 async function renderDokGallery() {
   const allFotos = await idbGetAll("dokumentasi");
   const fotos    = allFotos.filter(f=>f.folder===currentDokFolder).sort((a,b)=>b.id-a.id);
-
-  const lastItem = allFotos.filter(f=>f.folder===currentDokFolder).sort((a,b)=>b.id-a.id)[0];
+  const lastItem = fotos[0];
   document.getElementById("dok-count").textContent       = fotos.length;
   document.getElementById("dok-folder-name").textContent = DOK_FOLDER_LABELS[currentDokFolder];
   document.getElementById("dok-last").textContent        = lastItem ? lastItem.uploadDate : "—";
-
   const grid  = document.getElementById("dokGrid");
   const empty = document.getElementById("dokEmpty");
   grid.querySelectorAll(".dok-card").forEach(c=>c.remove());
-
   if (!fotos.length) { empty.style.display="flex"; return; }
   empty.style.display = "none";
-
   fotos.forEach(f => {
     const card = document.createElement("div");
     card.className = "dok-card";
@@ -771,7 +730,7 @@ async function renderDokGallery() {
         <div class="dok-card-filename" title="${esc(f.filename)}">${esc(f.filename)}</div>
         <div class="dok-card-keterangan-wrap">
           <textarea class="dok-keterangan-input" id="ket-${f.id}" placeholder="Tambahkan keterangan...">${esc(f.keterangan||"")}</textarea>
-          <button class="dok-save-ket" onclick="saveDokKeterangan(${f.id})" title="Simpan keterangan"><i class="fas fa-floppy-disk"></i></button>
+          <button class="dok-save-ket" onclick="saveDokKeterangan(${f.id})" title="Simpan"><i class="fas fa-floppy-disk"></i></button>
         </div>
         <div class="dok-card-meta">
           <span><i class="fas fa-calendar fa-xs"></i> ${f.uploadDate}</span>
@@ -789,13 +748,11 @@ async function renderDokGallery() {
 async function saveDokKeterangan(id) {
   const el  = document.getElementById("ket-"+id);
   if (!el) return;
-  const val = el.value.trim();
   const all = await idbGetAll("dokumentasi");
   const f   = all.find(x=>x.id===id);
   if (!f) return;
-  f.keterangan = val;
+  f.keterangan = el.value.trim();
   await idbPut("dokumentasi", f);
-  // Flash visual feedback
   el.style.borderColor = "#43A047";
   setTimeout(()=>{ el.style.borderColor=""; }, 1500);
 }
@@ -839,7 +796,6 @@ async function deleteDokFoto(id) {
   renderDokGallery();
 }
 
-// EXPORT / IMPORT DOKUMENTASI
 async function exportDokumentasiBackup() {
   const all = await idbGetAll("dokumentasi");
   if (!all.length) { alert("Tidak ada foto untuk di-export."); return; }
@@ -849,7 +805,7 @@ async function exportDokumentasiBackup() {
   const link = document.createElement("a");
   link.href = url; link.download = "dokumentasi_backup_"+Date.now()+".json"; link.click();
   setTimeout(()=>URL.revokeObjectURL(url), 5000);
-  alert(`Berhasil export ${all.length} foto.\n\nKirimkan file JSON ini ke device lain, lalu gunakan tombol "Import Backup".`);
+  alert(`Berhasil export ${all.length} foto.`);
 }
 
 async function importDokumentasiBackup(event) {
@@ -860,8 +816,7 @@ async function importDokumentasiBackup(event) {
     try {
       const parsed = JSON.parse(e.target.result);
       if (parsed.type !== "dokumentasi_backup" || !Array.isArray(parsed.data)) { alert("File backup tidak valid."); return; }
-      const ok = confirm(`Ditemukan ${parsed.data.length} foto dalam backup.\n\nImport akan MENAMBAHKAN foto (tidak menghapus yang sudah ada).\n\nLanjutkan?`);
-      if (!ok) { event.target.value=""; return; }
+      if (!confirm(`Ditemukan ${parsed.data.length} foto. Import sekarang?`)) { event.target.value=""; return; }
       let count = 0;
       for (const f of parsed.data) {
         const existing = await idbGetAll("dokumentasi");
