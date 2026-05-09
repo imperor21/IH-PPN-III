@@ -62,9 +62,9 @@
 <div class="sidebar-brand">
 <div class="brand-icon"><i class="fas fa-anchor"></i></div>
 <div>
-      <span class="brand-title">Dashboard</span>
-      <span class="brand-title">Health PPN III</span>
-<span class="brand-sub">Dashboard System</span>
+  <span class="brand-title">Dashboard</span>
+  <span class="brand-title">Health PPN III</span>
+  <span class="brand-sub">Dashboard System</span>
 </div>
 </div>
 
@@ -79,39 +79,43 @@
 <nav class="sidebar-nav">
 <div class="nav-label">Monitoring</div>
 <a href="#" class="nav-item active" data-menu="hra" data-title="HRA & IH">
-<span class="nav-icon"><i class="fas fa-lungs"></i></span>
-      <span class="nav-text">HRA & IH</span>
+  <span class="nav-icon"><i class="fas fa-lungs"></i></span>
+  <span class="nav-text">HRA & IH</span>
 </a>
 <a href="#" class="nav-item" data-menu="dat" data-title="Drugs & Alcohol Test">
-<span class="nav-icon"><i class="fas fa-vial"></i></span>
-<span class="nav-text">Drugs & Alcohol Test</span>
+  <span class="nav-icon"><i class="fas fa-vial"></i></span>
+  <span class="nav-text">Drugs & Alcohol Test</span>
 </a>
 <div class="nav-label">Facility</div>
 <a href="#" class="nav-item" data-menu="pest" data-title="Pest & Rodent Control">
-<span class="nav-icon"><i class="fas fa-bug"></i></span>
-<span class="nav-text">Pest & Rodent Control</span>
+  <span class="nav-icon"><i class="fas fa-bug"></i></span>
+  <span class="nav-text">Pest & Rodent Control</span>
 </a>
 <a href="#" class="nav-item placeholder" data-menu="p3k" data-title="P3K & AED Office">
-<span class="nav-icon"><i class="fas fa-kit-medical"></i></span>
-<span class="nav-text">P3K & AED Office</span>
-<span class="nav-badge">Soon</span>
+  <span class="nav-icon"><i class="fas fa-kit-medical"></i></span>
+  <span class="nav-text">P3K & AED Office</span>
+  <span class="nav-badge">Soon</span>
 </a>
 <div class="nav-label">Others</div>
-<a href="#" class="nav-item placeholder" data-menu="menu5" data-title="Menu Placeholder 5">
-<span class="nav-icon"><i class="fas fa-chart-pie"></i></span>
-<span class="nav-text">Sebaran Alkes Kapal</span>
-<span class="nav-badge">Soon</span>
+<a href="#" class="nav-item placeholder" data-menu="menu5" data-title="Sebaran Alkes Kapal">
+  <span class="nav-icon"><i class="fas fa-chart-pie"></i></span>
+  <span class="nav-text">Sebaran Alkes Kapal</span>
+  <span class="nav-badge">Soon</span>
 </a>
 <a href="#" class="nav-item" data-menu="menu6" data-title="Pedoman IH">
-<span class="nav-icon"><i class="fas fa-table-cells"></i></span>
-<span class="nav-text">Pedoman IH</span>
+  <span class="nav-icon"><i class="fas fa-book-open"></i></span>
+  <span class="nav-text">Pedoman IH</span>
+</a>
+<a href="#" class="nav-item" data-menu="dokumentasi" data-title="Dokumentasi">
+  <span class="nav-icon"><i class="fas fa-images"></i></span>
+  <span class="nav-text">Dokumentasi</span>
 </a>
 </nav>
 
 <div class="sidebar-footer">
 <div class="refresh-info">
-<i class="fas fa-circle-dot pulse-dot"></i>
-      <span>Live — auto refresh 5 Mnt</span>
+  <i class="fas fa-circle-dot pulse-dot"></i>
+  <span>Live — auto refresh 5 Mnt</span>
 </div>
 <div class="last-updated" id="lastUpdated">Menghubungkan...</div>
 <button class="btn-logout" onclick="doLogout()">
@@ -126,27 +130,27 @@
 <!-- TOPBAR -->
 <header class="topbar">
 <div class="topbar-left">
-<button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
-<div class="page-breadcrumb">
-<span class="breadcrumb-home"><i class="fas fa-house"></i></span>
-<span class="breadcrumb-sep">/</span>
-        <span class="page-title" id="pageTitle">Pertamina Patra Niaga</span>
-</div>
+  <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
+  <div class="page-breadcrumb">
+    <span class="breadcrumb-home"><i class="fas fa-house"></i></span>
+    <span class="breadcrumb-sep">/</span>
+    <span class="page-title" id="pageTitle">Pertamina Patra Niaga</span>
+  </div>
 </div>
 <div class="topbar-right">
-<div class="topbar-icon-btn" title="Notifikasi"><i class="fas fa-bell"></i></div>
-<div class="topbar-icon-btn" title="Pengaturan"><i class="fas fa-gear"></i></div>
-<button class="btn-refresh" id="btnRefresh">
-<i class="fas fa-rotate-right"></i> Refresh
-</button>
+  <div class="topbar-icon-btn" title="Notifikasi"><i class="fas fa-bell"></i></div>
+  <div class="topbar-icon-btn" title="Pengaturan"><i class="fas fa-gear"></i></div>
+  <button class="btn-refresh" id="btnRefresh">
+    <i class="fas fa-rotate-right"></i> Refresh
+  </button>
 </div>
 </header>
 
 <!-- LOADING -->
 <div class="loading-overlay" id="loadingOverlay">
 <div class="loading-inner">
-<div class="spinner"></div>
-<p style="font-weight:700;font-size:14px;margin-top:8px">Memuat data...</p>
+  <div class="spinner"></div>
+  <p style="font-weight:700;font-size:14px;margin-top:8px">Memuat data...</p>
 </div>
 </div>
 
@@ -159,404 +163,160 @@
 
 <!-- ===== PAGE HRA ===== -->
 <section class="page-content active" id="page-hra">
-
 <div class="filter-bar">
-<div class="filter-group">
-<label>Bulan</label>
-<select id="hra-filter-bulan" onchange="applyHRAFilters()">
-<option value="">Semua Bulan</option>
-<option>Januari</option><option>Februari</option><option>Maret</option><option>April</option><option>Mei</option><option>Juni</option><option>Juli</option>
-<option>Agustus</option><option>September</option><option>Oktober</option>
-<option>November</option><option>Desember</option>
-</select>
+  <div class="filter-group">
+    <label>Bulan</label>
+    <select id="hra-filter-bulan" onchange="applyHRAFilters()">
+      <option value="">Semua Bulan</option>
+      <option>Januari</option><option>Februari</option><option>Maret</option><option>April</option><option>Mei</option><option>Juni</option><option>Juli</option>
+      <option>Agustus</option><option>September</option><option>Oktober</option>
+      <option>November</option><option>Desember</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>Jenis Fleet</label>
+    <select id="hra-filter-fleet" onchange="applyHRAFilters()">
+      <option value="">Semua Fleet</option>
+      <option>FP I</option><option>FP II</option><option>FC</option><option>FGP</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>Nama Kapal</label>
+    <input type="text" id="hra-filter-kapal" placeholder="Cari nama kapal..." oninput="applyHRAFilters()">
+  </div>
+  <button class="btn-clear" onclick="clearHRAFilters()"><i class="fas fa-xmark"></i> Reset</button>
 </div>
-<div class="filter-group">
-<label>Jenis Fleet</label>
-<select id="hra-filter-fleet" onchange="applyHRAFilters()">
-<option value="">Semua Fleet</option>
-<option>FP I</option><option>FP II</option><option>FC</option><option>FGP</option>
-</select>
-</div>
-<div class="filter-group">
-<label>Nama Kapal</label>
-<input type="text" id="hra-filter-kapal" placeholder="Cari nama kapal..." oninput="applyHRAFilters()">
-</div>
-<button class="btn-clear" onclick="clearHRAFilters()"><i class="fas fa-xmark"></i> Reset</button>
-</div>
-
-<!-- KPI -->
 <div class="kpi-grid">
-<div class="kpi-card blue">
-<a class="kpi-link" href="#">View Detail</a>
-<div class="kpi-icon"><i class="fas fa-ship"></i></div>
-<div class="kpi-body">
-<div class="kpi-value" id="hra-total">85</div>
-<div class="kpi-label">Est Total Kapal</div>
+  <div class="kpi-card blue"><a class="kpi-link" href="#">View Detail</a><div class="kpi-icon"><i class="fas fa-ship"></i></div><div class="kpi-body"><div class="kpi-value" id="hra-total">85</div><div class="kpi-label">Total Kapal</div></div></div>
+  <div class="kpi-card green"><a class="kpi-link" href="#">View Detail</a><div class="kpi-icon"><i class="fas fa-circle-check"></i></div><div class="kpi-body"><div class="kpi-value" id="hra-done">—</div><div class="kpi-label">Sudah Monitoring</div></div></div>
+  <div class="kpi-card orange"><a class="kpi-link" href="#">View Detail</a><div class="kpi-icon"><i class="fas fa-clock"></i></div><div class="kpi-body"><div class="kpi-value" id="hra-belum">—</div><div class="kpi-label">Belum Monitoring</div></div></div>
+  <div class="kpi-card purple"><a class="kpi-link" href="#">View Detail</a><div class="kpi-icon"><i class="fas fa-sack-dollar"></i></div><div class="kpi-body"><div class="kpi-value" id="hra-budget">—</div><div class="kpi-label">Est. Budget</div></div></div>
+  <div class="kpi-card teal"><a class="kpi-link" href="#">View Detail</a><div class="kpi-icon"><i class="fas fa-percent"></i></div><div class="kpi-body"><div class="kpi-value" id="hra-coverage">—</div><div class="kpi-label">Coverage</div></div></div>
 </div>
-</div>
-<div class="kpi-card green">
-<a class="kpi-link" href="#">View Detail</a>
-<div class="kpi-icon"><i class="fas fa-circle-check"></i></div>
-<div class="kpi-body">
-<div class="kpi-value" id="hra-done">—</div>
-<div class="kpi-label">Sudah Monitoring</div>
-</div>
-</div>
-<div class="kpi-card orange">
-<a class="kpi-link" href="#">View Detail</a>
-<div class="kpi-icon"><i class="fas fa-clock"></i></div>
-<div class="kpi-body">
-<div class="kpi-value" id="hra-belum">—</div>
-<div class="kpi-label">Belum Monitoring</div>
-</div>
-</div>
-<div class="kpi-card purple">
-<a class="kpi-link" href="#">View Detail</a>
-<div class="kpi-icon"><i class="fas fa-sack-dollar"></i></div>
-<div class="kpi-body">
-<div class="kpi-value" id="hra-budget">—</div>
-<div class="kpi-label">Est. Budget</div>
-</div>
-</div>
-<div class="kpi-card teal">
-<a class="kpi-link" href="#">View Detail</a>
-<div class="kpi-icon"><i class="fas fa-percent"></i></div>
-<div class="kpi-body">
-<div class="kpi-value" id="hra-coverage">—</div>
-<div class="kpi-label">Coverage</div>
-</div>
-</div>
-</div>
-
-<!-- CHARTS -->
 <div class="chart-row">
-<div class="chart-card">
-<div class="chart-header">
-<span class="chart-title"><i class="fas fa-chart-column"></i> Monitoring per Bulan</span>
-<div class="pill-group">
-  <button class="pill active" onclick="toggleHRAChartType(this,'bar')">Bar</button>
-  <button class="pill" onclick="toggleHRAChartType(this,'line')">Line</button>
+  <div class="chart-card">
+    <div class="chart-header">
+      <span class="chart-title"><i class="fas fa-chart-column"></i> Monitoring per Bulan</span>
+      <div class="pill-group"><button class="pill active" onclick="toggleHRAChartType(this,'bar')">Bar</button><button class="pill" onclick="toggleHRAChartType(this,'line')">Line</button></div>
+    </div>
+    <div class="chart-body"><canvas id="hraBarChart"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-header"><span class="chart-title"><i class="fas fa-chart-pie"></i> Distribusi Fleet</span></div>
+    <div class="chart-body"><canvas id="hraDonutChart"></canvas></div>
+  </div>
 </div>
-</div>
-<div class="chart-body"><canvas id="hraBarChart" role="img" aria-label="Bar chart monitoring per bulan"></canvas></div>
-</div>
-<div class="chart-card">
-<div class="chart-header">
-<span class="chart-title"><i class="fas fa-chart-pie"></i> Distribusi Fleet</span>
-</div>
-<div class="chart-body"><canvas id="hraDonutChart" role="img" aria-label="Donut chart distribusi fleet"></canvas></div>
-</div>
-</div>
-
-<!-- BOTTOM -->
 <div class="bottom-row">
-<div class="hazard-card">
-<div class="chart-header">
-<span class="chart-title"><i class="fas fa-triangle-exclamation"></i> Top Hazard</span>
-<select id="hra-hazard-bulan" onchange="renderHRAHazard()" style="font-size:11px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:var(--font)">
-<option value="">Semua</option>
-<option>Januari</option><option>Februari</option><option>Maret</option><option>April</option>
-<option>Mei</option><option>Juni</option><option>Juli</option>
-<option>Agustus</option><option>September</option><option>Oktober</option>
-<option>November</option><option>Desember</option>
-</select>
-</div>
-<div id="hazardList" class="hazard-list"></div>
-</div>
-
-<div class="table-card">
-<div class="chart-header">
-<span class="chart-title"><i class="fas fa-table-list"></i> Data Monitoring IH</span>
-<input type="text" id="hra-search" placeholder="🔍 Cari data..." oninput="searchHRATable()" class="search-input">
-</div>
-<div class="table-wrap">
-<table class="data-table" id="hraTable">
-<thead>
-<tr>
-<th onclick="sortHRATable(0)">Kapal <i class="fas fa-sort fa-xs"></i></th>
-<th onclick="sortHRATable(1)">Fleet <i class="fas fa-sort fa-xs"></i></th>
-<th onclick="sortHRATable(2)">Bulan <i class="fas fa-sort fa-xs"></i></th>
-<th onclick="sortHRATable(3)">Vendor <i class="fas fa-sort fa-xs"></i></th>
-<th onclick="sortHRATable(4)">Status <i class="fas fa-sort fa-xs"></i></th>
-<th onclick="sortHRATable(5)">Est. Budget <i class="fas fa-sort fa-xs"></i></th>
-</tr>
-</thead>
-<tbody id="hraTableBody"></tbody>
-</table>
-</div>
-<div class="table-footer" id="hraTableFooter">Memuat data...</div>
-</div>
+  <div class="hazard-card">
+    <div class="chart-header">
+      <span class="chart-title"><i class="fas fa-triangle-exclamation"></i> Top Hazard</span>
+      <select id="hra-hazard-bulan" onchange="renderHRAHazard()" style="font-size:11px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:var(--font)">
+        <option value="">Semua</option><option>Januari</option><option>Februari</option><option>Maret</option><option>April</option><option>Mei</option><option>Juni</option><option>Juli</option><option>Agustus</option><option>September</option><option>Oktober</option><option>November</option><option>Desember</option>
+      </select>
+    </div>
+    <div id="hazardList" class="hazard-list"></div>
+  </div>
+  <div class="table-card">
+    <div class="chart-header">
+      <span class="chart-title"><i class="fas fa-table-list"></i> Data Monitoring IH</span>
+      <input type="text" id="hra-search" placeholder="🔍 Cari data..." oninput="searchHRATable()" class="search-input">
+    </div>
+    <div class="table-wrap">
+      <table class="data-table" id="hraTable"><thead><tr>
+        <th onclick="sortHRATable(0)">Kapal <i class="fas fa-sort fa-xs"></i></th>
+        <th onclick="sortHRATable(1)">Fleet <i class="fas fa-sort fa-xs"></i></th>
+        <th onclick="sortHRATable(2)">Bulan <i class="fas fa-sort fa-xs"></i></th>
+        <th onclick="sortHRATable(3)">Vendor <i class="fas fa-sort fa-xs"></i></th>
+        <th onclick="sortHRATable(4)">Status <i class="fas fa-sort fa-xs"></i></th>
+        <th onclick="sortHRATable(5)">Est. Budget <i class="fas fa-sort fa-xs"></i></th>
+      </tr></thead><tbody id="hraTableBody"></tbody></table>
+    </div>
+    <div class="table-footer" id="hraTableFooter">Memuat data...</div>
+  </div>
 </div>
 </section>
 
 <!-- ===== PAGE DAT ===== -->
 <section class="page-content" id="page-dat">
-
 <div class="filter-bar">
-<div class="filter-group">
-<label>Bulan</label>
-<select id="dat-filter-bulan" onchange="applyDATFilters()">
-<option value="">Semua Bulan</option>
-<option>Januari</option><option>Februari</option><option>Maret</option><option>April</option><option>Mei</option><option>Juni</option><option>Juli</option>
-<option>Agustus</option><option>September</option><option>Oktober</option>
-<option>November</option><option>Desember</option>
-</select>
+  <div class="filter-group"><label>Bulan</label><select id="dat-filter-bulan" onchange="applyDATFilters()"><option value="">Semua Bulan</option><option>Januari</option><option>Februari</option><option>Maret</option><option>April</option><option>Mei</option><option>Juni</option><option>Juli</option><option>Agustus</option><option>September</option><option>Oktober</option><option>November</option><option>Desember</option></select></div>
+  <div class="filter-group"><label>Jenis Fleet</label><select id="dat-filter-fleet" onchange="applyDATFilters()"><option value="">Semua Fleet</option><option>FP I</option><option>FP II</option><option>FC</option><option>FGP</option></select></div>
+  <div class="filter-group"><label>Nama Kapal</label><input type="text" id="dat-filter-kapal" placeholder="Cari nama kapal..." oninput="applyDATFilters()"></div>
+  <button class="btn-clear" onclick="clearDATFilters()"><i class="fas fa-xmark"></i> Reset</button>
 </div>
-<div class="filter-group">
-<label>Jenis Fleet</label>
-<select id="dat-filter-fleet" onchange="applyDATFilters()">
-<option value="">Semua Fleet</option>
-<option>FP I</option><option>FP II</option><option>FC</option><option>FGP</option>
-</select>
-</div>
-<div class="filter-group">
-<label>Nama Kapal</label>
-<input type="text" id="dat-filter-kapal" placeholder="Cari nama kapal..." oninput="applyDATFilters()">
-</div>
-<button class="btn-clear" onclick="clearDATFilters()"><i class="fas fa-xmark"></i> Reset</button>
-</div>
-
 <div class="kpi-grid">
-<div class="kpi-card blue">
-<a class="kpi-link" href="#">View Detail</a>
-<div class="kpi-icon"><i class="fas fa-ship"></i></div>
-<div class="kpi-body"><div class="kpi-value">85</div><div class="kpi-label">Est Total Kapal</div></div>
+  <div class="kpi-card blue"><a class="kpi-link" href="#">View Detail</a><div class="kpi-icon"><i class="fas fa-ship"></i></div><div class="kpi-body"><div class="kpi-value">85</div><div class="kpi-label">Total Kapal</div></div></div>
+  <div class="kpi-card green"><a class="kpi-link" href="#">View Detail</a><div class="kpi-icon"><i class="fas fa-circle-check"></i></div><div class="kpi-body"><div class="kpi-value" id="dat-done">—</div><div class="kpi-label">Sudah DAT</div></div></div>
+  <div class="kpi-card orange"><a class="kpi-link" href="#">View Detail</a><div class="kpi-icon"><i class="fas fa-clock"></i></div><div class="kpi-body"><div class="kpi-value" id="dat-belum">—</div><div class="kpi-label">Belum DAT</div></div></div>
+  <div class="kpi-card red"><a class="kpi-link" href="#">View Detail</a><div class="kpi-icon"><i class="fas fa-person-falling-burst"></i></div><div class="kpi-body"><div class="kpi-value" id="dat-positif">—</div><div class="kpi-label">Crew Positif</div></div></div>
+  <div class="kpi-card teal"><a class="kpi-link" href="#">View Detail</a><div class="kpi-icon"><i class="fas fa-users"></i></div><div class="kpi-body"><div class="kpi-value" id="dat-crew">—</div><div class="kpi-label">Total Crew Diperiksa</div></div></div>
+  <div class="kpi-card purple"><a class="kpi-link" href="#">View Detail</a><div class="kpi-icon"><i class="fas fa-sack-dollar"></i></div><div class="kpi-body"><div class="kpi-value" id="dat-biaya">—</div><div class="kpi-label">Est. Total Biaya</div></div></div>
+  <div class="kpi-card indigo"><a class="kpi-link" href="#">View Detail</a><div class="kpi-icon"><i class="fas fa-percent"></i></div><div class="kpi-body"><div class="kpi-value" id="dat-coverage">—</div><div class="kpi-label">Coverage</div></div></div>
 </div>
-<div class="kpi-card green">
-<a class="kpi-link" href="#">View Detail</a>
-<div class="kpi-icon"><i class="fas fa-circle-check"></i></div>
-<div class="kpi-body"><div class="kpi-value" id="dat-done">—</div><div class="kpi-label">Sudah DAT</div></div>
-</div>
-<div class="kpi-card orange">
-<a class="kpi-link" href="#">View Detail</a>
-<div class="kpi-icon"><i class="fas fa-clock"></i></div>
-<div class="kpi-body"><div class="kpi-value" id="dat-belum">—</div><div class="kpi-label">Belum DAT</div></div>
-</div>
-<div class="kpi-card red">
-<a class="kpi-link" href="#">View Detail</a>
-<div class="kpi-icon"><i class="fas fa-person-falling-burst"></i></div>
-<div class="kpi-body"><div class="kpi-value" id="dat-positif">—</div><div class="kpi-label">Crew Positif</div></div>
-</div>
-<div class="kpi-card teal">
-<a class="kpi-link" href="#">View Detail</a>
-<div class="kpi-icon"><i class="fas fa-users"></i></div>
-<div class="kpi-body"><div class="kpi-value" id="dat-crew">—</div><div class="kpi-label">Total Crew Diperiksa</div></div>
-</div>
-<div class="kpi-card purple">
-<a class="kpi-link" href="#">View Detail</a>
-<div class="kpi-icon"><i class="fas fa-sack-dollar"></i></div>
-<div class="kpi-body"><div class="kpi-value" id="dat-biaya">—</div><div class="kpi-label">Est. Total Biaya</div></div>
-</div>
-<div class="kpi-card indigo">
-<a class="kpi-link" href="#">View Detail</a>
-<div class="kpi-icon"><i class="fas fa-percent"></i></div>
-<div class="kpi-body"><div class="kpi-value" id="dat-coverage">—</div><div class="kpi-label">Coverage</div></div>
-</div>
-</div>
-
 <div class="chart-row">
-<div class="chart-card">
-<div class="chart-header">
-<span class="chart-title"><i class="fas fa-chart-line"></i> Crew Test per Bulan</span>
-<div class="pill-group">
-<button class="pill active" onclick="toggleDATChartType(this,'bar')">Bar</button>
-<button class="pill" onclick="toggleDATChartType(this,'line')">Line</button>
+  <div class="chart-card">
+    <div class="chart-header"><span class="chart-title"><i class="fas fa-chart-line"></i> Crew Test per Bulan</span><div class="pill-group"><button class="pill active" onclick="toggleDATChartType(this,'bar')">Bar</button><button class="pill" onclick="toggleDATChartType(this,'line')">Line</button></div></div>
+    <div class="chart-body"><canvas id="datBarChart"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-header"><span class="chart-title"><i class="fas fa-chart-pie"></i> Hasil Test (Negatif/Positif)</span></div>
+    <div class="chart-body"><canvas id="datDonutChart"></canvas></div>
+  </div>
 </div>
-</div>
-<div class="chart-body"><canvas id="datBarChart" role="img" aria-label="Bar chart crew test per bulan"></canvas></div>
-</div>
-<div class="chart-card">
-<div class="chart-header">
-<span class="chart-title"><i class="fas fa-chart-pie"></i> Hasil Test (Negatif/Positif)</span>
-</div>
-<div class="chart-body"><canvas id="datDonutChart" role="img" aria-label="Donut chart hasil DAT"></canvas></div>
-</div>
-</div>
-
 <div class="bottom-row">
-<div class="hazard-card">
-<div class="chart-header">
-<span class="chart-title"><i class="fas fa-arrow-trend-down"></i> Tindak Lanjut</span>
-</div>
-<div id="datTindakLanjut"></div>
-</div>
-
-<div class="table-card">
-<div class="chart-header">
-<span class="chart-title"><i class="fas fa-table-list"></i> Data Drugs & Alcohol Test</span>
-<input type="text" id="dat-search" placeholder="🔍 Cari data..." oninput="searchDATTable()" class="search-input">
-</div>
-<div class="table-wrap">
-<table class="data-table">
-<thead>
-<tr>
-<th onclick="sortDATTable(0)">Kapal <i class="fas fa-sort fa-xs"></i></th>
-<th onclick="sortDATTable(1)">Fleet <i class="fas fa-sort fa-xs"></i></th>
-<th onclick="sortDATTable(2)">Bulan <i class="fas fa-sort fa-xs"></i></th>
-<th onclick="sortDATTable(3)">Vendor <i class="fas fa-sort fa-xs"></i></th>
-<th onclick="sortDATTable(4)">Hasil <i class="fas fa-sort fa-xs"></i></th>
-<th onclick="sortDATTable(5)">Crew Positif <i class="fas fa-sort fa-xs"></i></th>
-<th onclick="sortDATTable(6)">Tindak Lanjut <i class="fas fa-sort fa-xs"></i></th>
-</tr>
-</thead>
-<tbody id="datTableBody"></tbody>
-</table>
-</div>
-<div class="table-footer" id="datTableFooter">Memuat data...</div>
-</div>
+  <div class="hazard-card"><div class="chart-header"><span class="chart-title"><i class="fas fa-arrow-trend-down"></i> Tindak Lanjut</span></div><div id="datTindakLanjut"></div></div>
+  <div class="table-card">
+    <div class="chart-header"><span class="chart-title"><i class="fas fa-table-list"></i> Data Drugs & Alcohol Test</span><input type="text" id="dat-search" placeholder="🔍 Cari data..." oninput="searchDATTable()" class="search-input"></div>
+    <div class="table-wrap">
+      <table class="data-table"><thead><tr>
+        <th onclick="sortDATTable(0)">Kapal <i class="fas fa-sort fa-xs"></i></th><th onclick="sortDATTable(1)">Fleet <i class="fas fa-sort fa-xs"></i></th><th onclick="sortDATTable(2)">Bulan <i class="fas fa-sort fa-xs"></i></th><th onclick="sortDATTable(3)">Vendor <i class="fas fa-sort fa-xs"></i></th><th onclick="sortDATTable(4)">Hasil <i class="fas fa-sort fa-xs"></i></th><th onclick="sortDATTable(5)">Crew Positif <i class="fas fa-sort fa-xs"></i></th><th onclick="sortDATTable(6)">Tindak Lanjut <i class="fas fa-sort fa-xs"></i></th>
+      </tr></thead><tbody id="datTableBody"></tbody></table>
+    </div>
+    <div class="table-footer" id="datTableFooter">Memuat data...</div>
+  </div>
 </div>
 </section>
 
-<!-- ===== PLACEHOLDERS ===== -->
-<!-- ===== PAGE PEST & RODENT CONTROL ===== -->
+<!-- ===== PAGE PEST & RODENT ===== -->
 <section class="page-content" id="page-pest">
-
   <div class="filter-bar">
-    <div class="filter-group">
-      <label>Bulan</label>
-      <select id="pest-filter-bulan" onchange="applyPestFilters()">
-        <option value="">Semua Bulan</option>
-        <option>Januari</option><option>Februari</option><option>Maret</option><option>April</option>
-        <option>Mei</option><option>Juni</option><option>Juli</option>
-        <option>Agustus</option><option>September</option><option>Oktober</option>
-        <option>November</option><option>Desember</option>
-      </select>
-    </div>
-    <div class="filter-group">
-      <label>Lokasi</label>
-      <select id="pest-filter-lokasi" onchange="applyPestFilters()">
-        <option value="">Semua Lokasi</option>
-      </select>
-    </div>
-    <div class="filter-group">
-      <label>Temuan</label>
-      <input type="text" id="pest-filter-temuan" placeholder="Cari temuan..." oninput="applyPestFilters()">
-    </div>
+    <div class="filter-group"><label>Bulan</label><select id="pest-filter-bulan" onchange="applyPestFilters()"><option value="">Semua Bulan</option><option>Januari</option><option>Februari</option><option>Maret</option><option>April</option><option>Mei</option><option>Juni</option><option>Juli</option><option>Agustus</option><option>September</option><option>Oktober</option><option>November</option><option>Desember</option></select></div>
+    <div class="filter-group"><label>Lokasi</label><select id="pest-filter-lokasi" onchange="applyPestFilters()"><option value="">Semua Lokasi</option></select></div>
+    <div class="filter-group"><label>Temuan</label><input type="text" id="pest-filter-temuan" placeholder="Cari temuan..." oninput="applyPestFilters()"></div>
     <button class="btn-clear" onclick="clearPestFilters()"><i class="fas fa-xmark"></i> Reset</button>
   </div>
-
-  <!-- KPI -->
   <div class="kpi-grid">
-    <div class="kpi-card blue">
-      <div class="kpi-icon"><i class="fas fa-calendar-check"></i></div>
-      <div class="kpi-body">
-        <div class="kpi-value" id="pest-total">0</div>
-        <div class="kpi-label">Total Pelaksanaan</div>
-      </div>
-    </div>
-    <div class="kpi-card green">
-      <div class="kpi-icon"><i class="fas fa-location-dot"></i></div>
-      <div class="kpi-body">
-        <div class="kpi-value" id="pest-lokasi">0</div>
-        <div class="kpi-label">Total Lokasi</div>
-      </div>
-    </div>
-    <div class="kpi-card orange">
-      <div class="kpi-icon"><i class="fas fa-triangle-exclamation"></i></div>
-      <div class="kpi-body">
-        <div class="kpi-value" id="pest-temuan">0</div>
-        <div class="kpi-label">Total Temuan</div>
-      </div>
-    </div>
-    <div class="kpi-card red">
-      <div class="kpi-icon"><i class="fas fa-bug"></i></div>
-      <div class="kpi-body">
-        <div class="kpi-value" id="pest-hama-dominan">—</div>
-        <div class="kpi-label">Hama Dominan</div>
-      </div>
-    </div>
-    <div class="kpi-card purple">
-      <div class="kpi-icon"><i class="fas fa-sack-dollar"></i></div>
-      <div class="kpi-body">
-        <div class="kpi-value" id="pest-biaya">0</div>
-        <div class="kpi-label">Est. Total Biaya</div>
-      </div>
-    </div>
+    <div class="kpi-card blue"><div class="kpi-icon"><i class="fas fa-calendar-check"></i></div><div class="kpi-body"><div class="kpi-value" id="pest-total">0</div><div class="kpi-label">Total Pelaksanaan</div></div></div>
+    <div class="kpi-card green"><div class="kpi-icon"><i class="fas fa-location-dot"></i></div><div class="kpi-body"><div class="kpi-value" id="pest-lokasi">0</div><div class="kpi-label">Total Lokasi</div></div></div>
+    <div class="kpi-card orange"><div class="kpi-icon"><i class="fas fa-triangle-exclamation"></i></div><div class="kpi-body"><div class="kpi-value" id="pest-temuan">0</div><div class="kpi-label">Total Temuan</div></div></div>
+    <div class="kpi-card red"><div class="kpi-icon"><i class="fas fa-bug"></i></div><div class="kpi-body"><div class="kpi-value" id="pest-hama-dominan">—</div><div class="kpi-label">Hama Dominan</div></div></div>
+    <div class="kpi-card purple"><div class="kpi-icon"><i class="fas fa-sack-dollar"></i></div><div class="kpi-body"><div class="kpi-value" id="pest-biaya">0</div><div class="kpi-label">Est. Total Biaya</div></div></div>
   </div>
-
-  <!-- CHART ROW 1 -->
   <div class="chart-row">
-    <div class="chart-card">
-      <div class="chart-header">
-        <span class="chart-title"><i class="fas fa-chart-bar"></i> Frekuensi Pelaksanaan per Bulan</span>
-        <div class="pill-group">
-          <button class="pill active" onclick="togglePestChartType(this,'bar')">Bar</button>
-          <button class="pill" onclick="togglePestChartType(this,'line')">Line</button>
-        </div>
-      </div>
-      <div class="chart-body"><canvas id="pestBarChart"></canvas></div>
-    </div>
-    <div class="chart-card">
-      <div class="chart-header">
-        <span class="chart-title"><i class="fas fa-chart-pie"></i> Distribusi per Lokasi</span>
-      </div>
-      <div class="chart-body"><canvas id="pestDonutChart"></canvas></div>
-    </div>
+    <div class="chart-card"><div class="chart-header"><span class="chart-title"><i class="fas fa-chart-bar"></i> Frekuensi Pelaksanaan per Bulan</span><div class="pill-group"><button class="pill active" onclick="togglePestChartType(this,'bar')">Bar</button><button class="pill" onclick="togglePestChartType(this,'line')">Line</button></div></div><div class="chart-body"><canvas id="pestBarChart"></canvas></div></div>
+    <div class="chart-card"><div class="chart-header"><span class="chart-title"><i class="fas fa-chart-pie"></i> Distribusi per Lokasi</span></div><div class="chart-body"><canvas id="pestDonutChart"></canvas></div></div>
   </div>
-
-  <!-- CHART ROW 2 -->
   <div class="chart-row">
-    <div class="chart-card">
-      <div class="chart-header">
-        <span class="chart-title"><i class="fas fa-chart-column"></i> Top Temuan / Keluhan</span>
-      </div>
-      <div class="chart-body"><canvas id="pestTemuanChart"></canvas></div>
-    </div>
-    <div class="chart-card">
-      <div class="chart-header">
-        <span class="chart-title"><i class="fas fa-chart-line"></i> Trend Est. Biaya per Bulan</span>
-      </div>
-      <div class="chart-body"><canvas id="pestBiayaChart"></canvas></div>
-    </div>
+    <div class="chart-card"><div class="chart-header"><span class="chart-title"><i class="fas fa-chart-column"></i> Top Temuan / Keluhan</span></div><div class="chart-body"><canvas id="pestTemuanChart"></canvas></div></div>
+    <div class="chart-card"><div class="chart-header"><span class="chart-title"><i class="fas fa-chart-line"></i> Trend Est. Biaya per Bulan</span></div><div class="chart-body"><canvas id="pestBiayaChart"></canvas></div></div>
   </div>
-
-  <!-- BOTTOM -->
   <div class="bottom-row">
-    <div class="hazard-card">
-      <div class="chart-header">
-        <span class="chart-title"><i class="fas fa-clipboard-list"></i> Tindak Lanjut &amp; Rekomendasi</span>
-      </div>
-      <div id="pestTindakLanjutList" class="hazard-list"></div>
-    </div>
+    <div class="hazard-card"><div class="chart-header"><span class="chart-title"><i class="fas fa-clipboard-list"></i> Tindak Lanjut &amp; Rekomendasi</span></div><div id="pestTindakLanjutList" class="hazard-list"></div></div>
     <div class="table-card">
-      <div class="chart-header">
-        <span class="chart-title"><i class="fas fa-table-list"></i> Data Pest &amp; Rodent Control</span>
-        <input type="text" id="pest-search" placeholder="Cari data..." oninput="searchPestTable()" class="search-input">
-      </div>
+      <div class="chart-header"><span class="chart-title"><i class="fas fa-table-list"></i> Data Pest &amp; Rodent Control</span><input type="text" id="pest-search" placeholder="Cari data..." oninput="searchPestTable()" class="search-input"></div>
       <div class="table-wrap">
-        <table class="data-table" id="pestTable">
-          <thead>
-            <tr>
-              <th onclick="sortPestTable(0)">Lokasi <i class="fas fa-sort fa-xs"></i></th>
-              <th onclick="sortPestTable(1)">Tanggal Pelaksanaan <i class="fas fa-sort fa-xs"></i></th>
-              <th onclick="sortPestTable(2)">Temuan / Keluhan <i class="fas fa-sort fa-xs"></i></th>
-              <th onclick="sortPestTable(3)">Tindak Lanjut & Rekomendasi <i class="fas fa-sort fa-xs"></i></th>
-              <th onclick="sortPestTable(4)">Est. Biaya <i class="fas fa-sort fa-xs"></i></th>
-            </tr>
-          </thead>
-          <tbody id="pestTableBody"></tbody>
-        </table>
+        <table class="data-table" id="pestTable"><thead><tr>
+          <th onclick="sortPestTable(0)">Lokasi <i class="fas fa-sort fa-xs"></i></th><th onclick="sortPestTable(1)">Tanggal Pelaksanaan <i class="fas fa-sort fa-xs"></i></th><th onclick="sortPestTable(2)">Temuan / Keluhan <i class="fas fa-sort fa-xs"></i></th><th onclick="sortPestTable(3)">Tindak Lanjut & Rekomendasi <i class="fas fa-sort fa-xs"></i></th><th onclick="sortPestTable(4)">Est. Biaya <i class="fas fa-sort fa-xs"></i></th>
+        </tr></thead><tbody id="pestTableBody"></tbody></table>
       </div>
       <div class="table-footer" id="pestTableFooter">Memuat data...</div>
     </div>
   </div>
 </section>
-<section class="page-content" id="page-p3k">
-<div class="placeholder-page">
-<div class="placeholder-icon"><i class="fas fa-kit-medical"></i></div>
-<h2>P3K & AED Office</h2>
-<p>Dashboard ini sedang dalam pengembangan. Sheet data sudah tersedia di Google Sheets dan siap diisi.</p>
-<div class="placeholder-tag">Coming Soon</div>
-</div>
-</section>
-<section class="page-content" id="page-menu5">
-<div class="placeholder-page">
-<div class="placeholder-icon"><i class="fas fa-chart-pie"></i></div>
-<h2>Sebaran Alkes Kapal</h2>
-<p>Modul belum tersedia. Hubungi tim HSSE untuk pengembangan lebih lanjut.</p>
-<div class="placeholder-tag">Coming Soon</div>
-</div>
-</section>
+
+<section class="page-content" id="page-p3k"><div class="placeholder-page"><div class="placeholder-icon"><i class="fas fa-kit-medical"></i></div><h2>P3K & AED Office</h2><p>Dashboard ini sedang dalam pengembangan.</p><div class="placeholder-tag">Coming Soon</div></div></section>
+<section class="page-content" id="page-menu5"><div class="placeholder-page"><div class="placeholder-icon"><i class="fas fa-chart-pie"></i></div><h2>Sebaran Alkes Kapal</h2><p>Modul belum tersedia.</p><div class="placeholder-tag">Coming Soon</div></div></section>
+
 <!-- ===== PAGE PEDOMAN IH ===== -->
 <section class="page-content" id="page-menu6">
   <div class="pedoman-header-bar">
@@ -564,49 +324,29 @@
       <h2 class="pedoman-title"><i class="fas fa-book-open" style="color:var(--sidebar-bg);margin-right:10px"></i>Portal Pedoman IH</h2>
       <p class="pedoman-sub">Upload, simpan dan download file pedoman Industrial Hygiene</p>
     </div>
-    <label class="btn-upload-pdf" for="pdfUploadInput">
-      <i class="fas fa-cloud-arrow-up"></i> Upload Pedoman PDF
-    </label>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <label class="btn-upload-pdf" for="pdfUploadInput"><i class="fas fa-cloud-arrow-up"></i> Upload Pedoman PDF</label>
+      <button class="btn-export-data" onclick="exportPedomanBackup()"><i class="fas fa-file-export"></i> Export Backup</button>
+      <label class="btn-import-data" for="importBackupInput"><i class="fas fa-file-import"></i> Import Backup</label>
+    </div>
     <input type="file" id="pdfUploadInput" accept=".pdf" style="display:none" onchange="handlePdfUpload(event)">
+    <input type="file" id="importBackupInput" accept=".json" style="display:none" onchange="importPedomanBackup(event)">
+  </div>
+
+  <div class="pedoman-info-banner">
+    <i class="fas fa-circle-info"></i>
+    <span>File PDF disimpan di browser ini (IndexedDB). Untuk berbagi ke device lain, klik <strong>Export Backup</strong> → kirim file JSON → buka di device lain → klik <strong>Import Backup</strong>.</span>
   </div>
 
   <div class="pedoman-search-bar">
-    <div class="pedoman-search-wrap">
-      <i class="fas fa-magnifying-glass"></i>
-      <input type="text" id="pedomanSearch" placeholder="Cari nama pedoman atau kategori..." oninput="renderPedomanList()">
-    </div>
-    <select id="pedomanFilterKat" onchange="renderPedomanList()">
-      <option value="">Semua Kategori</option>
-      <option>Pedoman Umum</option>
-      <option>STK</option>
-      <option>Regulasi</option>
-      <option>Formulir</option>
-      <option>TKO</option>
-    </select>
+    <div class="pedoman-search-wrap"><i class="fas fa-magnifying-glass"></i><input type="text" id="pedomanSearch" placeholder="Cari nama pedoman atau kategori..." oninput="renderPedomanList()"></div>
+    <select id="pedomanFilterKat" onchange="renderPedomanList()"><option value="">Semua Kategori</option><option>Pedoman Umum</option><option>STK</option><option>Regulasi</option><option>Formulir</option><option>TKO</option></select>
   </div>
 
   <div class="pedoman-stats-row">
-    <div class="pedoman-stat-card">
-      <i class="fas fa-file-pdf" style="color:#C62828"></i>
-      <div>
-        <div class="pedoman-stat-num" id="pedoman-count">0</div>
-        <div class="pedoman-stat-lbl">Total File</div>
-      </div>
-    </div>
-    <div class="pedoman-stat-card">
-      <i class="fas fa-download" style="color:#1565C0"></i>
-      <div>
-        <div class="pedoman-stat-num" id="pedoman-downloads">0</div>
-        <div class="pedoman-stat-lbl">Total Download</div>
-      </div>
-    </div>
-    <div class="pedoman-stat-card">
-      <i class="fas fa-clock" style="color:#E65100"></i>
-      <div>
-        <div class="pedoman-stat-num" id="pedoman-last">—</div>
-        <div class="pedoman-stat-lbl">Upload Terakhir</div>
-      </div>
-    </div>
+    <div class="pedoman-stat-card"><i class="fas fa-file-pdf" style="color:#C62828"></i><div><div class="pedoman-stat-num" id="pedoman-count">0</div><div class="pedoman-stat-lbl">Total File</div></div></div>
+    <div class="pedoman-stat-card"><i class="fas fa-download" style="color:#1565C0"></i><div><div class="pedoman-stat-num" id="pedoman-downloads">0</div><div class="pedoman-stat-lbl">Total Download</div></div></div>
+    <div class="pedoman-stat-card"><i class="fas fa-clock" style="color:#E65100"></i><div><div class="pedoman-stat-num" id="pedoman-last">—</div><div class="pedoman-stat-lbl">Upload Terakhir</div></div></div>
   </div>
 
   <div id="pedomanGrid" class="pedoman-grid">
@@ -618,8 +358,67 @@
   </div>
 </section>
 
-</main>
+<!-- ===== PAGE DOKUMENTASI ===== -->
+<section class="page-content" id="page-dokumentasi">
+  <div class="pedoman-header-bar">
+    <div>
+      <h2 class="pedoman-title"><i class="fas fa-images" style="color:var(--sidebar-bg);margin-right:10px"></i>Dokumentasi Foto</h2>
+      <p class="pedoman-sub">Kelola foto dokumentasi kegiatan per kategori</p>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <button class="btn-export-data" onclick="exportDokumentasiBackup()"><i class="fas fa-file-export"></i> Export Backup</button>
+      <label class="btn-import-data" for="importDokInput"><i class="fas fa-file-import"></i> Import Backup</label>
+      <input type="file" id="importDokInput" accept=".json" style="display:none" onchange="importDokumentasiBackup(event)">
+    </div>
+  </div>
 
+  <div class="pedoman-info-banner">
+    <i class="fas fa-circle-info"></i>
+    <span>Foto disimpan di browser ini (IndexedDB). Untuk berbagi ke device lain, gunakan <strong>Export Backup</strong> lalu <strong>Import Backup</strong> di device tujuan.</span>
+  </div>
+
+  <!-- TAB FOLDER -->
+  <div class="dok-tabs">
+    <button class="dok-tab active" data-folder="hra_ih" onclick="switchDokFolder(this)">
+      <i class="fas fa-lungs"></i> HRA & IH
+    </button>
+    <button class="dok-tab" data-folder="dat" onclick="switchDokFolder(this)">
+      <i class="fas fa-vial"></i> DAT
+    </button>
+    <button class="dok-tab" data-folder="pest_rodent" onclick="switchDokFolder(this)">
+      <i class="fas fa-bug"></i> Pest & Rodent
+    </button>
+  </div>
+
+  <!-- UPLOAD AREA -->
+  <div class="dok-upload-area" id="dokUploadArea">
+    <div class="dok-upload-inner">
+      <i class="fas fa-cloud-arrow-up" style="font-size:40px;color:var(--sidebar-bg);margin-bottom:10px"></i>
+      <p style="font-weight:700;font-size:14px;color:var(--text)">Upload Foto Dokumentasi</p>
+      <p style="font-size:12px;color:var(--text-muted);margin-top:4px">Format: JPG, PNG, WEBP — Maks. 10 MB per foto</p>
+      <label class="btn-upload-pdf" for="dokFotoInput" style="margin-top:14px;display:inline-flex">
+        <i class="fas fa-image"></i> Pilih Foto
+      </label>
+    </div>
+    <input type="file" id="dokFotoInput" accept="image/jpeg,image/png,image/webp,image/gif" multiple style="display:none" onchange="handleDokUpload(event)">
+  </div>
+
+  <div class="pedoman-stats-row">
+    <div class="pedoman-stat-card"><i class="fas fa-images" style="color:#1565C0"></i><div><div class="pedoman-stat-num" id="dok-count">0</div><div class="pedoman-stat-lbl">Total Foto di Folder</div></div></div>
+    <div class="pedoman-stat-card"><i class="fas fa-folder-open" style="color:#E65100"></i><div><div class="pedoman-stat-num" id="dok-folder-name" style="font-size:16px">HRA & IH</div><div class="pedoman-stat-lbl">Folder Aktif</div></div></div>
+    <div class="pedoman-stat-card"><i class="fas fa-clock" style="color:#2E7D32"></i><div><div class="pedoman-stat-num" id="dok-last" style="font-size:15px">—</div><div class="pedoman-stat-lbl">Upload Terakhir</div></div></div>
+  </div>
+
+  <div id="dokGrid" class="dok-grid">
+    <div class="dok-empty" id="dokEmpty">
+      <i class="fas fa-image" style="font-size:52px;color:var(--border);margin-bottom:18px;display:block"></i>
+      <p style="font-size:15px;font-weight:700;color:var(--text-muted)">Belum ada foto dokumentasi</p>
+      <p style="font-size:13px;color:var(--text-muted);margin-top:6px">Klik <strong>Pilih Foto</strong> untuk upload gambar</p>
+    </div>
+  </div>
+</section>
+
+</main>
 <script src="script.js"></script>
 </body>
 </html>
