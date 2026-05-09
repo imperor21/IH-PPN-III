@@ -7,7 +7,7 @@
 // ============================================================
 // ⚠️  GANTI URL INI DENGAN URL GOOGLE APPS SCRIPT ANDA
 // ============================================================
-const API_URL = "https://script.google.com/macros/s/AKfycbxAygNFbJ30DkwaDcCjLWaTXuw4xzLTtdb3TLa9GYHv5vfegVkbwBW1iZWMdEgaolE_Sw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyVLVLKjH7IkEcojQ_beQZ_8inExPmRwJYflUXVMxk2mqu9sRo45r9dxjI5JGGpCcg02w/exec";
 
 // ============================================================
 // 🗄️  IndexedDB
