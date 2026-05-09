@@ -5,7 +5,7 @@
 // ============================================================
 // ⚠️  GANTI URL INI DENGAN URL GOOGLE APPS SCRIPT ANDA
 // ============================================================
-const API_URL = "https://script.google.com/macros/s/AKfycbx8NW-J5eCkQLfueB-bC7BYATgFG_Rq-gJh7TE8l0XKBpvt78xgQ5ZJ2Nlf-Nd9IQUssQ/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbz5GH5XTYDmcVEzKLbAqWEQ4iXCPYVshvCf5tW9zA9iVqzssCCMaZVvHxXRjn06EFhNlw/exec";
 
 // ============================================================
 // HELPER FETCH — satu fungsi untuk semua request ke GAS
