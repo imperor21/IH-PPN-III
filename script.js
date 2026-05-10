@@ -3,7 +3,7 @@
 /* ✅ Pedoman PDF & Foto Dokumentasi → Google Drive (multi-device)    */
 /* ✅ IndexedDB dihapus — data terpusat di GAS/Drive                  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbypeHDNUIeuQUwmaa2Jb6MOGg5U6zsAMfeD-0PfOHvyTTDK-kPVFzgh9MvuYdLHwTXDEQ/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwU8YjLgzBkf-hkqsZZt3Bp7yvwdfHik7dyqSTMnLu_xMDweuHkCi0a5ZQ5EYEbfamuXw/exec";
 
 async function gasPost(payload) {
   const controller = new AbortController();
