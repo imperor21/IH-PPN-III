@@ -68,23 +68,18 @@ html, body { height:100%; font-family:var(--font); background:var(--bg); color:v
 /* Left hero panel */
 .login-left {
   flex:1; min-width:0;
-  background:linear-gradient(160deg, #071E45 0%, #0D2E5E 40%, #1565C0 100%);
+  background:url('https://drive.google.com/thumbnail?id=155N7ebgHq6EHbSb_61VLbpbiqcskncVn&sz=w1200') center center / cover no-repeat;
   display:flex; align-items:center; justify-content:center;
   padding:48px; position:relative; overflow:hidden;
 }
 .login-left::before {
   content:'';
-  position:absolute; top:-120px; right:-120px;
-  width:500px; height:500px; border-radius:50%;
-  border:1px solid rgba(255,255,255,0.06);
+  position:absolute; inset:0; z-index:1;
+  background:linear-gradient(160deg, rgba(7,30,69,0.82) 0%, rgba(13,46,94,0.78) 40%, rgba(21,101,192,0.72) 100%);
 }
-.login-left::after {
-  content:'';
-  position:absolute; bottom:-80px; left:-80px;
-  width:400px; height:400px; border-radius:50%;
-  border:1px solid rgba(255,255,255,0.05);
-}
-.login-hero-content { position:relative; z-index:2; max-width:440px; }
+
+
+.login-hero-content { position:relative; z-index:3; max-width:440px; }
 
 .login-logo-top {
   display:flex; align-items:center; gap:16px; margin-bottom:52px;
@@ -196,25 +191,6 @@ html, body { height:100%; font-family:var(--font); background:var(--bg); color:v
 }
 
 
-.login-ship-photo {
-  margin-top: 36px;
-  width: 100%;
-  border-radius: 16px;
-  overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.12);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-  position: relative;
-  z-index: 2;
-}
-.login-ship-photo img {
-  width: 100%;
-  height: 200px;
-  object-fit: cover;
-  display: block;
-  opacity: 0.88;
-  transition: opacity .3s;
-}
-.login-ship-photo img:hover { opacity: 1; }
 
 @keyframes shake {
   0%,100%{ transform:translateX(0); }
