@@ -75,6 +75,10 @@ padding:48px; position:relative; overflow:hidden;
 }
 .login-left::before {
   content:'';
+  position:absolute; inset:0; z-index:2;
+  background:linear-gradient(160deg, rgba(7,30,69,0.55) 0%, rgba(13,46,94,0.45) 60%, rgba(21,101,192,0.35) 100%);
+  pointer-events:none;
+}
 
 .login-bg-photo {
   position:absolute; inset:0; z-index:0;
