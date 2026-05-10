@@ -49,6 +49,9 @@ function checkAuth(){
     const user=getSession();
     overlay.classList.add("hidden");
     if(usernameEl)usernameEl.textContent=user?user.displayName:"User";
+    // Update avatar inisial
+    var av=document.querySelector(".user-avatar");
+    if(av&&user){var nm=user.displayName||"IH";var ini=nm.split(" ").map(function(w){return w[0];}).join("").toUpperCase().slice(0,2);av.innerHTML='<span style="font-size:14px;font-weight:800;color:#fff;">'+ini+'</span>';}
     applyRoleUI();
   }else{
     clearSession();
@@ -107,8 +110,18 @@ function applyRoleUI(){
     }
   });
   // Badge role di sidebar
+  // Role badge disembunyikan (display:none), tapi value tetap disimpan untuk logika internal
   const roleEl=document.querySelector(".user-role");
-  if(roleEl)roleEl.textContent=admin?"Admin":"Viewer";
+  if(roleEl){roleEl.textContent=admin?"Admin":"Viewer";roleEl.style.display="none";}
+
+  // Update avatar inisial berdasarkan nama
+  var avatarEl=document.querySelector(".user-avatar");
+  if(avatarEl){
+    var uname=document.getElementById("sidebarUsername");
+    var name=uname?uname.textContent:"IH";
+    var initials=name.split(" ").map(function(w){return w[0];}).join("").toUpperCase().slice(0,2);
+    avatarEl.innerHTML='<span style="font-size:14px;font-weight:800;color:#fff;">'+initials+'</span>';
+  }
 }
 
 /* VIEWER GUARD — blokir action write jika bukan admin */
@@ -401,3 +414,23 @@ async function deleteDokFoto(fileId){
 }
 async function exportDokumentasiBackup(){showToast("Foto tersimpan terpusat di Google Drive — bisa diakses dari semua device.","info");}
 async function importDokumentasiBackup(event){showToast("Import tidak diperlukan. Foto sudah tersimpan di Google Drive.","info");if(event&&event.target)event.target.value="";}
+
+/* ═══ MOBILE PAGE SWITCHER ═══ */
+function switchPage(menu) {
+  var titles = {
+    hra:'HRA & IH', dat:'Drugs & Alcohol Test',
+    pest:'Pest & Rodent Control', p3k:'P3K & AED Office',
+    menu5:'Sebaran Alkes Kapal', menu6:'Pedoman IH',
+    dokumentasi:'Dokumentasi'
+  };
+  var title = titles[menu] || menu;
+  document.querySelectorAll('.page-content').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
+  document.querySelectorAll('.mobile-nav-item').forEach(function(n){ n.classList.remove('active'); });
+  var page = document.getElementById('page-' + menu);
+  if (page) page.classList.add('active');
+  document.querySelectorAll('[data-menu="'+menu+'"]').forEach(function(n){ n.classList.add('active'); });
+  var pt = document.getElementById('pageTitle');
+  if (pt) pt.textContent = title;
+  closeSidebar();
+}
