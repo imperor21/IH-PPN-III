@@ -87,7 +87,7 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 .login-hero-content{position:relative;z-index:3;max-width:460px;width:100%}
 
 .login-logo-top{display:flex;align-items:center;gap:16px;margin-bottom:48px}
-.login-anchor-icon{display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.login-anchor-icon{display:flex;align-items:center;justify-content:center;flex-shrink:0;width:auto;height:auto}
 .tagline-main{display:block;font-size:11px;font-weight:800;color:#fff;letter-spacing:2.5px;text-transform:uppercase}
 .tagline-sub{display:block;font-size:11px;color:rgba(255,255,255,.55);margin-top:3px;letter-spacing:.5px}
 
@@ -112,7 +112,7 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 .login-card{width:100%;max-width:390px}
 
 .login-card-header{display:flex;align-items:center;gap:16px;padding-bottom:28px;border-bottom:2px solid #F3F4F6;margin-bottom:36px}
-.login-card-icon{border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden}
+.login-card-icon{border-radius:12px;background:#EBF5FF;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;padding:10px 14px;min-width:68px;min-height:52px}
 .login-brand-title{font-size:16px;font-weight:800;color:var(--text)}
 .login-brand-sub{font-size:12px;color:var(--text-muted);margin-top:3px}
 
@@ -146,14 +146,14 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 
 /* Brand */
 .sidebar-brand{display:flex;align-items:center;gap:13px;padding:22px 20px 18px;border-bottom:1px solid var(--border-soft)}
-.brand-icon{border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.brand-icon{border-radius:10px;background:#fff;flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:6px 8px;min-width:48px;min-height:36px;box-shadow:0 2px 8px rgba(0,107,184,0.2)}
 .brand-title{display:block;font-weight:800;font-size:15px;color:var(--text);letter-spacing:-.2px;line-height:1.2}
 .brand-sub{display:block;font-size:10px;color:var(--text-muted);margin-top:2px;letter-spacing:.3px;text-transform:uppercase}
 
 /* User badge */
 .sidebar-user{display:flex;align-items:center;gap:12px;padding:13px 20px;background:var(--blue-bg);border-bottom:1px solid var(--border-soft)}
 .user-avatar{width:38px;height:38px;border-radius:50%;background:var(--grad-blue);display:flex;align-items:center;justify-content:center;font-size:15px;color:#fff;font-weight:700;flex-shrink:0;box-shadow:0 2px 8px rgba(0,107,184,.25)}
-.user-name{font-weight:700;font-size:13px;color:var(--text)}
+.user-name{font-weight:700;font-size:13px;color:var(--text);line-height:1.4}
 .user-role{font-size:10px;color:var(--text-muted);margin-top:1px}
 
 /* Nav */
@@ -574,3 +574,27 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
   box-shadow:0 6px 20px rgba(237,26,47,.45);
 }
 .btn-export-ppt i{font-size:14px}
+
+/* ═══ ROLE BADGE HIDDEN — nama saja yang tampil ═══ */
+.sidebar-user .user-role{display:none!important}
+
+/* ═══ LOGO IMAGES ═══ */
+.logo-hero{
+  width:80px;height:auto;
+  display:block;
+  object-fit:contain;
+  filter:brightness(0) invert(1);
+  margin:0 auto;
+}
+.logo-card{
+  width:72px;height:auto;
+  display:block;
+  object-fit:contain;
+  margin:0 auto;
+}
+.logo-sidebar{
+  width:38px;height:auto;
+  display:block;
+  object-fit:contain;
+  margin:0 auto;
+}
