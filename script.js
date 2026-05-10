@@ -137,7 +137,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 
 /* NAV */
 function setupNav(){document.querySelectorAll(".nav-item").forEach(item=>{item.addEventListener("click",e=>{e.preventDefault();const menu=item.dataset.menu;const title=item.dataset.title||menu;document.querySelectorAll(".page-content").forEach(p=>p.classList.remove("active"));document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));const page=document.getElementById("page-"+menu);if(page)page.classList.add("active");item.classList.add("active");document.getElementById("pageTitle").textContent=title;closeSidebar();});});}
-function setupSidebar(){const overlay=document.createElement("div");overlay.className="sidebar-overlay";overlay.id="sidebarOverlay";overlay.addEventListener("click",closeSidebar);document.body.appendChild(overlay);document.getElementById("sidebarToggle").addEventListener("click",()=>{const open=document.getElementById("sidebar").classList.toggle("open");overlay.classList.toggle("show",open);});}
+function setupSidebar(){const overlay=document.getElementById("sidebarOverlay");if(overlay)overlay.addEventListener("click",closeSidebar);document.getElementById("sidebarToggle").addEventListener("click",()=>{const open=document.getElementById("sidebar").classList.toggle("open");const ov=document.getElementById("sidebarOverlay");if(ov)ov.classList.toggle("show",open);});}
 function closeSidebar(){document.getElementById("sidebar").classList.remove("open");document.getElementById("sidebarOverlay").classList.remove("show");}
 
 /* DATA LOAD */
