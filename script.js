@@ -6,19 +6,30 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbzs7XKeqah4z9KgWYcoDhBnJ4E9jFK9spRgw_djQ-pRknxuGxO3VENLJj7CJbeMDPRvxw/exec";
 
 async function gasPost(payload) {
-  const res = await fetch(API_URL, {
-    method:"POST", redirect:"follow",
-    headers:{"Content-Type":"text/plain;charset=utf-8"},
-    body:JSON.stringify(payload)
-  });
-  // GAS kadang return HTML redirect jika session expired atau deploy error
-  // Tangkap agar tidak crash dengan SyntaxError di caller
-  const text = await res.text();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000); // 30 detik timeout
   try {
-    return JSON.parse(text);
+    const res = await fetch(API_URL, {
+      method:"POST", redirect:"follow",
+      headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body:JSON.stringify(payload),
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+    // GAS kadang return HTML redirect jika session expired atau deploy error
+    const text = await res.text();
+    try {
+      return JSON.parse(text);
+    } catch(e) {
+      console.error("GAS non-JSON response:", text.slice(0, 200));
+      throw new Error("Server mengembalikan respons tidak valid. Cek deployment GAS.");
+    }
   } catch(e) {
-    console.error("GAS non-JSON response:", text.slice(0, 200));
-    throw new Error("Server mengembalikan respons tidak valid. Cek deployment GAS.");
+    clearTimeout(timeout);
+    if (e.name === "AbortError") {
+      throw new Error("Request timeout (>30 detik). Server GAS tidak merespons.");
+    }
+    throw e;
   }
 }
 
@@ -30,29 +41,47 @@ function isAdmin(){return getRole()==="admin";}
 function saveSession(data,token){sessionStorage.setItem("ppn_token",token);sessionStorage.setItem("ppn_user",JSON.stringify({displayName:data.displayName,role:data.role}));sessionStorage.setItem("ppn_login_time",Date.now().toString());}
 function clearSession(){sessionStorage.removeItem("ppn_token");sessionStorage.removeItem("ppn_user");sessionStorage.removeItem("ppn_login_time");}
 function isSessionValid(){const token=getToken();const loginTime=parseInt(sessionStorage.getItem("ppn_login_time")||"0");if(!token)return false;if(Date.now()-loginTime>8*60*60*1000){clearSession();return false;}return true;}
-function checkAuth(){if(isSessionValid()){const user=getSession();document.getElementById("loginOverlay").classList.add("hidden");document.getElementById("sidebarUsername").textContent=user?user.displayName:"User";applyRoleUI();}else{clearSession();document.getElementById("loginOverlay").classList.remove("hidden");}}
+function checkAuth(){
+  const overlay=document.getElementById("loginOverlay");
+  const usernameEl=document.getElementById("sidebarUsername");
+  if(!overlay)return;
+  if(isSessionValid()){
+    const user=getSession();
+    overlay.classList.add("hidden");
+    if(usernameEl)usernameEl.textContent=user?user.displayName:"User";
+    applyRoleUI();
+  }else{
+    clearSession();
+    overlay.classList.remove("hidden");
+  }
+}
 
 /* LOGIN */
-let loginAttempts=0,loginLockedUntil=0;
+let loginAttempts=0;
+function getLoginLockedUntil(){return parseInt(localStorage.getItem("ppn_locked_until")||"0");}
+function setLoginLockedUntil(ts){localStorage.setItem("ppn_locked_until",ts.toString());}
+
 async function doLogin(){
   const username=document.getElementById("loginUsername").value.trim();
   const password=document.getElementById("loginPassword").value;
   const btn=document.getElementById("btnLogin");
-  if(Date.now()<loginLockedUntil){const sisa=Math.ceil((loginLockedUntil-Date.now())/60000);showLoginError("Terlalu banyak percobaan. Tunggu "+sisa+" menit.");return;}
+  const lockedUntil=getLoginLockedUntil();
+  if(Date.now()<lockedUntil){const sisa=Math.ceil((lockedUntil-Date.now())/60000);showLoginError("Terlalu banyak percobaan. Tunggu "+sisa+" menit.");return;}
   if(!username||!password){showLoginError("Username dan password tidak boleh kosong.");return;}
   btn.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Memverifikasi...';btn.disabled=true;
   try{
+    clearSession(); // bersihkan sesi lama sebelum login baru
     const data=await gasPost({action:"login",username,password});
-    if(data.status==="ok"){loginAttempts=0;saveSession(data,data.token);document.getElementById("loginError").style.display="none";document.getElementById("loginOverlay").classList.add("hidden");document.getElementById("sidebarUsername").textContent=data.displayName;applyRoleUI();loadData();}
-    else if(data.status==="locked"){loginLockedUntil=Date.now()+15*60*1000;showLoginError(data.message||"Akun dikunci sementara.");shakeCard();}
-    else{loginAttempts++;if(loginAttempts>=5)loginLockedUntil=Date.now()+15*60*1000;showLoginError(data.message||"Username atau password salah.");shakeCard();}
-  }catch(err){showLoginError("Tidak dapat terhubung ke server. Periksa koneksi internet.");console.error("Login error:",err);}
+    if(data.status==="ok"){loginAttempts=0;localStorage.removeItem("ppn_locked_until");saveSession(data,data.token);document.getElementById("loginError").style.display="none";document.getElementById("loginOverlay").classList.add("hidden");document.getElementById("sidebarUsername").textContent=data.displayName;applyRoleUI();loadData();}
+    else if(data.status==="locked"){setLoginLockedUntil(Date.now()+15*60*1000);showLoginError(data.message||"Akun dikunci sementara.");shakeCard();}
+    else{loginAttempts++;if(loginAttempts>=5){setLoginLockedUntil(Date.now()+15*60*1000);loginAttempts=0;}showLoginError(data.message||"Username atau password salah.");shakeCard();}
+  }catch(err){showLoginError("Tidak dapat terhubung ke server: "+err.message);console.error("Login error:",err);}
   btn.innerHTML='<i class="fas fa-right-to-bracket"></i> Masuk';btn.disabled=false;
 }
 function shakeCard(){const card=document.querySelector(".login-card");card.style.animation="shake .4s ease";setTimeout(()=>{card.style.animation="";},400);}
 
 /* LOGOUT */
-async function doLogout(){if(!confirm("Yakin ingin logout?"))return;const token=getToken();if(token)gasPost({action:"logout",token}).catch(()=>{});clearSession();document.getElementById("loginUsername").value="";document.getElementById("loginPassword").value="";document.getElementById("loginError").style.display="none";document.getElementById("loginOverlay").classList.remove("hidden");}
+async function doLogout(){if(!confirm("Yakin ingin logout?"))return;const token=getToken();if(token)gasPost({action:"logout",token}).catch(()=>{});clearSession();const unEl=document.getElementById("loginUsername");const pwEl=document.getElementById("loginPassword");const errEl=document.getElementById("loginError");const overlay=document.getElementById("loginOverlay");if(unEl)unEl.value="";if(pwEl)pwEl.value="";if(errEl)errEl.style.display="none";if(overlay)overlay.classList.remove("hidden");}
 function showLoginError(msg){document.getElementById("loginErrorMsg").textContent=msg;document.getElementById("loginError").style.display="flex";}
 function togglePassword(){const input=document.getElementById("loginPassword");const icon=document.getElementById("togglePwIcon");if(input.type==="password"){input.type="text";icon.className="fas fa-eye-slash";}else{input.type="password";icon.className="fas fa-eye";}}
 
@@ -60,10 +89,8 @@ function togglePassword(){const input=document.getElementById("loginPassword");c
 function applyRoleUI(){
   const admin=isAdmin();
   // Admin-only: sembunyikan jika viewer, tampilkan jika admin
-  // Pakai "inline-flex" untuk tombol/label, "flex" untuk div
   document.querySelectorAll(".admin-only").forEach(el=>{
     if(admin){
-      // Kembalikan display asli berdasarkan tag
       const tag=el.tagName.toLowerCase();
       el.style.display=(tag==="label"||tag==="button"||tag==="a")?"inline-flex":"flex";
     } else {
@@ -72,7 +99,12 @@ function applyRoleUI(){
   });
   // Viewer-only: kebalikannya
   document.querySelectorAll(".viewer-only").forEach(el=>{
-    el.style.display=admin?"none":"flex";
+    if(!admin){
+      const tag=el.tagName.toLowerCase();
+      el.style.display=(tag==="label"||tag==="button"||tag==="a")?"inline-flex":"flex";
+    } else {
+      el.style.display="none";
+    }
   });
   // Badge role di sidebar
   const roleEl=document.querySelector(".user-role");
@@ -95,10 +127,10 @@ let hraChartType="bar",datChartType="bar",pestChartType="bar";
 
 /* INIT */
 document.addEventListener("DOMContentLoaded",()=>{
-  ["loginUsername","loginPassword"].forEach(id=>{document.getElementById(id).addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});});
+  ["loginUsername","loginPassword"].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});});
   checkAuth();setupNav();setupSidebar();
-  if(isSessionValid()){loadData();let _autoRefreshing=false;setInterval(()=>{if(!isSessionValid()){alert("Sesi Anda telah habis (8 jam). Silakan login kembali.");clearSession();document.getElementById("loginOverlay").classList.remove("hidden");return;}if(_autoRefreshing)return;_autoRefreshing=true;loadData().finally(()=>{_autoRefreshing=false;});},300000);}
-  document.getElementById("btnRefresh").addEventListener("click",()=>{if(isSessionValid())loadData();else alert("Sesi habis. Silakan login kembali.");});
+  if(isSessionValid()){loadData();let _autoRefreshing=false;setInterval(()=>{if(!isSessionValid()){alert("Sesi Anda telah habis (8 jam). Silakan login kembali.");clearSession();const overlay=document.getElementById("loginOverlay");if(overlay)overlay.classList.remove("hidden");return;}if(_autoRefreshing)return;_autoRefreshing=true;loadData().finally(()=>{_autoRefreshing=false;});},300000);}
+  const btnRefresh=document.getElementById("btnRefresh");if(btnRefresh)btnRefresh.addEventListener("click",()=>{if(isSessionValid())loadData();else alert("Sesi habis. Silakan login kembali.");});
   document.querySelectorAll('.nav-item[data-menu="menu6"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(renderPedomanList,80));});
   document.querySelectorAll('.nav-item[data-menu="dokumentasi"]').forEach(item=>{item.addEventListener("click",()=>{currentDokFolder="hra_ih";setTimeout(renderDokGallery,80);});});
 });
@@ -110,16 +142,36 @@ function closeSidebar(){document.getElementById("sidebar").classList.remove("ope
 
 /* DATA LOAD */
 async function loadData(){
-  if(!isSessionValid()){showError("Sesi habis. Silakan login kembali.");document.getElementById("loginOverlay").classList.remove("hidden");return;}
+  if(!isSessionValid()){
+    showError("Sesi habis. Silakan login kembali.");
+    const overlay=document.getElementById("loginOverlay");
+    if(overlay)overlay.classList.remove("hidden");
+    return;
+  }
   showLoading(true);hideError();
   try{
     const data=await gasPost({action:"getData",sheet:"all",token:getToken()});
-    if(data.status==="unauthorized"){clearSession();showError("Sesi habis atau tidak valid. Silakan login kembali.");document.getElementById("loginOverlay").classList.remove("hidden");showLoading(false);return;}
+    if(data.status==="unauthorized"){
+      clearSession();
+      showError("Sesi habis atau tidak valid. Silakan login kembali.");
+      const overlay=document.getElementById("loginOverlay");
+      if(overlay)overlay.classList.remove("hidden");
+      showLoading(false);return;
+    }
     if(data.status!=="ok")throw new Error(data.message||"Error dari server");
     rawHRA=data.hra||[];rawDAT=data.dat||[];rawPest=data.pest||[];
     filteredHRA=[...rawHRA];filteredDAT=[...rawDAT];filteredPest=[...rawPest];
-    const now=new Date();document.getElementById("lastUpdated").textContent="Update: "+now.toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"});
-  }catch(err){console.error("API Error:",err);showError("Gagal memuat data: "+err.message);rawHRA=[];rawDAT=[];rawPest=[];filteredHRA=[];filteredDAT=[];filteredPest=[];document.getElementById("lastUpdated").textContent="Gagal terhubung";}
+    const now=new Date();
+    const lastEl=document.getElementById("lastUpdated");
+    if(lastEl)lastEl.textContent="Update: "+now.toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"});
+  }catch(err){
+    console.error("API Error:",err);
+    showError("Gagal memuat data: "+err.message);
+    rawHRA=[];rawDAT=[];rawPest=[];
+    filteredHRA=[];filteredDAT=[];filteredPest=[];
+    const lastEl=document.getElementById("lastUpdated");
+    if(lastEl)lastEl.textContent="Gagal terhubung";
+  }
   renderHRAPage();renderDATPage();renderPestPage();showLoading(false);
 }
 function showLoading(v){document.getElementById("loadingOverlay").style.display=v?"flex":"none";}
