@@ -38,6 +38,15 @@ function getToken(){return sessionStorage.getItem("ppn_token");}
 function getSession(){const s=sessionStorage.getItem("ppn_user");return s?JSON.parse(s):null;}
 function getRole(){const u=getSession();return u?u.role:"";}
 function isAdmin(){return getRole()==="admin";}
+
+/* Mapping nama tampilan — override displayName dari server */
+var NAME_MAP = {
+  "IH Viewer": "Health3",
+  "IH Admin":  "IH Admin"
+};
+function getMappedName(name) {
+  return NAME_MAP[name] || name;
+}
 function saveSession(data,token){sessionStorage.setItem("ppn_token",token);sessionStorage.setItem("ppn_user",JSON.stringify({displayName:data.displayName,role:data.role}));sessionStorage.setItem("ppn_login_time",Date.now().toString());}
 function clearSession(){sessionStorage.removeItem("ppn_token");sessionStorage.removeItem("ppn_user");sessionStorage.removeItem("ppn_login_time");}
 function isSessionValid(){const token=getToken();const loginTime=parseInt(sessionStorage.getItem("ppn_login_time")||"0");if(!token)return false;if(Date.now()-loginTime>8*60*60*1000){clearSession();return false;}return true;}
@@ -48,7 +57,7 @@ function checkAuth(){
   if(isSessionValid()){
     const user=getSession();
     overlay.classList.add("hidden");
-    if(usernameEl)usernameEl.textContent=user?user.displayName:"User";
+    if(usernameEl)usernameEl.textContent=user?getMappedName(user.displayName):"User";
     // Update avatar inisial
     var av=document.querySelector(".user-avatar");
     if(av&&user){var nm=user.displayName||"IH";var ini=nm.split(" ").map(function(w){return w[0];}).join("").toUpperCase().slice(0,2);av.innerHTML='<span style="font-size:14px;font-weight:800;color:#fff;">'+ini+'</span>';}
@@ -75,7 +84,7 @@ async function doLogin(){
   try{
     clearSession(); // bersihkan sesi lama sebelum login baru
     const data=await gasPost({action:"login",username,password});
-    if(data.status==="ok"){loginAttempts=0;localStorage.removeItem("ppn_locked_until");saveSession(data,data.token);document.getElementById("loginError").style.display="none";document.getElementById("loginOverlay").classList.add("hidden");document.getElementById("sidebarUsername").textContent=data.displayName;applyRoleUI();loadData();}
+    if(data.status==="ok"){loginAttempts=0;localStorage.removeItem("ppn_locked_until");saveSession(data,data.token);document.getElementById("loginError").style.display="none";document.getElementById("loginOverlay").classList.add("hidden");document.getElementById("sidebarUsername").textContent=getMappedName(data.displayName);applyRoleUI();loadData();}
     else if(data.status==="locked"){setLoginLockedUntil(Date.now()+15*60*1000);showLoginError(data.message||"Akun dikunci sementara.");shakeCard();}
     else{loginAttempts++;if(loginAttempts>=5){setLoginLockedUntil(Date.now()+15*60*1000);loginAttempts=0;}showLoginError(data.message||"Username atau password salah.");shakeCard();}
   }catch(err){showLoginError("Tidak dapat terhubung ke server: "+err.message);console.error("Login error:",err);}
