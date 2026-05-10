@@ -30,11 +30,11 @@
         </div>
       </div>
       <div class="login-hero-text">
-        <h1 class="login-hero-title">HYGIENE<br>CONTROL<br>CENTER</h1>
-        <p class="login-hero-desc">Integrated Maritime IH Dashboard 2026.</p>
+        <h1 class="login-hero-title">HEALTH<br>MONITORING<br>SYSTEM</h1>
+        <p class="login-hero-desc">Platform monitoring kesehatan & keselamatan armada kapal PPN III secara real-time.</p>
       </div>
       <div class="login-stats-row">
-        <div class="login-stat"><span class="ls-num">85</span><span class="ls-lbl">Est Kapal Milik</span></div>
+        <div class="login-stat"><span class="ls-num">85</span><span class="ls-lbl">Armada Kapal</span></div>
         <div class="login-stat-div"></div>
         <div class="login-stat"><span class="ls-num">4</span><span class="ls-lbl">Jenis Fleet</span></div>
         <div class="login-stat-div"></div>
@@ -47,7 +47,7 @@
       <div class="login-card-header">
         <div class="login-card-icon"><i class="fas fa-shield-halved"></i></div>
         <div>
-          <div class="login-brand-title">Health III</div>
+          <div class="login-brand-title">Dashboard Health III</div>
           <div class="login-brand-sub">Pertamina Patra Niaga</div>
         </div>
       </div>
@@ -299,8 +299,8 @@
     <div class="table-card">
       <div class="chart-header"><span class="chart-title"><i class="fas fa-table-list"></i> Data Drugs & Alcohol Test</span><input type="text" id="dat-search" placeholder="🔍 Cari data..." oninput="searchDATTable()" class="search-input"></div>
       <div class="table-wrap">
-        <table class="data-table"><thead><tr>
-          <th onclick="sortDATTable(0)">Kapal <i class="fas fa-sort fa-xs"></i></th><th onclick="sortDATTable(1)">Fleet <i class="fas fa-sort fa-xs"></i></th><th onclick="sortDATTable(2)">Bulan <i class="fas fa-sort fa-xs"></i></th><th onclick="sortDATTable(3)">Vendor <i class="fas fa-sort fa-xs"></i></th><th onclick="sortDATTable(4)">Hasil <i class="fas fa-sort fa-xs"></i></th><th onclick="sortDATTable(5)">Crew Positif <i class="fas fa-sort fa-xs"></i></th><th onclick="sortDATTable(6)">Tindak Lanjut <i class="fas fa-sort fa-xs"></i></th>
+        <table class="data-table" id="datTable"><thead><tr>
+          <th onclick="sortDATTable(0)">Kapal <i class="fas fa-sort fa-xs"></i></th><th onclick="sortDATTable(1)">Fleet <i class="fas fa-sort fa-xs"></i></th><th onclick="sortDATTable(2)">Bulan <i class="fas fa-sort fa-xs"></i></th><th onclick="sortDATTable(3)">Vendor <i class="fas fa-sort fa-xs"></i></th><th onclick="sortDATTable(4)">Total Crew <i class="fas fa-sort fa-xs"></i></th><th onclick="sortDATTable(5)">Hasil <i class="fas fa-sort fa-xs"></i></th><th onclick="sortDATTable(6)">Crew Positif <i class="fas fa-sort fa-xs"></i></th><th onclick="sortDATTable(7)">Tindak Lanjut <i class="fas fa-sort fa-xs"></i></th>
         </tr></thead><tbody id="datTableBody"></tbody></table>
       </div>
       <div class="table-footer" id="datTableFooter">Memuat data...</div>
@@ -356,12 +356,17 @@
       <p class="pedoman-sub">Upload, simpan dan download file pedoman Industrial Hygiene</p>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-      <label class="btn-upload-pdf" for="pdfUploadInput"><i class="fas fa-cloud-arrow-up"></i> Upload Pedoman PDF</label>
-      <button class="btn-export-data" onclick="exportPedomanBackup()"><i class="fas fa-file-export"></i> Export Backup</button>
-      <label class="btn-import-data" for="importBackupInput"><i class="fas fa-file-import"></i> Import Backup</label>
+      <label class="btn-upload-pdf admin-only" for="pdfUploadInput"><i class="fas fa-cloud-arrow-up"></i> Upload Pedoman PDF</label>
+      <button class="btn-export-data admin-only" onclick="exportPedomanBackup()"><i class="fas fa-file-export"></i> Export Backup</button>
+      <label class="btn-import-data admin-only" for="importBackupInput"><i class="fas fa-file-import"></i> Import Backup</label>
     </div>
     <input type="file" id="pdfUploadInput" accept=".pdf" style="display:none" onchange="handlePdfUpload(event)">
     <input type="file" id="importBackupInput" accept=".json" style="display:none" onchange="importPedomanBackup(event)">
+  </div>
+
+  <div class="viewer-banner viewer-only" id="pedomanViewerBanner">
+    <i class="fas fa-eye"></i>
+    <span>Anda login sebagai <strong>Viewer</strong> — hanya dapat melihat dan mendownload file. Hubungi Admin untuk upload atau menghapus file.</span>
   </div>
 
   <div class="pedoman-info-banner">
@@ -397,10 +402,15 @@
       <p class="pedoman-sub">Kelola foto dokumentasi kegiatan per kategori</p>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-      <button class="btn-export-data" onclick="exportDokumentasiBackup()"><i class="fas fa-file-export"></i> Export Backup</button>
-      <label class="btn-import-data" for="importDokInput"><i class="fas fa-file-import"></i> Import Backup</label>
+      <button class="btn-export-data admin-only" onclick="exportDokumentasiBackup()"><i class="fas fa-file-export"></i> Export Backup</button>
+      <label class="btn-import-data admin-only" for="importDokInput"><i class="fas fa-file-import"></i> Import Backup</label>
       <input type="file" id="importDokInput" accept=".json" style="display:none" onchange="importDokumentasiBackup(event)">
     </div>
+  </div>
+
+  <div class="viewer-banner viewer-only" id="dokViewerBanner">
+    <i class="fas fa-eye"></i>
+    <span>Anda login sebagai <strong>Viewer</strong> — hanya dapat melihat dan mendownload foto. Hubungi Admin untuk upload atau menghapus foto.</span>
   </div>
 
   <div class="pedoman-info-banner">
@@ -420,7 +430,7 @@
     </button>
   </div>
 
-  <div class="dok-upload-area" id="dokUploadArea">
+  <div class="dok-upload-area admin-only" id="dokUploadArea">
     <div class="dok-upload-inner">
       <i class="fas fa-cloud-arrow-up" style="font-size:40px;color:var(--primary);margin-bottom:10px"></i>
       <p style="font-weight:700;font-size:14px;color:var(--text)">Upload Foto Dokumentasi</p>
