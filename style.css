@@ -795,3 +795,57 @@ html, body { height:100%; font-family:var(--font); background:var(--bg); color:v
 .dok-card-meta { display:flex; gap:10px; font-size:11px; color:var(--text-muted); flex-wrap:wrap; }
 .dok-card-meta span { display:flex; align-items:center; gap:4px; }
 .dok-card-actions { display:flex; gap:8px; }
+
+/* ══════════════════════════════════════
+   ROLE-BASED ACCESS CONTROL UI
+══════════════════════════════════════ */
+
+/* Elemen admin-only disembunyikan via JS (applyRoleUI),
+   ini sebagai fallback sebelum JS selesai load */
+.admin-only { display: none; }
+
+/* Badge role di sidebar */
+.user-role {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 20px;
+  display: inline-block;
+  margin-top: 2px;
+}
+/* Warna badge berubah lewat JS berdasarkan role text */
+.sidebar-user .user-role {
+  background: rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.75);
+}
+
+/* Viewer: textarea keterangan readonly */
+.viewer-readonly .dok-keterangan-input {
+  background: #F5F7FA;
+  color: var(--text-muted);
+  cursor: default;
+  border-color: transparent;
+  resize: none;
+}
+.viewer-readonly .dok-keterangan-input:focus {
+  border-color: transparent;
+  background: #F5F7FA;
+}
+
+/* Banner info role untuk viewer di halaman Pedoman & Dokumentasi */
+.viewer-banner {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  background: #E3F2FD;
+  border: 1px solid #90CAF9;
+  border-radius: var(--radius-sm);
+  padding: 10px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1565C0;
+  margin-bottom: 14px;
+}
+.viewer-banner i { font-size: 15px; flex-shrink: 0; }
