@@ -401,33 +401,3 @@ async function deleteDokFoto(fileId){
 }
 async function exportDokumentasiBackup(){showToast("Foto tersimpan terpusat di Google Drive — bisa diakses dari semua device.","info");}
 async function importDokumentasiBackup(event){showToast("Import tidak diperlukan. Foto sudah tersimpan di Google Drive.","info");if(event&&event.target)event.target.value="";}
-
-/* ═══ MOBILE NAV & PAGE SWITCHER ═══ */
-function switchPage(menu) {
-  var title = {
-    hra: 'HRA & IH', dat: 'Drugs & Alcohol Test',
-    pest: 'Pest & Rodent', p3k: 'P3K & AED Office',
-    menu5: 'Sebaran Alkes', menu6: 'Pedoman IH',
-    dokumentasi: 'Dokumentasi'
-  }[menu] || menu;
-
-  document.querySelectorAll('.page-content').forEach(function(p){p.classList.remove('active')});
-  document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active')});
-  document.querySelectorAll('.mobile-nav-item').forEach(function(n){n.classList.remove('active')});
-
-  var page = document.getElementById('page-' + menu);
-  if (page) page.classList.add('active');
-
-  var navItem = document.querySelector('[data-menu="' + menu + '"]');
-  if (navItem) navItem.classList.add('active');
-
-  var pageTitle = document.getElementById('pageTitle');
-  if (pageTitle) pageTitle.textContent = title;
-
-  // Update mobile hero name
-  var mheroName = document.getElementById('mheroName');
-  var sidebarUsername = document.getElementById('sidebarUsername');
-  if (mheroName && sidebarUsername) mheroName.textContent = sidebarUsername.textContent;
-
-  closeSidebar();
-}
