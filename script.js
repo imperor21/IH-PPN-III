@@ -137,7 +137,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 
 /* NAV */
 function setupNav(){document.querySelectorAll(".nav-item").forEach(item=>{item.addEventListener("click",e=>{e.preventDefault();const menu=item.dataset.menu;const title=item.dataset.title||menu;document.querySelectorAll(".page-content").forEach(p=>p.classList.remove("active"));document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));const page=document.getElementById("page-"+menu);if(page)page.classList.add("active");item.classList.add("active");document.getElementById("pageTitle").textContent=title;closeSidebar();});});}
-function setupSidebar(){const overlay=document.getElementById("sidebarOverlay");if(overlay)overlay.addEventListener("click",closeSidebar);document.getElementById("sidebarToggle").addEventListener("click",()=>{const open=document.getElementById("sidebar").classList.toggle("open");const ov=document.getElementById("sidebarOverlay");if(ov)ov.classList.toggle("show",open);});}
+function setupSidebar(){var overlay=document.getElementById("sidebarOverlay");if(overlay)overlay.addEventListener("click",closeSidebar);var tog=document.getElementById("sidebarToggle");if(tog)tog.addEventListener("click",function(){var open=document.getElementById("sidebar").classList.toggle("open");var ov=document.getElementById("sidebarOverlay");if(ov)ov.classList.toggle("show",open);});}
 function closeSidebar(){document.getElementById("sidebar").classList.remove("open");document.getElementById("sidebarOverlay").classList.remove("show");}
 
 /* DATA LOAD */
@@ -401,3 +401,33 @@ async function deleteDokFoto(fileId){
 }
 async function exportDokumentasiBackup(){showToast("Foto tersimpan terpusat di Google Drive — bisa diakses dari semua device.","info");}
 async function importDokumentasiBackup(event){showToast("Import tidak diperlukan. Foto sudah tersimpan di Google Drive.","info");if(event&&event.target)event.target.value="";}
+
+/* ═══ MOBILE NAV & PAGE SWITCHER ═══ */
+function switchPage(menu) {
+  var title = {
+    hra: 'HRA & IH', dat: 'Drugs & Alcohol Test',
+    pest: 'Pest & Rodent', p3k: 'P3K & AED Office',
+    menu5: 'Sebaran Alkes', menu6: 'Pedoman IH',
+    dokumentasi: 'Dokumentasi'
+  }[menu] || menu;
+
+  document.querySelectorAll('.page-content').forEach(function(p){p.classList.remove('active')});
+  document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active')});
+  document.querySelectorAll('.mobile-nav-item').forEach(function(n){n.classList.remove('active')});
+
+  var page = document.getElementById('page-' + menu);
+  if (page) page.classList.add('active');
+
+  var navItem = document.querySelector('[data-menu="' + menu + '"]');
+  if (navItem) navItem.classList.add('active');
+
+  var pageTitle = document.getElementById('pageTitle');
+  if (pageTitle) pageTitle.textContent = title;
+
+  // Update mobile hero name
+  var mheroName = document.getElementById('mheroName');
+  var sidebarUsername = document.getElementById('sidebarUsername');
+  if (mheroName && sidebarUsername) mheroName.textContent = sidebarUsername.textContent;
+
+  closeSidebar();
+}
