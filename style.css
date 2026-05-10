@@ -820,8 +820,7 @@ html, body { height:100%; font-family:var(--font); background:var(--bg); color:v
 }
 /* Warna badge berubah lewat JS berdasarkan role text */
 .sidebar-user .user-role {
-  background: rgba(255,255,255,0.12);
-  color: rgba(255,255,255,0.75);
+  display: none;
 }
 
 /* Viewer: textarea keterangan readonly */
