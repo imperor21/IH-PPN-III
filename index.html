@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IH Dashboard Health III</title>
+<title>IH Dashboard PPN III</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Barlow+Condensed:wght@500;600;700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Barlow+Condensed:wght@600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <link rel="stylesheet" href="style.css">
@@ -26,7 +26,7 @@
          alt=""
          onerror="this.style.display='none'">
     <div class="login-bg-overlay"></div>
-<div class="login-hero-content">
+<div class="deco-icon deco-icon-1"><i class="fas fa-anchor"></i></div><div class="deco-icon deco-icon-2"><i class="fas fa-ship"></i></div><div class="login-hero-content">
 <div class="login-logo-top">
 <div class="login-anchor-icon"><i class="fas fa-anchor"></i></div>
 <div class="login-brand-tagline">
@@ -35,11 +35,11 @@
 </div>
 </div>
 <div class="login-hero-text">
-<h1 class="login-hero-title">IH<br>PORTAL<br>SYSTEM</h1>
-<p class="login-hero-desc">Platform monitoring Industrial Hygiene.</p>
+<h1 class="login-hero-title">HEALTH<br>MONITORING<br>SYSTEM</h1>
+<p class="login-hero-desc">Platform monitoring kesehatan & keselamatan armada kapal PPN III secara real-time.</p>
 </div>
 <div class="login-stats-row">
-<div class="login-stat"><span class="ls-num">85</span><span class="ls-lbl">Est Kapal Milik</span></div>
+<div class="login-stat"><span class="ls-num">85</span><span class="ls-lbl">Armada Kapal</span></div>
 <div class="login-stat-div"></div>
 <div class="login-stat"><span class="ls-num">4</span><span class="ls-lbl">Jenis Fleet</span></div>
 <div class="login-stat-div"></div>
@@ -199,6 +199,18 @@
 
 <!-- ===== PAGE HRA ===== -->
 <section class="page-content active" id="page-hra">
+<!-- Mobile Hero Card -->
+<div class="mobile-hero-card" id="mobileHeroCard">
+<div class="mhero-greeting">Selamat Datang,</div>
+<div class="mhero-title" id="mheroName">IH Admin</div>
+<div class="mhero-sub"><i class="fas fa-circle-dot" style="color:#69F0AE;margin-right:6px;font-size:8px"></i>Live — Health Monitoring System</div>
+</div>
+<div class="quick-actions" id="quickActions">
+<div class="quick-action-item" onclick="switchPage('hra')"><div class="qa-icon blue"><i class="fas fa-lungs"></i></div><span class="qa-label">HRA & IH</span></div>
+<div class="quick-action-item" onclick="switchPage('dat')"><div class="qa-icon red"><i class="fas fa-vial"></i></div><span class="qa-label">DAT</span></div>
+<div class="quick-action-item" onclick="switchPage('pest')"><div class="qa-icon green"><i class="fas fa-bug"></i></div><span class="qa-label">Pest</span></div>
+<div class="quick-action-item" onclick="switchPage('menu6')"><div class="qa-icon orange"><i class="fas fa-book-open"></i></div><span class="qa-label">Pedoman</span></div>
+</div>
 <div class="filter-bar">
 <div class="filter-group">
 <label>Bulan</label>
@@ -464,16 +476,42 @@
 
 </main>
 
-<!-- SIDEBAR OVERLAY (mobile) -->
-<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+<!-- MOBILE BOTTOM NAV -->
+<nav class="mobile-bottom-nav" id="mobileBottomNav">
+<div class="mobile-nav-items">
+<button class="mobile-nav-item active" data-menu="hra" onclick="switchPage('hra')">
+<div class="mnav-icon-wrap"><i class="fas fa-lungs"></i></div>
+<span class="mnav-label">HRA</span>
+</button>
+<button class="mobile-nav-item" data-menu="dat" onclick="switchPage('dat')">
+<div class="mnav-icon-wrap"><i class="fas fa-vial"></i></div>
+<span class="mnav-label">DAT</span>
+</button>
+<button class="mobile-nav-item" data-menu="pest" onclick="switchPage('pest')">
+<div class="mnav-icon-wrap"><i class="fas fa-bug"></i></div>
+<span class="mnav-label">Pest</span>
+</button>
+<button class="mobile-nav-item" data-menu="menu6" onclick="switchPage('menu6')">
+<div class="mnav-icon-wrap"><i class="fas fa-book-open"></i></div>
+<span class="mnav-label">Pedoman</span>
+</button>
+<button class="mobile-nav-item" data-menu="dokumentasi" onclick="switchPage('dokumentasi')">
+<div class="mnav-icon-wrap"><i class="fas fa-images"></i></div>
+<span class="mnav-label">Dok</span>
+</button>
+</div>
+</nav>
+
+<!-- SIDEBAR OVERLAY -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
 
 <!-- TOAST CONTAINER -->
 <div class="toast-container" id="toastContainer"></div>
 
 <!-- DRIVE PROGRESS -->
 <div class="drive-progress" id="driveProgress">
-  <i class="fas fa-circle-notch fa-spin"></i>
-  <span id="driveProgressMsg">Mengupload...</span>
+<i class="fas fa-circle-notch fa-spin"></i>
+<span id="driveProgressMsg">Mengupload...</span>
 </div>
 
 <script src="script.js"></script>
