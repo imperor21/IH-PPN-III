@@ -143,9 +143,16 @@ function guardAdmin(msg){
 const TOTAL_KAPAL=85;
 const BULAN_ORDER=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 let rawHRA=[],rawDAT=[],rawPest=[],filteredHRA=[],filteredDAT=[],filteredPest=[];
+let rawFisika=[],rawKimia=[],rawBiologi=[],rawErgonomi=[],rawPsikososial=[];
+let filteredFisika=[],filteredKimia=[],filteredBiologi=[],filteredErgonomi=[],filteredPsikososial=[];
 let hraBarChart,hraDonutChart,datBarChart,datDonutChart,pestBarChart,pestDonutChart,pestTemuanChart,pestBiayaChart;
+let fisikaBarChart,fisikaDonutChart,kimiaBarChart,kimiaDonutChart,biologiBarChart,biologiDonutChart;
+let ergonomiBarChart,ergonomiDonutChart,psikoBarChart,psikoDonutChart,psikoRadarChart;
 let hraSortCol=-1,hraSortDir=1,datSortCol=-1,datSortDir=1,pestSortCol=-1,pestSortDir=1;
+let fisikaSortCol=-1,fisikaSortDir=1,kimiaSortCol=-1,kimiaSortDir=1,biologiSortCol=-1,biologiSortDir=1;
+let ergonomiSortCol=-1,ergonomiSortDir=1,psikoSortCol=-1,psikoSortDir=1;
 let hraChartType="bar",datChartType="bar",pestChartType="bar";
+let fisikaChartType="bar",kimiaChartType="bar",biologiChartType="bar",ergonomiChartType="bar",psikoChartType="bar";
 
 /* INIT */
 document.addEventListener("DOMContentLoaded",()=>{
@@ -182,7 +189,11 @@ async function loadData(){
     }
     if(data.status!=="ok")throw new Error(data.message||"Error dari server");
     rawHRA=data.hra||[];rawDAT=data.dat||[];rawPest=data.pest||[];
+    rawFisika=data.fisika||[];rawKimia=data.kimia||[];rawBiologi=data.biologi||[];
+    rawErgonomi=data.ergonomi||[];rawPsikososial=data.psikososial||[];
     filteredHRA=[...rawHRA];filteredDAT=[...rawDAT];filteredPest=[...rawPest];
+    filteredFisika=[...rawFisika];filteredKimia=[...rawKimia];filteredBiologi=[...rawBiologi];
+    filteredErgonomi=[...rawErgonomi];filteredPsikososial=[...rawPsikososial];
     const now=new Date();
     const lastEl=document.getElementById("lastUpdated");
     if(lastEl)lastEl.textContent="Update: "+now.toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"});
@@ -190,11 +201,15 @@ async function loadData(){
     console.error("API Error:",err);
     showError("Gagal memuat data: "+err.message);
     rawHRA=[];rawDAT=[];rawPest=[];
+    rawFisika=[];rawKimia=[];rawBiologi=[];rawErgonomi=[];rawPsikososial=[];
     filteredHRA=[];filteredDAT=[];filteredPest=[];
+    filteredFisika=[];filteredKimia=[];filteredBiologi=[];filteredErgonomi=[];filteredPsikososial=[];
     const lastEl=document.getElementById("lastUpdated");
     if(lastEl)lastEl.textContent="Gagal terhubung";
   }
-  renderHRAPage();renderDATPage();renderPestPage();showLoading(false);
+  renderHRAPage();renderDATPage();renderPestPage();
+  renderFisikaPage();renderKimiaPage();renderBiologiPage();renderErgonomiPage();renderPsikoPage();
+  showLoading(false);
 }
 function showLoading(v){document.getElementById("loadingOverlay").style.display=v?"flex":"none";}
 function showError(msg){document.getElementById("errorBanner").style.display="flex";document.getElementById("errorMsg").textContent=msg;}
@@ -430,7 +445,10 @@ function switchPage(menu) {
     hra:'HRA & IH', dat:'Drugs & Alcohol Test',
     pest:'Pest & Rodent Control', p3k:'P3K & AED Office',
     menu5:'Sebaran Alkes Kapal', menu6:'Pedoman IH',
-    dokumentasi:'Dokumentasi'
+    dokumentasi:'Dokumentasi',
+    fisika:'Faktor Fisika', kimia:'Faktor Kimia',
+    biologi:'Faktor Biologi', ergonomi:'Faktor Ergonomi',
+    psikososial:'Faktor Psikososial'
   };
   var title = titles[menu] || menu;
   document.querySelectorAll('.page-content').forEach(function(p){ p.classList.remove('active'); });
@@ -443,3 +461,431 @@ function switchPage(menu) {
   if (pt) pt.textContent = title;
   closeSidebar();
 }
+
+/* ═══════════════════════════════════════════════
+   HELPERS — NAB STATUS
+═══════════════════════════════════════════════ */
+function nabBadge(status){
+  const s=(status||"").toLowerCase();
+  if(s.includes("melebihi"))return'<span class="badge badge-melebihi">⛔ Melebihi NAB</span>';
+  if(s.includes("perhatian"))return'<span class="badge badge-perhatian">⚠ Perhatian</span>';
+  if(s.includes("aman"))return'<span class="badge badge-aman">✅ Aman</span>';
+  return`<span class="badge badge-belum">${esc(status||"—")}</span>`;
+}
+function tlBadge(s){
+  const v=(s||"").toLowerCase();
+  if(v==="closed")return'<span class="badge badge-done">✓ Closed</span>';
+  if(v==="on progress")return'<span class="badge badge-perhatian">↻ On Progress</span>';
+  if(v==="open")return'<span class="badge badge-melebihi">⏳ Open</span>';
+  return`<span class="badge badge-belum">${esc(s||"—")}</span>`;
+}
+function riskBadge(level){
+  const n=parseInt(level)||0;
+  if(n>=3)return'<span class="badge badge-melebihi">🔴 Level '+n+'</span>';
+  if(n===2)return'<span class="badge badge-perhatian">🟡 Level 2</span>';
+  if(n===1)return'<span class="badge badge-aman">🟢 Level 1</span>';
+  return`<span class="badge badge-belum">${esc(level||"—")}</span>`;
+}
+function psikoBadge(level){
+  const l=(level||"").toLowerCase();
+  if(l.includes("tinggi"))return'<span class="badge badge-melebihi">🔴 Risiko Tinggi</span>';
+  if(l.includes("sedang"))return'<span class="badge badge-perhatian">🟡 Risiko Sedang</span>';
+  if(l.includes("rendah"))return'<span class="badge badge-aman">🟢 Risiko Rendah</span>';
+  return`<span class="badge badge-belum">${esc(level||"—")}</span>`;
+}
+function nabAlertBar(pageId, alertId, msgId, data){
+  const over=data.filter(r=>{const s=(r["Status"]||"").toLowerCase();return s.includes("melebihi");});
+  const bar=document.getElementById(alertId);
+  const msg=document.getElementById(msgId);
+  if(!bar||!msg)return;
+  if(over.length>0){
+    bar.style.display="flex";
+    msg.textContent=over.length+" parameter melebihi NAB — perlu tindakan segera!";
+  }else{bar.style.display="none";}
+}
+
+/* ═══════════════════════════════════════════════
+   FAKTOR FISIKA
+═══════════════════════════════════════════════ */
+function renderFisikaPage(){
+  const data=filteredFisika;
+  const total=data.length;
+  const melebihi=data.filter(r=>(r["Status"]||"").toLowerCase().includes("melebihi")).length;
+  const perhatian=data.filter(r=>(r["Status"]||"").toLowerCase().includes("perhatian")).length;
+  const aman=data.filter(r=>(r["Status"]||"").toLowerCase().includes("aman")).length;
+  const personal=data.filter(r=>(r["Metode"]||"").toLowerCase()==="personal").length;
+  document.getElementById("fisika-total").textContent=total;
+  document.getElementById("fisika-melebihi").textContent=melebihi;
+  document.getElementById("fisika-perhatian").textContent=perhatian;
+  document.getElementById("fisika-aman").textContent=aman;
+  document.getElementById("fisika-personal").textContent=personal;
+  nabAlertBar("fisika","fisika-alert-bar","fisika-alert-msg",data);
+  renderFisikaBarChart(data);renderFisikaDonutChart(data);renderFisikaAlertList(data);renderFisikaTable(data);
+}
+function renderFisikaBarChart(data){
+  const counts={};BULAN_ORDER.forEach(b=>counts[b]=0);
+  data.forEach(r=>{const b=r["Tanggal Pengukuran"]?"":""||"";const tgl=r["Tanggal Pengukuran"]||"";
+    BULAN_ORDER.forEach((bln,i)=>{if(tgl.toLowerCase().includes(bln.toLowerCase())||(parseInt(tgl.split("-")[1])-1===i))counts[bln]++;});
+  });
+  const ctx=document.getElementById("fisikaBarChart");if(!ctx)return;
+  if(fisikaBarChart)fisikaBarChart.destroy();
+  fisikaBarChart=new Chart(ctx.getContext("2d"),{type:fisikaChartType,data:{labels:BULAN_ORDER,datasets:[{label:"Pengukuran",data:BULAN_ORDER.map(b=>counts[b]),backgroundColor:fisikaChartType==="line"?"rgba(21,101,192,0.12)":"#1976D2",borderColor:"#1565C0",borderWidth:fisikaChartType==="line"?2.5:1,borderRadius:fisikaChartType==="bar"?6:0,fill:fisikaChartType==="line",tension:0.4,pointBackgroundColor:"#1565C0",pointRadius:fisikaChartType==="line"?4:0}]},options:chartOpts()});
+}
+function renderFisikaDonutChart(data){
+  const params={};
+  data.forEach(r=>{const p=r["Jenis Parameter"]||"Lainnya";params[p]=(params[p]||0)+1;});
+  const ctx=document.getElementById("fisikaDonutChart");if(!ctx)return;
+  if(fisikaDonutChart)fisikaDonutChart.destroy();
+  const keys=Object.keys(params);
+  const palette=["#1976D2","#43A047","#FB8C00","#8E24AA","#00838F"];
+  fisikaDonutChart=new Chart(ctx.getContext("2d"),{type:"doughnut",data:{labels:keys,datasets:[{data:keys.map(k=>params[k]),backgroundColor:palette.slice(0,keys.length),borderColor:"#fff",borderWidth:3,hoverOffset:8}]},options:donutOpts()});
+}
+function renderFisikaAlertList(data){
+  const el=document.getElementById("fisikaAlertList");if(!el)return;
+  const over=data.filter(r=>(r["Status"]||"").toLowerCase().includes("melebihi")).slice(0,6);
+  if(!over.length){el.innerHTML='<div class="hazard-empty"><i class="fas fa-check-circle" style="font-size:24px;opacity:.3;margin-bottom:8px;display:block"></i>Semua dalam batas aman</div>';return;}
+  el.innerHTML=over.map((r,i)=>`<div class="hazard-item"><div class="hazard-rank r${(i%5)+1}">${i+1}</div><div class="hazard-name">${esc(r["Nama Kapal"]||"")} — ${esc(r["Jenis Parameter"]||"")} ${r["Hasil Pengukuran"]||""} ${esc(r["Satuan"]||"")}</div><div class="hazard-count">${r["% terhadap NAB"]||""}%</div></div>`).join("");
+}
+function renderFisikaTable(data){
+  const tbody=document.getElementById("fisikaTableBody");if(!tbody)return;
+  tbody.innerHTML=data.map(r=>`<tr>
+    <td><strong style="color:var(--sidebar-bg)">${esc(r["Nama Kapal"]||"")}</strong></td>
+    <td><span style="background:#E3F2FD;color:#1565C0;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">${esc(r["Fleet"]||"")}</span></td>
+    <td>${esc(r["Area / Titik Ukur"]||"")}</td>
+    <td>${esc(r["Jenis Parameter"]||"")}</td>
+    <td><span style="background:#EDE7F6;color:#4527A0;padding:2px 7px;border-radius:12px;font-size:11px;font-weight:700">${esc(r["Metode"]||"")}</span></td>
+    <td style="font-weight:700">${r["Hasil Pengukuran"]||"—"}</td>
+    <td>${esc(r["Satuan"]||"")}</td>
+    <td>${r["NAB / TLV"]||"—"}</td>
+    <td style="font-weight:700;color:${pctColor(parseFloat(r["% terhadap NAB"]||0))}">${r["% terhadap NAB"]||"—"}%</td>
+    <td>${nabBadge(r["Status"])}</td>
+    <td>${tlBadge(r["Status TL"])}</td>
+  </tr>`).join("");
+  const f=document.getElementById("fisikaTableFooter");if(f)f.textContent=`Menampilkan ${data.length} dari ${rawFisika.length} entri`;
+}
+function pctColor(pct){if(pct>=100)return"#C62828";if(pct>=50)return"#E65100";return"#2E7D32";}
+function applyFisikaFilters(){
+  const b=document.getElementById("fisika-filter-bulan").value;
+  const f=document.getElementById("fisika-filter-fleet").value;
+  const p=document.getElementById("fisika-filter-param").value;
+  const m=document.getElementById("fisika-filter-metode").value;
+  const k=document.getElementById("fisika-filter-kapal").value.toLowerCase();
+  filteredFisika=rawFisika.filter(r=>
+    (!b||(r["Tanggal Pengukuran"]||"").includes(b))&&
+    (!f||r["Fleet"]===f)&&
+    (!p||r["Jenis Parameter"]===p)&&
+    (!m||r["Metode"]===m)&&
+    (!k||(r["Nama Kapal"]||"").toLowerCase().includes(k))
+  );renderFisikaPage();
+}
+function clearFisikaFilters(){
+  ["fisika-filter-bulan","fisika-filter-fleet","fisika-filter-param","fisika-filter-metode"].forEach(id=>{const e=document.getElementById(id);if(e)e.value="";});
+  const k=document.getElementById("fisika-filter-kapal");if(k)k.value="";
+  filteredFisika=[...rawFisika];renderFisikaPage();
+}
+function searchFisikaTable(){const q=(document.getElementById("fisika-search")||{}).value||"";document.querySelectorAll("#fisikaTableBody tr").forEach(row=>{row.style.display=row.textContent.toLowerCase().includes(q.toLowerCase())?"":"none";});}
+function sortFisikaTable(col){if(fisikaSortCol===col)fisikaSortDir*=-1;else{fisikaSortCol=col;fisikaSortDir=1;}const keys=["Nama Kapal","Fleet","Area / Titik Ukur","Jenis Parameter","Metode","Hasil Pengukuran","Satuan","NAB / TLV","% terhadap NAB","Status","Status TL"];filteredFisika.sort((a,b)=>String(a[keys[col]]||"").localeCompare(String(b[keys[col]]||""),"id")*fisikaSortDir);renderFisikaTable(filteredFisika);}
+function toggleFisikaChartType(btn,type){fisikaChartType=type;btn.closest(".pill-group").querySelectorAll(".pill").forEach(p=>p.classList.remove("active"));btn.classList.add("active");renderFisikaBarChart(filteredFisika);}
+
+/* ═══════════════════════════════════════════════
+   FAKTOR KIMIA
+═══════════════════════════════════════════════ */
+function renderKimiaPage(){
+  const data=filteredKimia;
+  const total=data.length;
+  const melebihi=data.filter(r=>(r["Status"]||"").toLowerCase().includes("melebihi")).length;
+  const perhatian=data.filter(r=>(r["Status"]||"").toLowerCase().includes("perhatian")).length;
+  const personal=data.filter(r=>(r["Metode Sampling"]||"").toLowerCase().includes("personal air")).length;
+  const bio=data.filter(r=>(r["Metode Sampling"]||"").toLowerCase().includes("biological")).length;
+  document.getElementById("kimia-total").textContent=total;
+  document.getElementById("kimia-melebihi").textContent=melebihi;
+  document.getElementById("kimia-perhatian").textContent=perhatian;
+  document.getElementById("kimia-personal").textContent=personal;
+  document.getElementById("kimia-bio").textContent=bio;
+  nabAlertBar("kimia","kimia-alert-bar","kimia-alert-msg",data);
+  renderKimiaBarChart(data);renderKimiaDonutChart(data);renderKimiaAlertList(data);renderKimiaTable(data);
+}
+function renderKimiaBarChart(data){
+  const counts={};BULAN_ORDER.forEach(b=>counts[b]=0);
+  data.forEach(r=>{const tgl=r["Tanggal"]||"";BULAN_ORDER.forEach((bln,i)=>{if(tgl.toLowerCase().includes(bln.toLowerCase())||(parseInt((tgl.split("-")[1]||"0"))-1===i))counts[bln]++;});});
+  const ctx=document.getElementById("kimiaBarChart");if(!ctx)return;
+  if(kimiaBarChart)kimiaBarChart.destroy();
+  kimiaBarChart=new Chart(ctx.getContext("2d"),{type:kimiaChartType,data:{labels:BULAN_ORDER,datasets:[{label:"Sampling",data:BULAN_ORDER.map(b=>counts[b]),backgroundColor:kimiaChartType==="line"?"rgba(142,36,170,0.12)":"#8E24AA",borderColor:"#6A1B9A",borderWidth:kimiaChartType==="line"?2.5:1,borderRadius:kimiaChartType==="bar"?6:0,fill:kimiaChartType==="line",tension:0.4,pointBackgroundColor:"#6A1B9A",pointRadius:kimiaChartType==="line"?4:0}]},options:chartOpts()});
+}
+function renderKimiaDonutChart(data){
+  const methods={};
+  data.forEach(r=>{const m=r["Metode Sampling"]||"Lainnya";methods[m]=(methods[m]||0)+1;});
+  const ctx=document.getElementById("kimiaDonutChart");if(!ctx)return;
+  if(kimiaDonutChart)kimiaDonutChart.destroy();
+  const keys=Object.keys(methods);
+  kimiaDonutChart=new Chart(ctx.getContext("2d"),{type:"doughnut",data:{labels:keys,datasets:[{data:keys.map(k=>methods[k]),backgroundColor:["#8E24AA","#1976D2","#E91E63"],borderColor:"#fff",borderWidth:3,hoverOffset:8}]},options:donutOpts()});
+}
+function renderKimiaAlertList(data){
+  const el=document.getElementById("kimiaAlertList");if(!el)return;
+  const over=data.filter(r=>(r["Status"]||"").toLowerCase().includes("melebihi")).slice(0,6);
+  if(!over.length){el.innerHTML='<div class="hazard-empty"><i class="fas fa-check-circle" style="font-size:24px;opacity:.3;margin-bottom:8px;display:block"></i>Semua dalam batas aman</div>';return;}
+  el.innerHTML=over.map((r,i)=>`<div class="hazard-item"><div class="hazard-rank r${(i%5)+1}">${i+1}</div><div class="hazard-name">${esc(r["Nama Kapal"]||"")} — ${esc(r["Nama Bahan Kimia"]||"")} [${esc(r["Metode Sampling"]||"")}]</div><div class="hazard-count">${r["% terhadap TLV/BEI"]||""}%</div></div>`).join("");
+}
+function renderKimiaTable(data){
+  const tbody=document.getElementById("kimiaTableBody");if(!tbody)return;
+  tbody.innerHTML=data.map(r=>`<tr>
+    <td><strong style="color:var(--sidebar-bg)">${esc(r["Nama Kapal"]||"")}</strong></td>
+    <td><span style="background:#E3F2FD;color:#1565C0;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">${esc(r["Fleet"]||"")}</span></td>
+    <td>${esc(r["Nama Bahan Kimia"]||"")}</td>
+    <td><span style="background:#F3E5F5;color:#6A1B9A;padding:2px 7px;border-radius:12px;font-size:11px;font-weight:700">${esc(r["Metode Sampling"]||"")}</span></td>
+    <td>${esc(r["Media Sampel"]||"")}</td>
+    <td style="font-weight:700">${r["Hasil Pengukuran"]||"—"}</td>
+    <td>${esc(r["Satuan"]||"")}</td>
+    <td>${r["TLV-TWA ACGIH"]||r["BEI ACGIH"]||"—"}</td>
+    <td style="font-weight:700;color:${pctColor(parseFloat(r["% terhadap TLV/BEI"]||0))}">${r["% terhadap TLV/BEI"]||"—"}%</td>
+    <td>${nabBadge(r["Status"])}</td>
+    <td style="font-size:11px">${esc(r["Nama Laboratorium"]||"—")}</td>
+  </tr>`).join("");
+  const f=document.getElementById("kimiaTableFooter");if(f)f.textContent=`Menampilkan ${data.length} dari ${rawKimia.length} entri`;
+}
+function applyKimiaFilters(){
+  const b=document.getElementById("kimia-filter-bulan").value;
+  const f=document.getElementById("kimia-filter-fleet").value;
+  const m=document.getElementById("kimia-filter-metode").value;
+  const bh=(document.getElementById("kimia-filter-bahan")||{}).value||"";
+  filteredKimia=rawKimia.filter(r=>
+    (!b||(r["Tanggal"]||"").includes(b))&&
+    (!f||r["Fleet"]===f)&&
+    (!m||r["Metode Sampling"]===m)&&
+    (!bh||(r["Nama Bahan Kimia"]||"").toLowerCase().includes(bh.toLowerCase()))
+  );renderKimiaPage();
+}
+function clearKimiaFilters(){
+  ["kimia-filter-bulan","kimia-filter-fleet","kimia-filter-metode"].forEach(id=>{const e=document.getElementById(id);if(e)e.value="";});
+  const bh=document.getElementById("kimia-filter-bahan");if(bh)bh.value="";
+  filteredKimia=[...rawKimia];renderKimiaPage();
+}
+function searchKimiaTable(){const q=(document.getElementById("kimia-search")||{}).value||"";document.querySelectorAll("#kimiaTableBody tr").forEach(row=>{row.style.display=row.textContent.toLowerCase().includes(q.toLowerCase())?"":"none";});}
+function sortKimiaTable(col){if(kimiaSortCol===col)kimiaSortDir*=-1;else{kimiaSortCol=col;kimiaSortDir=1;}const keys=["Nama Kapal","Fleet","Nama Bahan Kimia","Metode Sampling","Media Sampel","Hasil Pengukuran","Satuan","TLV-TWA ACGIH","% terhadap TLV/BEI","Status","Nama Laboratorium"];filteredKimia.sort((a,b)=>String(a[keys[col]]||"").localeCompare(String(b[keys[col]]||""),"id")*kimiaSortDir);renderKimiaTable(filteredKimia);}
+function toggleKimiaChartType(btn,type){kimiaChartType=type;btn.closest(".pill-group").querySelectorAll(".pill").forEach(p=>p.classList.remove("active"));btn.classList.add("active");renderKimiaBarChart(filteredKimia);}
+
+/* ═══════════════════════════════════════════════
+   FAKTOR BIOLOGI
+═══════════════════════════════════════════════ */
+function renderBiologiPage(){
+  const data=filteredBiologi;
+  const total=data.length;
+  const melebihi=data.filter(r=>(r["Status"]||"").toLowerCase().includes("melebihi")).length;
+  const perhatian=data.filter(r=>(r["Status"]||"").toLowerCase().includes("perhatian")).length;
+  const aman=data.filter(r=>(r["Status"]||"").toLowerCase().includes("aman")).length;
+  const lokSet=new Set(data.map(r=>(r["Area / Lokasi"]||"").trim()).filter(Boolean));
+  document.getElementById("biologi-total").textContent=total;
+  document.getElementById("biologi-melebihi").textContent=melebihi;
+  document.getElementById("biologi-perhatian").textContent=perhatian;
+  document.getElementById("biologi-aman").textContent=aman;
+  document.getElementById("biologi-lokasi").textContent=lokSet.size;
+  renderBiologiBarChart(data);renderBiologiDonutChart(data);renderBiologiAlertList(data);renderBiologiTable(data);
+}
+function renderBiologiBarChart(data){
+  const counts={};BULAN_ORDER.forEach(b=>counts[b]=0);
+  data.forEach(r=>{const tgl=r["Tanggal"]||"";BULAN_ORDER.forEach((bln,i)=>{if(tgl.toLowerCase().includes(bln.toLowerCase())||(parseInt((tgl.split("-")[1]||"0"))-1===i))counts[bln]++;});});
+  const ctx=document.getElementById("biologiBarChart");if(!ctx)return;
+  if(biologiBarChart)biologiBarChart.destroy();
+  biologiBarChart=new Chart(ctx.getContext("2d"),{type:biologiChartType,data:{labels:BULAN_ORDER,datasets:[{label:"Sampling",data:BULAN_ORDER.map(b=>counts[b]),backgroundColor:biologiChartType==="line"?"rgba(0,131,143,0.12)":"#00838F",borderColor:"#006064",borderWidth:biologiChartType==="line"?2.5:1,borderRadius:biologiChartType==="bar"?6:0,fill:biologiChartType==="line",tension:0.4,pointBackgroundColor:"#006064",pointRadius:biologiChartType==="line"?4:0}]},options:chartOpts()});
+}
+function renderBiologiDonutChart(data){
+  const agenMap={};
+  data.forEach(r=>{const a=r["Jenis Agen"]||"Lainnya";agenMap[a]=(agenMap[a]||0)+1;});
+  const ctx=document.getElementById("biologiDonutChart");if(!ctx)return;
+  if(biologiDonutChart)biologiDonutChart.destroy();
+  const keys=Object.keys(agenMap);
+  const palette=["#00838F","#43A047","#FB8C00","#E53935","#8E24AA"];
+  biologiDonutChart=new Chart(ctx.getContext("2d"),{type:"doughnut",data:{labels:keys,datasets:[{data:keys.map(k=>agenMap[k]),backgroundColor:palette.slice(0,keys.length),borderColor:"#fff",borderWidth:3,hoverOffset:8}]},options:donutOpts()});
+}
+function renderBiologiAlertList(data){
+  const el=document.getElementById("biologiAlertList");if(!el)return;
+  const over=data.filter(r=>(r["Status"]||"").toLowerCase().includes("melebihi")).slice(0,6);
+  if(!over.length){el.innerHTML='<div class="hazard-empty"><i class="fas fa-check-circle" style="font-size:24px;opacity:.3;margin-bottom:8px;display:block"></i>Semua dalam batas aman</div>';return;}
+  el.innerHTML=over.map((r,i)=>`<div class="hazard-item"><div class="hazard-rank r${(i%5)+1}">${i+1}</div><div class="hazard-name">${esc(r["Nama Kapal"]||"")} — ${esc(r["Nama Agen / Spesies"]||"")} (${esc(r["Media Sampel"]||"")})</div><div class="hazard-count">${r["Hasil Pengukuran"]||""} ${esc(r["Satuan"]||"")}</div></div>`).join("");
+}
+function renderBiologiTable(data){
+  const tbody=document.getElementById("biologiTableBody");if(!tbody)return;
+  tbody.innerHTML=data.map(r=>`<tr>
+    <td><strong style="color:var(--sidebar-bg)">${esc(r["Nama Kapal"]||"")}</strong></td>
+    <td><span style="background:#E3F2FD;color:#1565C0;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">${esc(r["Fleet"]||"")}</span></td>
+    <td>${esc(r["Area / Lokasi"]||"")}</td>
+    <td>${esc(r["Jenis Agen"]||"")}</td>
+    <td>${esc(r["Nama Agen / Spesies"]||"")}</td>
+    <td>${esc(r["Media Sampel"]||"")}</td>
+    <td style="font-weight:700">${r["Hasil Pengukuran"]||"—"}</td>
+    <td>${esc(r["Satuan"]||"")}</td>
+    <td>${r["Baku Mutu / Referensi"]||"—"}</td>
+    <td>${nabBadge(r["Status"])}</td>
+    <td style="font-size:11px">${esc(r["Nama Laboratorium"]||"—")}</td>
+  </tr>`).join("");
+  const f=document.getElementById("biologiTableFooter");if(f)f.textContent=`Menampilkan ${data.length} dari ${rawBiologi.length} entri`;
+}
+function applyBiologiFilters(){
+  const b=document.getElementById("biologi-filter-bulan").value;
+  const f=document.getElementById("biologi-filter-fleet").value;
+  const a=document.getElementById("biologi-filter-agen").value;
+  const k=(document.getElementById("biologi-filter-kapal")||{}).value||"";
+  filteredBiologi=rawBiologi.filter(r=>
+    (!b||(r["Tanggal"]||"").includes(b))&&
+    (!f||r["Fleet"]===f)&&
+    (!a||r["Jenis Agen"]===a)&&
+    (!k||(r["Nama Kapal"]||"").toLowerCase().includes(k.toLowerCase()))
+  );renderBiologiPage();
+}
+function clearBiologiFilters(){
+  ["biologi-filter-bulan","biologi-filter-fleet","biologi-filter-agen"].forEach(id=>{const e=document.getElementById(id);if(e)e.value="";});
+  const k=document.getElementById("biologi-filter-kapal");if(k)k.value="";
+  filteredBiologi=[...rawBiologi];renderBiologiPage();
+}
+function searchBiologiTable(){const q=(document.getElementById("biologi-search")||{}).value||"";document.querySelectorAll("#biologiTableBody tr").forEach(row=>{row.style.display=row.textContent.toLowerCase().includes(q.toLowerCase())?"":"none";});}
+function sortBiologiTable(col){if(biologiSortCol===col)biologiSortDir*=-1;else{biologiSortCol=col;biologiSortDir=1;}const keys=["Nama Kapal","Fleet","Area / Lokasi","Jenis Agen","Nama Agen / Spesies","Media Sampel","Hasil Pengukuran","Satuan","Baku Mutu / Referensi","Status","Nama Laboratorium"];filteredBiologi.sort((a,b)=>String(a[keys[col]]||"").localeCompare(String(b[keys[col]]||""),"id")*biologiSortDir);renderBiologiTable(filteredBiologi);}
+function toggleBiologiChartType(btn,type){biologiChartType=type;btn.closest(".pill-group").querySelectorAll(".pill").forEach(p=>p.classList.remove("active"));btn.classList.add("active");renderBiologiBarChart(filteredBiologi);}
+
+/* ═══════════════════════════════════════════════
+   FAKTOR ERGONOMI
+═══════════════════════════════════════════════ */
+function renderErgonomiPage(){
+  const data=filteredErgonomi;
+  const total=data.length;
+  const tinggi=data.filter(r=>parseInt(r["Level Risiko (1–4)"]||0)>=3).length;
+  const sedang=data.filter(r=>parseInt(r["Level Risiko (1–4)"]||0)===2).length;
+  const rendah=data.filter(r=>parseInt(r["Level Risiko (1–4)"]||0)===1).length;
+  const tlOpen=data.filter(r=>(r["Status TL"]||"").toLowerCase()==="open").length;
+  document.getElementById("ergonomi-total").textContent=total;
+  document.getElementById("ergonomi-tinggi").textContent=tinggi;
+  document.getElementById("ergonomi-sedang").textContent=sedang;
+  document.getElementById("ergonomi-rendah").textContent=rendah;
+  document.getElementById("ergonomi-tl-open").textContent=tlOpen;
+  renderErgonomiBarChart(data);renderErgonomiDonutChart(data);renderErgonomiAlertList(data);renderErgonomiTable(data);
+}
+function renderErgonomiBarChart(data){
+  const counts={};BULAN_ORDER.forEach(b=>counts[b]=0);
+  data.forEach(r=>{const tgl=r["Tanggal"]||"";BULAN_ORDER.forEach((bln,i)=>{if(tgl.toLowerCase().includes(bln.toLowerCase())||(parseInt((tgl.split("-")[1]||"0"))-1===i))counts[bln]++;});});
+  const ctx=document.getElementById("ergonomiBarChart");if(!ctx)return;
+  if(ergonomiBarChart)ergonomiBarChart.destroy();
+  ergonomiBarChart=new Chart(ctx.getContext("2d"),{type:ergonomiChartType,data:{labels:BULAN_ORDER,datasets:[{label:"Assessment",data:BULAN_ORDER.map(b=>counts[b]),backgroundColor:ergonomiChartType==="line"?"rgba(245,124,0,0.12)":"#F57C00",borderColor:"#E65100",borderWidth:ergonomiChartType==="line"?2.5:1,borderRadius:ergonomiChartType==="bar"?6:0,fill:ergonomiChartType==="line",tension:0.4,pointBackgroundColor:"#E65100",pointRadius:ergonomiChartType==="line"?4:0}]},options:chartOpts()});
+}
+function renderErgonomiDonutChart(data){
+  const levels={"Level 1 — Rendah":0,"Level 2 — Sedang":0,"Level 3 — Tinggi":0,"Level 4 — Sangat Tinggi":0};
+  data.forEach(r=>{const n=parseInt(r["Level Risiko (1–4)"]||0);if(n===1)levels["Level 1 — Rendah"]++;else if(n===2)levels["Level 2 — Sedang"]++;else if(n===3)levels["Level 3 — Tinggi"]++;else if(n>=4)levels["Level 4 — Sangat Tinggi"]++;});
+  const ctx=document.getElementById("ergonomiDonutChart");if(!ctx)return;
+  if(ergonomiDonutChart)ergonomiDonutChart.destroy();
+  ergonomiDonutChart=new Chart(ctx.getContext("2d"),{type:"doughnut",data:{labels:Object.keys(levels),datasets:[{data:Object.values(levels),backgroundColor:["#43A047","#FB8C00","#E53935","#880E4F"],borderColor:"#fff",borderWidth:3,hoverOffset:8}]},options:donutOpts()});
+}
+function renderErgonomiAlertList(data){
+  const el=document.getElementById("ergonomiAlertList");if(!el)return;
+  const high=data.filter(r=>parseInt(r["Level Risiko (1–4)"]||0)>=3).slice(0,6);
+  if(!high.length){el.innerHTML='<div class="hazard-empty"><i class="fas fa-check-circle" style="font-size:24px;opacity:.3;margin-bottom:8px;display:block"></i>Tidak ada risiko tinggi</div>';return;}
+  el.innerHTML=high.map((r,i)=>`<div class="hazard-item"><div class="hazard-rank r${(i%5)+1}">${i+1}</div><div class="hazard-name">${esc(r["Nama Kapal"]||"")} — ${esc(r["Jenis Pekerjaan / Tugas"]||"")} (Skor: ${r["Skor"]||""})</div><div class="hazard-count">L${r["Level Risiko (1–4)"]||""}</div></div>`).join("");
+}
+function renderErgonomiTable(data){
+  const tbody=document.getElementById("ergonomiTableBody");if(!tbody)return;
+  tbody.innerHTML=data.map(r=>`<tr>
+    <td><strong style="color:var(--sidebar-bg)">${esc(r["Nama Kapal"]||"")}</strong></td>
+    <td><span style="background:#E3F2FD;color:#1565C0;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">${esc(r["Fleet"]||"")}</span></td>
+    <td>${esc(r["Area / Unit Kerja"]||"")}</td>
+    <td style="max-width:140px">${esc(r["Jenis Pekerjaan / Tugas"]||"")}</td>
+    <td>${esc(r["Metode Assessment"]||"")}</td>
+    <td style="font-weight:700;text-align:center">${r["Skor"]||"—"}</td>
+    <td style="text-align:center">${riskBadge(r["Level Risiko (1–4)"])}</td>
+    <td style="font-size:11px">${esc(r["Keluhan MSDs (area tubuh)"]||"—")}</td>
+    <td style="font-size:11px;max-width:140px">${esc(r["Rekomendasi Teknis"]||"—")}</td>
+    <td>${tlBadge(r["Status TL"])}</td>
+  </tr>`).join("");
+  const f=document.getElementById("ergonomiTableFooter");if(f)f.textContent=`Menampilkan ${data.length} dari ${rawErgonomi.length} entri`;
+}
+function applyErgonomiFilters(){
+  const b=document.getElementById("ergonomi-filter-bulan").value;
+  const f=document.getElementById("ergonomi-filter-fleet").value;
+  const l=document.getElementById("ergonomi-filter-level").value;
+  const k=(document.getElementById("ergonomi-filter-kapal")||{}).value||"";
+  filteredErgonomi=rawErgonomi.filter(r=>
+    (!b||(r["Tanggal"]||"").includes(b))&&
+    (!f||r["Fleet"]===f)&&
+    (!l||String(r["Level Risiko (1–4)"]||"")===l)&&
+    (!k||(r["Nama Kapal"]||"").toLowerCase().includes(k.toLowerCase()))
+  );renderErgonomiPage();
+}
+function clearErgonomiFilters(){
+  ["ergonomi-filter-bulan","ergonomi-filter-fleet","ergonomi-filter-level"].forEach(id=>{const e=document.getElementById(id);if(e)e.value="";});
+  const k=document.getElementById("ergonomi-filter-kapal");if(k)k.value="";
+  filteredErgonomi=[...rawErgonomi];renderErgonomiPage();
+}
+function searchErgonomiTable(){const q=(document.getElementById("ergonomi-search")||{}).value||"";document.querySelectorAll("#ergonomiTableBody tr").forEach(row=>{row.style.display=row.textContent.toLowerCase().includes(q.toLowerCase())?"":"none";});}
+function sortErgonomiTable(col){if(ergonomiSortCol===col)ergonomiSortDir*=-1;else{ergonomiSortCol=col;ergonomiSortDir=1;}const keys=["Nama Kapal","Fleet","Area / Unit Kerja","Jenis Pekerjaan / Tugas","Metode Assessment","Skor","Level Risiko (1–4)","Keluhan MSDs (area tubuh)","Rekomendasi Teknis","Status TL"];filteredErgonomi.sort((a,b)=>String(a[keys[col]]||"").localeCompare(String(b[keys[col]]||""),"id")*ergonomiSortDir);renderErgonomiTable(filteredErgonomi);}
+function toggleErgonomiChartType(btn,type){ergonomiChartType=type;btn.closest(".pill-group").querySelectorAll(".pill").forEach(p=>p.classList.remove("active"));btn.classList.add("active");renderErgonomiBarChart(filteredErgonomi);}
+
+/* ═══════════════════════════════════════════════
+   FAKTOR PSIKOSOSIAL
+═══════════════════════════════════════════════ */
+function renderPsikoPage(){
+  const data=filteredPsikososial;
+  const total=data.length;
+  const tinggi=data.filter(r=>(r["Level Risiko"]||"").toLowerCase().includes("tinggi")).length;
+  const sedang=data.filter(r=>(r["Level Risiko"]||"").toLowerCase().includes("sedang")).length;
+  const rendah=data.filter(r=>(r["Level Risiko"]||"").toLowerCase().includes("rendah")).length;
+  const responden=data.reduce((s,r)=>s+parseInt(r["Jumlah Responden"]||0),0);
+  document.getElementById("psiko-total").textContent=total;
+  document.getElementById("psiko-tinggi").textContent=tinggi;
+  document.getElementById("psiko-sedang").textContent=sedang;
+  document.getElementById("psiko-rendah").textContent=rendah;
+  document.getElementById("psiko-responden").textContent=fmtNum(responden);
+  renderPsikoBarChart(data);renderPsikoDonutChart(data);renderPsikoRadarChart(data);renderPsikoTable(data);
+}
+function renderPsikoBarChart(data){
+  const counts={};BULAN_ORDER.forEach(b=>counts[b]=0);
+  data.forEach(r=>{const tgl=r["Tanggal"]||"";BULAN_ORDER.forEach((bln,i)=>{if(tgl.toLowerCase().includes(bln.toLowerCase())||(parseInt((tgl.split("-")[1]||"0"))-1===i))counts[bln]++;});});
+  const ctx=document.getElementById("psikoBarChart");if(!ctx)return;
+  if(psikoBarChart)psikoBarChart.destroy();
+  psikoBarChart=new Chart(ctx.getContext("2d"),{type:psikoChartType,data:{labels:BULAN_ORDER,datasets:[{label:"Assessment",data:BULAN_ORDER.map(b=>counts[b]),backgroundColor:psikoChartType==="line"?"rgba(30,136,229,0.12)":"#1E88E5",borderColor:"#1565C0",borderWidth:psikoChartType==="line"?2.5:1,borderRadius:psikoChartType==="bar"?6:0,fill:psikoChartType==="line",tension:0.4,pointBackgroundColor:"#1565C0",pointRadius:psikoChartType==="line"?4:0}]},options:chartOpts()});
+}
+function renderPsikoDonutChart(data){
+  const levels={"Risiko Rendah":0,"Risiko Sedang":0,"Risiko Tinggi":0};
+  data.forEach(r=>{const l=(r["Level Risiko"]||"").toLowerCase();if(l.includes("tinggi"))levels["Risiko Tinggi"]++;else if(l.includes("sedang"))levels["Risiko Sedang"]++;else if(l.includes("rendah"))levels["Risiko Rendah"]++;});
+  const ctx=document.getElementById("psikoDonutChart");if(!ctx)return;
+  if(psikoDonutChart)psikoDonutChart.destroy();
+  psikoDonutChart=new Chart(ctx.getContext("2d"),{type:"doughnut",data:{labels:Object.keys(levels),datasets:[{data:Object.values(levels),backgroundColor:["#43A047","#FB8C00","#E53935"],borderColor:"#fff",borderWidth:3,hoverOffset:8}]},options:donutOpts()});
+}
+function renderPsikoRadarChart(data){
+  const ctx=document.getElementById("psikoRadarChart");if(!ctx)return;
+  if(psikoRadarChart)psikoRadarChart.destroy();
+  const dims=["Beban Kerja (1–5)","Kontrol Kerja (1–5)","Dukungan Atasan (1–5)","Hub. Antar Rekan (1–5)","Peran Pekerjaan (1–5)","Perubahan Organisasi (1–5)"];
+  const labels=["Beban Kerja","Kontrol Kerja","Dukungan Atasan","Hub. Rekan","Peran","Perubahan Org"];
+  const avgs=dims.map(d=>{const vals=data.map(r=>parseFloat(r[d]||0)).filter(v=>v>0);return vals.length?vals.reduce((s,v)=>s+v,0)/vals.length:0;});
+  psikoRadarChart=new Chart(ctx.getContext("2d"),{type:"radar",data:{labels,datasets:[{label:"Rata-rata Skor",data:avgs.map(v=>+v.toFixed(2)),backgroundColor:"rgba(21,101,192,0.15)",borderColor:"#1565C0",borderWidth:2,pointBackgroundColor:"#1565C0",pointRadius:4}]},options:{responsive:true,maintainAspectRatio:false,scales:{r:{min:0,max:5,ticks:{stepSize:1,color:"#90A4AE",font:{size:10}},grid:{color:"#ECEFF1"},pointLabels:{color:"#607D8B",font:{size:10}}}},plugins:{legend:{display:false}}}});
+}
+function renderPsikoTable(data){
+  const tbody=document.getElementById("psikoTableBody");if(!tbody)return;
+  tbody.innerHTML=data.map(r=>`<tr>
+    <td><strong style="color:var(--sidebar-bg)">${esc(r["Nama Kapal"]||"")}</strong></td>
+    <td><span style="background:#E3F2FD;color:#1565C0;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">${esc(r["Fleet"]||"")}</span></td>
+    <td>${esc(r["Departemen / Jabatan"]||"")}</td>
+    <td>${esc(r["Instrumen"]||"")}</td>
+    <td style="text-align:center">${r["Jumlah Responden"]||"—"}</td>
+    <td style="font-weight:700;text-align:center">${r["Total Skor"]||"—"}</td>
+    <td>${psikoBadge(r["Level Risiko"])}</td>
+    <td style="font-size:11px;max-width:160px">${esc(r["Program Intervensi"]||"—")}</td>
+    <td>${tlBadge(r["Status TL"])}</td>
+  </tr>`).join("");
+  const f=document.getElementById("psikoTableFooter");if(f)f.textContent=`Menampilkan ${data.length} dari ${rawPsikososial.length} entri`;
+}
+function applyPsikoFilters(){
+  const b=document.getElementById("psiko-filter-bulan").value;
+  const f=document.getElementById("psiko-filter-fleet").value;
+  const l=document.getElementById("psiko-filter-level").value;
+  const k=(document.getElementById("psiko-filter-kapal")||{}).value||"";
+  filteredPsikososial=rawPsikososial.filter(r=>
+    (!b||(r["Tanggal"]||"").includes(b))&&
+    (!f||r["Fleet"]===f)&&
+    (!l||(r["Level Risiko"]||"").toLowerCase().includes(l.toLowerCase()))&&
+    (!k||(r["Nama Kapal"]||"").toLowerCase().includes(k.toLowerCase()))
+  );renderPsikoPage();
+}
+function clearPsikoFilters(){
+  ["psiko-filter-bulan","psiko-filter-fleet","psiko-filter-level"].forEach(id=>{const e=document.getElementById(id);if(e)e.value="";});
+  const k=document.getElementById("psiko-filter-kapal");if(k)k.value="";
+  filteredPsikososial=[...rawPsikososial];renderPsikoPage();
+}
+function searchPsikoTable(){const q=(document.getElementById("psiko-search")||{}).value||"";document.querySelectorAll("#psikoTableBody tr").forEach(row=>{row.style.display=row.textContent.toLowerCase().includes(q.toLowerCase())?"":"none";});}
+function sortPsikoTable(col){if(psikoSortCol===col)psikoSortDir*=-1;else{psikoSortCol=col;psikoSortDir=1;}const keys=["Nama Kapal","Fleet","Departemen / Jabatan","Instrumen","Jumlah Responden","Total Skor","Level Risiko","Program Intervensi","Status TL"];filteredPsikososial.sort((a,b)=>String(a[keys[col]]||"").localeCompare(String(b[keys[col]]||""),"id")*psikoSortDir);renderPsikoTable(filteredPsikososial);}
+function togglePsikoChartType(btn,type){psikoChartType=type;btn.closest(".pill-group").querySelectorAll(".pill").forEach(p=>p.classList.remove("active"));btn.classList.add("active");renderPsikoBarChart(filteredPsikososial);}
