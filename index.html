@@ -44,7 +44,7 @@
 <div class="login-stat-div"></div>
 <div class="login-stat"><span class="ls-num">4</span><span class="ls-lbl">Jenis Fleet</span></div>
 <div class="login-stat-div"></div>
-<div class="login-stat"><span class="ls-num">3</span><span class="ls-lbl">Modul Aktif</span></div>
+<div class="login-stat"><span class="ls-num">8</span><span class="ls-lbl">Modul Aktif</span></div>
 </div>
 </div>
 </div>
@@ -119,6 +119,7 @@
 <a href="#" class="nav-item" data-menu="dat" data-title="Drugs & Alcohol Test">
 <span class="nav-icon"><i class="fas fa-vial"></i></span>
 <span class="nav-text">Drugs & Alcohol Test</span>
+</a>
 <a href="#" class="nav-item" data-menu="pest" data-title="Pest & Rodent Control">
 <span class="nav-icon"><i class="fas fa-bug"></i></span>
 <span class="nav-text">Pest & Rodent Control</span>
@@ -132,6 +133,32 @@
 <span class="nav-icon"><i class="fas fa-chart-pie"></i></span>
 <span class="nav-text">Sebaran Alkes Kapal</span>
 <span class="nav-badge">Soon</span>
+</a>
+<div class="nav-label">5 Hazard Utama</div>
+<a href="#" class="nav-item" data-menu="fisika" data-title="Faktor Fisika">
+<span class="nav-icon"><i class="fas fa-wave-square"></i></span>
+<span class="nav-text">Faktor Fisika</span>
+<span class="nav-badge nav-badge-new">Baru</span>
+</a>
+<a href="#" class="nav-item" data-menu="kimia" data-title="Faktor Kimia">
+<span class="nav-icon"><i class="fas fa-flask"></i></span>
+<span class="nav-text">Faktor Kimia</span>
+<span class="nav-badge nav-badge-new">Baru</span>
+</a>
+<a href="#" class="nav-item" data-menu="biologi" data-title="Faktor Biologi">
+<span class="nav-icon"><i class="fas fa-virus"></i></span>
+<span class="nav-text">Faktor Biologi</span>
+<span class="nav-badge nav-badge-new">Baru</span>
+</a>
+<a href="#" class="nav-item" data-menu="ergonomi" data-title="Faktor Ergonomi">
+<span class="nav-icon"><i class="fas fa-person-rays"></i></span>
+<span class="nav-text">Faktor Ergonomi</span>
+<span class="nav-badge nav-badge-new">Baru</span>
+</a>
+<a href="#" class="nav-item" data-menu="psikososial" data-title="Faktor Psikososial">
+<span class="nav-icon"><i class="fas fa-brain"></i></span>
+<span class="nav-text">Faktor Psikososial</span>
+<span class="nav-badge nav-badge-new">Baru</span>
 </a>
 <div class="nav-label">Others</div>
 <a href="#" class="nav-item" data-menu="menu6" data-title="Pedoman IH">
@@ -454,6 +481,221 @@
 <p style="font-size:13px;color:var(--text-muted);margin-top:6px">Klik <strong>Pilih Foto</strong> untuk upload gambar</p>
 </div>
 </div>
+</section>
+
+<!-- ===== PAGE FAKTOR FISIKA ===== -->
+<section class="page-content" id="page-fisika">
+<div class="filter-bar">
+<div class="filter-group"><label>Bulan</label><select id="fisika-filter-bulan" onchange="applyFisikaFilters()"><option value="">Semua Bulan</option><option>Januari</option><option>Februari</option><option>Maret</option><option>April</option><option>Mei</option><option>Juni</option><option>Juli</option><option>Agustus</option><option>September</option><option>Oktober</option><option>November</option><option>Desember</option></select></div>
+<div class="filter-group"><label>Fleet</label><select id="fisika-filter-fleet" onchange="applyFisikaFilters()"><option value="">Semua Fleet</option><option>FP I</option><option>FP II</option><option>FC</option><option>FGP</option></select></div>
+<div class="filter-group"><label>Parameter</label><select id="fisika-filter-param" onchange="applyFisikaFilters()"><option value="">Semua Parameter</option><option>Kebisingan</option><option>Getaran</option><option>Iklim Kerja ISBB</option><option>Pencahayaan</option><option>Radiasi UV</option></select></div>
+<div class="filter-group"><label>Metode</label><select id="fisika-filter-metode" onchange="applyFisikaFilters()"><option value="">Area & Personal</option><option>Area</option><option>Personal</option></select></div>
+<div class="filter-group"><label>Nama Kapal</label><input type="text" id="fisika-filter-kapal" placeholder="Cari kapal..." oninput="applyFisikaFilters()"></div>
+<button class="btn-clear" onclick="clearFisikaFilters()"><i class="fas fa-xmark"></i> Reset</button>
+</div>
+<div id="fisika-alert-bar" style="display:none" class="nab-alert-bar"><i class="fas fa-triangle-exclamation"></i><span id="fisika-alert-msg"></span></div>
+<div class="kpi-grid">
+<div class="kpi-card blue"><div class="kpi-icon"><i class="fas fa-ruler-combined"></i></div><div class="kpi-body"><div class="kpi-value" id="fisika-total">—</div><div class="kpi-label">Total Pengukuran</div></div></div>
+<div class="kpi-card red"><div class="kpi-icon"><i class="fas fa-circle-xmark"></i></div><div class="kpi-body"><div class="kpi-value" id="fisika-melebihi">—</div><div class="kpi-label">Melebihi NAB</div></div></div>
+<div class="kpi-card orange"><div class="kpi-icon"><i class="fas fa-circle-exclamation"></i></div><div class="kpi-body"><div class="kpi-value" id="fisika-perhatian">—</div><div class="kpi-label">Perhatian (50–100%)</div></div></div>
+<div class="kpi-card green"><div class="kpi-icon"><i class="fas fa-circle-check"></i></div><div class="kpi-body"><div class="kpi-value" id="fisika-aman">—</div><div class="kpi-label">Aman (&lt;50% NAB)</div></div></div>
+<div class="kpi-card teal"><div class="kpi-icon"><i class="fas fa-user-check"></i></div><div class="kpi-body"><div class="kpi-value" id="fisika-personal">—</div><div class="kpi-label">Personal Monitoring</div></div></div>
+</div>
+<div class="chart-row">
+<div class="chart-card"><div class="chart-header"><span class="chart-title"><i class="fas fa-chart-column"></i> Pengukuran per Bulan</span><div class="pill-group"><button class="pill active" onclick="toggleFisikaChartType(this,'bar')">Bar</button><button class="pill" onclick="toggleFisikaChartType(this,'line')">Line</button></div></div><div class="chart-body"><canvas id="fisikaBarChart"></canvas></div></div>
+<div class="chart-card"><div class="chart-header"><span class="chart-title"><i class="fas fa-chart-pie"></i> Distribusi Parameter</span></div><div class="chart-body"><canvas id="fisikaDonutChart"></canvas></div></div>
+</div>
+<div class="bottom-row">
+<div class="hazard-card"><div class="chart-header"><span class="chart-title"><i class="fas fa-triangle-exclamation"></i> Melebihi NAB</span></div><div id="fisikaAlertList" class="hazard-list"></div></div>
+<div class="table-card">
+<div class="chart-header"><span class="chart-title"><i class="fas fa-table-list"></i> Data Faktor Fisika</span><input type="text" id="fisika-search" placeholder="🔍 Cari data..." oninput="searchFisikaTable()" class="search-input"></div>
+<div class="table-wrap">
+<table class="data-table"><thead><tr>
+<th onclick="sortFisikaTable(0)">Kapal <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortFisikaTable(1)">Fleet <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortFisikaTable(2)">Area <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortFisikaTable(3)">Parameter <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortFisikaTable(4)">Metode <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortFisikaTable(5)">Hasil <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortFisikaTable(6)">Satuan <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortFisikaTable(7)">NAB <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortFisikaTable(8)">% NAB <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortFisikaTable(9)">Status <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortFisikaTable(10)">Status TL <i class="fas fa-sort fa-xs"></i></th>
+</tr></thead><tbody id="fisikaTableBody"></tbody></table>
+</div>
+<div class="table-footer" id="fisikaTableFooter">Memuat data...</div>
+</div></div>
+</section>
+
+<!-- ===== PAGE FAKTOR KIMIA ===== -->
+<section class="page-content" id="page-kimia">
+<div class="filter-bar">
+<div class="filter-group"><label>Bulan</label><select id="kimia-filter-bulan" onchange="applyKimiaFilters()"><option value="">Semua Bulan</option><option>Januari</option><option>Februari</option><option>Maret</option><option>April</option><option>Mei</option><option>Juni</option><option>Juli</option><option>Agustus</option><option>September</option><option>Oktober</option><option>November</option><option>Desember</option></select></div>
+<div class="filter-group"><label>Fleet</label><select id="kimia-filter-fleet" onchange="applyKimiaFilters()"><option value="">Semua Fleet</option><option>FP I</option><option>FP II</option><option>FC</option><option>FGP</option></select></div>
+<div class="filter-group"><label>Metode</label><select id="kimia-filter-metode" onchange="applyKimiaFilters()"><option value="">Semua Metode</option><option>Area Stasioner</option><option>Personal Air Sampling</option><option>Biological Monitoring</option></select></div>
+<div class="filter-group"><label>Bahan Kimia</label><input type="text" id="kimia-filter-bahan" placeholder="Cari bahan..." oninput="applyKimiaFilters()"></div>
+<button class="btn-clear" onclick="clearKimiaFilters()"><i class="fas fa-xmark"></i> Reset</button>
+</div>
+<div id="kimia-alert-bar" style="display:none" class="nab-alert-bar"><i class="fas fa-triangle-exclamation"></i><span id="kimia-alert-msg"></span></div>
+<div class="kpi-grid">
+<div class="kpi-card blue"><div class="kpi-icon"><i class="fas fa-flask"></i></div><div class="kpi-body"><div class="kpi-value" id="kimia-total">—</div><div class="kpi-label">Total Sampling</div></div></div>
+<div class="kpi-card red"><div class="kpi-icon"><i class="fas fa-circle-xmark"></i></div><div class="kpi-body"><div class="kpi-value" id="kimia-melebihi">—</div><div class="kpi-label">Melebihi TLV/BEI</div></div></div>
+<div class="kpi-card orange"><div class="kpi-icon"><i class="fas fa-circle-exclamation"></i></div><div class="kpi-body"><div class="kpi-value" id="kimia-perhatian">—</div><div class="kpi-label">Perhatian</div></div></div>
+<div class="kpi-card purple"><div class="kpi-icon"><i class="fas fa-user-shield"></i></div><div class="kpi-body"><div class="kpi-value" id="kimia-personal">—</div><div class="kpi-label">Personal Sampling</div></div></div>
+<div class="kpi-card indigo"><div class="kpi-icon"><i class="fas fa-dna"></i></div><div class="kpi-body"><div class="kpi-value" id="kimia-bio">—</div><div class="kpi-label">Biomarker</div></div></div>
+</div>
+<div class="chart-row">
+<div class="chart-card"><div class="chart-header"><span class="chart-title"><i class="fas fa-chart-column"></i> Sampling per Bulan</span><div class="pill-group"><button class="pill active" onclick="toggleKimiaChartType(this,'bar')">Bar</button><button class="pill" onclick="toggleKimiaChartType(this,'line')">Line</button></div></div><div class="chart-body"><canvas id="kimiaBarChart"></canvas></div></div>
+<div class="chart-card"><div class="chart-header"><span class="chart-title"><i class="fas fa-chart-pie"></i> Distribusi Metode</span></div><div class="chart-body"><canvas id="kimiaDonutChart"></canvas></div></div>
+</div>
+<div class="bottom-row">
+<div class="hazard-card"><div class="chart-header"><span class="chart-title"><i class="fas fa-biohazard"></i> Melebihi TLV/BEI</span></div><div id="kimiaAlertList" class="hazard-list"></div></div>
+<div class="table-card">
+<div class="chart-header"><span class="chart-title"><i class="fas fa-table-list"></i> Data Faktor Kimia</span><input type="text" id="kimia-search" placeholder="🔍 Cari data..." oninput="searchKimiaTable()" class="search-input"></div>
+<div class="table-wrap">
+<table class="data-table"><thead><tr>
+<th onclick="sortKimiaTable(0)">Kapal <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortKimiaTable(1)">Fleet <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortKimiaTable(2)">Bahan Kimia <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortKimiaTable(3)">Metode <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortKimiaTable(4)">Media <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortKimiaTable(5)">Hasil <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortKimiaTable(6)">Satuan <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortKimiaTable(7)">TLV/BEI <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortKimiaTable(8)">% TLV <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortKimiaTable(9)">Status <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortKimiaTable(10)">Lab <i class="fas fa-sort fa-xs"></i></th>
+</tr></thead><tbody id="kimiaTableBody"></tbody></table>
+</div>
+<div class="table-footer" id="kimiaTableFooter">Memuat data...</div>
+</div></div>
+</section>
+
+<!-- ===== PAGE FAKTOR BIOLOGI ===== -->
+<section class="page-content" id="page-biologi">
+<div class="filter-bar">
+<div class="filter-group"><label>Bulan</label><select id="biologi-filter-bulan" onchange="applyBiologiFilters()"><option value="">Semua Bulan</option><option>Januari</option><option>Februari</option><option>Maret</option><option>April</option><option>Mei</option><option>Juni</option><option>Juli</option><option>Agustus</option><option>September</option><option>Oktober</option><option>November</option><option>Desember</option></select></div>
+<div class="filter-group"><label>Fleet</label><select id="biologi-filter-fleet" onchange="applyBiologiFilters()"><option value="">Semua Fleet</option><option>FP I</option><option>FP II</option><option>FC</option><option>FGP</option></select></div>
+<div class="filter-group"><label>Jenis Agen</label><select id="biologi-filter-agen" onchange="applyBiologiFilters()"><option value="">Semua Agen</option><option>Bakteri</option><option>Virus</option><option>Jamur</option><option>Parasit</option><option>Bioaerosol</option></select></div>
+<div class="filter-group"><label>Nama Kapal</label><input type="text" id="biologi-filter-kapal" placeholder="Cari kapal..." oninput="applyBiologiFilters()"></div>
+<button class="btn-clear" onclick="clearBiologiFilters()"><i class="fas fa-xmark"></i> Reset</button>
+</div>
+<div class="kpi-grid">
+<div class="kpi-card blue"><div class="kpi-icon"><i class="fas fa-virus"></i></div><div class="kpi-body"><div class="kpi-value" id="biologi-total">—</div><div class="kpi-label">Total Sampling</div></div></div>
+<div class="kpi-card red"><div class="kpi-icon"><i class="fas fa-circle-xmark"></i></div><div class="kpi-body"><div class="kpi-value" id="biologi-melebihi">—</div><div class="kpi-label">Melebihi Baku Mutu</div></div></div>
+<div class="kpi-card orange"><div class="kpi-icon"><i class="fas fa-circle-exclamation"></i></div><div class="kpi-body"><div class="kpi-value" id="biologi-perhatian">—</div><div class="kpi-label">Perhatian</div></div></div>
+<div class="kpi-card green"><div class="kpi-icon"><i class="fas fa-circle-check"></i></div><div class="kpi-body"><div class="kpi-value" id="biologi-aman">—</div><div class="kpi-label">Aman</div></div></div>
+<div class="kpi-card teal"><div class="kpi-icon"><i class="fas fa-location-dot"></i></div><div class="kpi-body"><div class="kpi-value" id="biologi-lokasi">—</div><div class="kpi-label">Total Lokasi</div></div></div>
+</div>
+<div class="chart-row">
+<div class="chart-card"><div class="chart-header"><span class="chart-title"><i class="fas fa-chart-column"></i> Sampling per Bulan</span><div class="pill-group"><button class="pill active" onclick="toggleBiologiChartType(this,'bar')">Bar</button><button class="pill" onclick="toggleBiologiChartType(this,'line')">Line</button></div></div><div class="chart-body"><canvas id="biologiBarChart"></canvas></div></div>
+<div class="chart-card"><div class="chart-header"><span class="chart-title"><i class="fas fa-chart-pie"></i> Distribusi Jenis Agen</span></div><div class="chart-body"><canvas id="biologiDonutChart"></canvas></div></div>
+</div>
+<div class="bottom-row">
+<div class="hazard-card"><div class="chart-header"><span class="chart-title"><i class="fas fa-triangle-exclamation"></i> Melebihi Baku Mutu</span></div><div id="biologiAlertList" class="hazard-list"></div></div>
+<div class="table-card">
+<div class="chart-header"><span class="chart-title"><i class="fas fa-table-list"></i> Data Faktor Biologi</span><input type="text" id="biologi-search" placeholder="🔍 Cari data..." oninput="searchBiologiTable()" class="search-input"></div>
+<div class="table-wrap">
+<table class="data-table"><thead><tr>
+<th onclick="sortBiologiTable(0)">Kapal <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortBiologiTable(1)">Fleet <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortBiologiTable(2)">Area <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortBiologiTable(3)">Jenis Agen <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortBiologiTable(4)">Nama Agen <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortBiologiTable(5)">Media <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortBiologiTable(6)">Hasil <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortBiologiTable(7)">Satuan <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortBiologiTable(8)">Baku Mutu <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortBiologiTable(9)">Status <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortBiologiTable(10)">Lab <i class="fas fa-sort fa-xs"></i></th>
+</tr></thead><tbody id="biologiTableBody"></tbody></table>
+</div>
+<div class="table-footer" id="biologiTableFooter">Memuat data...</div>
+</div></div>
+</section>
+
+<!-- ===== PAGE FAKTOR ERGONOMI ===== -->
+<section class="page-content" id="page-ergonomi">
+<div class="filter-bar">
+<div class="filter-group"><label>Bulan</label><select id="ergonomi-filter-bulan" onchange="applyErgonomiFilters()"><option value="">Semua Bulan</option><option>Januari</option><option>Februari</option><option>Maret</option><option>April</option><option>Mei</option><option>Juni</option><option>Juli</option><option>Agustus</option><option>September</option><option>Oktober</option><option>November</option><option>Desember</option></select></div>
+<div class="filter-group"><label>Fleet</label><select id="ergonomi-filter-fleet" onchange="applyErgonomiFilters()"><option value="">Semua Fleet</option><option>FP I</option><option>FP II</option><option>FC</option><option>FGP</option></select></div>
+<div class="filter-group"><label>Level Risiko</label><select id="ergonomi-filter-level" onchange="applyErgonomiFilters()"><option value="">Semua Level</option><option>1</option><option>2</option><option>3</option><option>4</option></select></div>
+<div class="filter-group"><label>Nama Kapal</label><input type="text" id="ergonomi-filter-kapal" placeholder="Cari kapal..." oninput="applyErgonomiFilters()"></div>
+<button class="btn-clear" onclick="clearErgonomiFilters()"><i class="fas fa-xmark"></i> Reset</button>
+</div>
+<div class="kpi-grid">
+<div class="kpi-card blue"><div class="kpi-icon"><i class="fas fa-person-rays"></i></div><div class="kpi-body"><div class="kpi-value" id="ergonomi-total">—</div><div class="kpi-label">Total Assessment</div></div></div>
+<div class="kpi-card red"><div class="kpi-icon"><i class="fas fa-circle-xmark"></i></div><div class="kpi-body"><div class="kpi-value" id="ergonomi-tinggi">—</div><div class="kpi-label">Risiko Tinggi (3–4)</div></div></div>
+<div class="kpi-card orange"><div class="kpi-icon"><i class="fas fa-circle-exclamation"></i></div><div class="kpi-body"><div class="kpi-value" id="ergonomi-sedang">—</div><div class="kpi-label">Risiko Sedang (2)</div></div></div>
+<div class="kpi-card green"><div class="kpi-icon"><i class="fas fa-circle-check"></i></div><div class="kpi-body"><div class="kpi-value" id="ergonomi-rendah">—</div><div class="kpi-label">Risiko Rendah (1)</div></div></div>
+<div class="kpi-card purple"><div class="kpi-icon"><i class="fas fa-clipboard-list"></i></div><div class="kpi-body"><div class="kpi-value" id="ergonomi-tl-open">—</div><div class="kpi-label">TL Belum Selesai</div></div></div>
+</div>
+<div class="chart-row">
+<div class="chart-card"><div class="chart-header"><span class="chart-title"><i class="fas fa-chart-column"></i> Assessment per Bulan</span><div class="pill-group"><button class="pill active" onclick="toggleErgonomiChartType(this,'bar')">Bar</button><button class="pill" onclick="toggleErgonomiChartType(this,'line')">Line</button></div></div><div class="chart-body"><canvas id="ergonomiBarChart"></canvas></div></div>
+<div class="chart-card"><div class="chart-header"><span class="chart-title"><i class="fas fa-chart-pie"></i> Distribusi Level Risiko</span></div><div class="chart-body"><canvas id="ergonomiDonutChart"></canvas></div></div>
+</div>
+<div class="bottom-row">
+<div class="hazard-card"><div class="chart-header"><span class="chart-title"><i class="fas fa-triangle-exclamation"></i> Risiko Tinggi — Perlu Tindakan</span></div><div id="ergonomiAlertList" class="hazard-list"></div></div>
+<div class="table-card">
+<div class="chart-header"><span class="chart-title"><i class="fas fa-table-list"></i> Data Faktor Ergonomi</span><input type="text" id="ergonomi-search" placeholder="🔍 Cari data..." oninput="searchErgonomiTable()" class="search-input"></div>
+<div class="table-wrap">
+<table class="data-table"><thead><tr>
+<th onclick="sortErgonomiTable(0)">Kapal <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortErgonomiTable(1)">Fleet <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortErgonomiTable(2)">Area <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortErgonomiTable(3)">Pekerjaan <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortErgonomiTable(4)">Metode <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortErgonomiTable(5)">Skor <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortErgonomiTable(6)">Level Risiko <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortErgonomiTable(7)">Keluhan MSDs <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortErgonomiTable(8)">Rekomendasi <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortErgonomiTable(9)">Status TL <i class="fas fa-sort fa-xs"></i></th>
+</tr></thead><tbody id="ergonomiTableBody"></tbody></table>
+</div>
+<div class="table-footer" id="ergonomiTableFooter">Memuat data...</div>
+</div></div>
+</section>
+
+<!-- ===== PAGE FAKTOR PSIKOSOSIAL ===== -->
+<section class="page-content" id="page-psikososial">
+<div class="filter-bar">
+<div class="filter-group"><label>Bulan</label><select id="psiko-filter-bulan" onchange="applyPsikoFilters()"><option value="">Semua Bulan</option><option>Januari</option><option>Februari</option><option>Maret</option><option>April</option><option>Mei</option><option>Juni</option><option>Juli</option><option>Agustus</option><option>September</option><option>Oktober</option><option>November</option><option>Desember</option></select></div>
+<div class="filter-group"><label>Fleet</label><select id="psiko-filter-fleet" onchange="applyPsikoFilters()"><option value="">Semua Fleet</option><option>FP I</option><option>FP II</option><option>FC</option><option>FGP</option></select></div>
+<div class="filter-group"><label>Level Risiko</label><select id="psiko-filter-level" onchange="applyPsikoFilters()"><option value="">Semua Level</option><option>Rendah</option><option>Sedang</option><option>Tinggi</option></select></div>
+<div class="filter-group"><label>Nama Kapal</label><input type="text" id="psiko-filter-kapal" placeholder="Cari kapal..." oninput="applyPsikoFilters()"></div>
+<button class="btn-clear" onclick="clearPsikoFilters()"><i class="fas fa-xmark"></i> Reset</button>
+</div>
+<div class="kpi-grid">
+<div class="kpi-card blue"><div class="kpi-icon"><i class="fas fa-brain"></i></div><div class="kpi-body"><div class="kpi-value" id="psiko-total">—</div><div class="kpi-label">Total Assessment</div></div></div>
+<div class="kpi-card red"><div class="kpi-icon"><i class="fas fa-face-dizzy"></i></div><div class="kpi-body"><div class="kpi-value" id="psiko-tinggi">—</div><div class="kpi-label">Risiko Tinggi</div></div></div>
+<div class="kpi-card orange"><div class="kpi-icon"><i class="fas fa-face-meh"></i></div><div class="kpi-body"><div class="kpi-value" id="psiko-sedang">—</div><div class="kpi-label">Risiko Sedang</div></div></div>
+<div class="kpi-card green"><div class="kpi-icon"><i class="fas fa-face-smile"></i></div><div class="kpi-body"><div class="kpi-value" id="psiko-rendah">—</div><div class="kpi-label">Risiko Rendah</div></div></div>
+<div class="kpi-card teal"><div class="kpi-icon"><i class="fas fa-users"></i></div><div class="kpi-body"><div class="kpi-value" id="psiko-responden">—</div><div class="kpi-label">Total Responden</div></div></div>
+</div>
+<div class="chart-row">
+<div class="chart-card"><div class="chart-header"><span class="chart-title"><i class="fas fa-chart-column"></i> Assessment per Bulan</span><div class="pill-group"><button class="pill active" onclick="togglePsikoChartType(this,'bar')">Bar</button><button class="pill" onclick="togglePsikoChartType(this,'line')">Line</button></div></div><div class="chart-body"><canvas id="psikoBarChart"></canvas></div></div>
+<div class="chart-card"><div class="chart-header"><span class="chart-title"><i class="fas fa-chart-pie"></i> Distribusi Level Risiko</span></div><div class="chart-body"><canvas id="psikoDonutChart"></canvas></div></div>
+</div>
+<div class="bottom-row">
+<div class="hazard-card"><div class="chart-header"><span class="chart-title"><i class="fas fa-chart-radar"></i> Rata-rata 6 Dimensi</span></div><div id="psikoRadarWrap" style="height:200px;position:relative"><canvas id="psikoRadarChart"></canvas></div></div>
+<div class="table-card">
+<div class="chart-header"><span class="chart-title"><i class="fas fa-table-list"></i> Data Faktor Psikososial</span><input type="text" id="psiko-search" placeholder="🔍 Cari data..." oninput="searchPsikoTable()" class="search-input"></div>
+<div class="table-wrap">
+<table class="data-table"><thead><tr>
+<th onclick="sortPsikoTable(0)">Kapal <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortPsikoTable(1)">Fleet <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortPsikoTable(2)">Departemen <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortPsikoTable(3)">Instrumen <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortPsikoTable(4)">Responden <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortPsikoTable(5)">Total Skor <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortPsikoTable(6)">Level Risiko <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortPsikoTable(7)">Program Intervensi <i class="fas fa-sort fa-xs"></i></th>
+<th onclick="sortPsikoTable(8)">Status TL <i class="fas fa-sort fa-xs"></i></th>
+</tr></thead><tbody id="psikoTableBody"></tbody></table>
+</div>
+<div class="table-footer" id="psikoTableFooter">Memuat data...</div>
+</div></div>
 </section>
 
 </main>
