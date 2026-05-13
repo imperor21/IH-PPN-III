@@ -57,6 +57,14 @@
 <div class="login-brand-sub">Pertamina Patra Niaga</div>
 </div>
 </div>
+<!-- Mobile-only stats strip -->
+<div class="m-login-stats">
+<div class="m-ls"><span class="m-ls-num">85</span><span class="m-ls-lbl">Kapal</span></div>
+<div class="m-ls-div"></div>
+<div class="m-ls"><span class="m-ls-num">4</span><span class="m-ls-lbl">Fleet</span></div>
+<div class="m-ls-div"></div>
+<div class="m-ls"><span class="m-ls-num">8</span><span class="m-ls-lbl">Modul</span></div>
+</div>
 <div class="login-body">
 <h2 class="login-heading">Selamat Datang</h2>
 <p class="login-sub">Masuk untuk mengakses IH dashboard</p>
@@ -111,69 +119,115 @@
 </div>
 
 <nav class="sidebar-nav">
-<div class="nav-label">Monitoring</div>
-<a href="#" class="nav-item active" data-menu="hra" data-title="HRA & IH">
-<span class="nav-icon"><i class="fas fa-lungs"></i></span>
-<span class="nav-text">HRA & IH</span>
-</a>
-<a href="#" class="nav-item" data-menu="dat" data-title="Drugs & Alcohol Test">
-<span class="nav-icon"><i class="fas fa-vial"></i></span>
-<span class="nav-text">Drugs & Alcohol Test</span>
-</a>
-<a href="#" class="nav-item" data-menu="pest" data-title="Pest & Rodent Control">
-<span class="nav-icon"><i class="fas fa-bug"></i></span>
-<span class="nav-text">Pest & Rodent Control</span>
-</a>
-<a href="#" class="nav-item placeholder" data-menu="p3k" data-title="P3K & AED Office">
-<span class="nav-icon"><i class="fas fa-kit-medical"></i></span>
-<span class="nav-text">P3K & AED Office</span>
-<span class="nav-badge">Soon</span>
-</a>
-<a href="#" class="nav-item placeholder" data-menu="menu5" data-title="Sebaran Alkes Kapal">
-<span class="nav-icon"><i class="fas fa-chart-pie"></i></span>
-<span class="nav-text">Sebaran Alkes Kapal</span>
-<span class="nav-badge">Soon</span>
-</a>
-<div class="nav-label">5 Hazard Utama</div>
-<a href="#" class="nav-item" data-menu="fisika" data-title="Faktor Fisika">
-<span class="nav-icon"><i class="fas fa-wave-square"></i></span>
-<span class="nav-text">Faktor Fisika</span>
-<span class="nav-badge nav-badge-new">Baru</span>
-</a>
-<a href="#" class="nav-item" data-menu="kimia" data-title="Faktor Kimia">
-<span class="nav-icon"><i class="fas fa-flask"></i></span>
-<span class="nav-text">Faktor Kimia</span>
-<span class="nav-badge nav-badge-new">Baru</span>
-</a>
-<a href="#" class="nav-item" data-menu="biologi" data-title="Faktor Biologi">
-<span class="nav-icon"><i class="fas fa-virus"></i></span>
-<span class="nav-text">Faktor Biologi</span>
-<span class="nav-badge nav-badge-new">Baru</span>
-</a>
-<a href="#" class="nav-item" data-menu="ergonomi" data-title="Faktor Ergonomi">
-<span class="nav-icon"><i class="fas fa-person-rays"></i></span>
-<span class="nav-text">Faktor Ergonomi</span>
-<span class="nav-badge nav-badge-new">Baru</span>
-</a>
-<a href="#" class="nav-item" data-menu="psikososial" data-title="Faktor Psikososial">
-<span class="nav-icon"><i class="fas fa-brain"></i></span>
-<span class="nav-text">Faktor Psikososial</span>
-<span class="nav-badge nav-badge-new">Baru</span>
-</a>
-<div class="nav-label">Others</div>
-<a href="#" class="nav-item" data-menu="closeout25" data-title="Closeout HRA & IH 2025">
-<span class="nav-icon"><i class="fas fa-clipboard-check"></i></span>
-<span class="nav-text">Closeout HRA & IH 2025</span>
-<span class="nav-badge nav-badge-new">Baru</span>
-</a>
-<a href="#" class="nav-item" data-menu="menu6" data-title="Pedoman IH">
-<span class="nav-icon"><i class="fas fa-book-open"></i></span>
-<span class="nav-text">Pedoman IH</span>
-</a>
-<a href="#" class="nav-item" data-menu="dokumentasi" data-title="Dokumentasi">
-<span class="nav-icon"><i class="fas fa-images"></i></span>
-<span class="nav-text">Dokumentasi</span>
-</a>
+
+<!-- ── GROUP: MONITORING ── -->
+<div class="nav-group open" id="navg-monitoring">
+  <div class="nav-group-hdr" onclick="toggleNavGroup('monitoring')">
+    <div class="nav-group-hdr-left">
+      <span class="nav-group-icon"><i class="fas fa-ship"></i></span>
+      <span class="nav-group-label">Monitoring</span>
+    </div>
+    <div class="nav-group-hdr-right">
+      <span class="nav-group-count">5</span>
+      <i class="fas fa-chevron-down nav-group-arrow"></i>
+    </div>
+  </div>
+  <div class="nav-group-body">
+    <a href="#" class="nav-item active" data-menu="hra" data-title="HRA & IH" data-group="monitoring">
+      <span class="nav-icon"><i class="fas fa-lungs"></i></span>
+      <span class="nav-text">HRA & IH</span>
+    </a>
+    <a href="#" class="nav-item" data-menu="dat" data-title="Drugs & Alcohol Test" data-group="monitoring">
+      <span class="nav-icon"><i class="fas fa-vial"></i></span>
+      <span class="nav-text">Drugs & Alcohol Test</span>
+    </a>
+    <a href="#" class="nav-item" data-menu="pest" data-title="Pest & Rodent Control" data-group="monitoring">
+      <span class="nav-icon"><i class="fas fa-bug"></i></span>
+      <span class="nav-text">Pest & Rodent Control</span>
+    </a>
+    <a href="#" class="nav-item placeholder" data-menu="p3k" data-title="P3K & AED Office" data-group="monitoring">
+      <span class="nav-icon"><i class="fas fa-kit-medical"></i></span>
+      <span class="nav-text">P3K & AED Office</span>
+      <span class="nav-badge">Soon</span>
+    </a>
+    <a href="#" class="nav-item placeholder" data-menu="menu5" data-title="Sebaran Alkes Kapal" data-group="monitoring">
+      <span class="nav-icon"><i class="fas fa-chart-pie"></i></span>
+      <span class="nav-text">Sebaran Alkes Kapal</span>
+      <span class="nav-badge">Soon</span>
+    </a>
+  </div>
+</div>
+
+<!-- ── GROUP: 5 HAZARD UTAMA ── -->
+<div class="nav-group" id="navg-hazard">
+  <div class="nav-group-hdr" onclick="toggleNavGroup('hazard')">
+    <div class="nav-group-hdr-left">
+      <span class="nav-group-icon"><i class="fas fa-triangle-exclamation"></i></span>
+      <span class="nav-group-label">5 Hazard Utama</span>
+    </div>
+    <div class="nav-group-hdr-right">
+      <span class="nav-group-count">5</span>
+      <i class="fas fa-chevron-down nav-group-arrow"></i>
+    </div>
+  </div>
+  <div class="nav-group-body">
+    <a href="#" class="nav-item" data-menu="fisika" data-title="Faktor Fisika" data-group="hazard">
+      <span class="nav-icon"><i class="fas fa-wave-square"></i></span>
+      <span class="nav-text">Faktor Fisika</span>
+      <span class="nav-badge nav-badge-new">Baru</span>
+    </a>
+    <a href="#" class="nav-item" data-menu="kimia" data-title="Faktor Kimia" data-group="hazard">
+      <span class="nav-icon"><i class="fas fa-flask"></i></span>
+      <span class="nav-text">Faktor Kimia</span>
+      <span class="nav-badge nav-badge-new">Baru</span>
+    </a>
+    <a href="#" class="nav-item" data-menu="biologi" data-title="Faktor Biologi" data-group="hazard">
+      <span class="nav-icon"><i class="fas fa-virus"></i></span>
+      <span class="nav-text">Faktor Biologi</span>
+      <span class="nav-badge nav-badge-new">Baru</span>
+    </a>
+    <a href="#" class="nav-item" data-menu="ergonomi" data-title="Faktor Ergonomi" data-group="hazard">
+      <span class="nav-icon"><i class="fas fa-person-rays"></i></span>
+      <span class="nav-text">Faktor Ergonomi</span>
+      <span class="nav-badge nav-badge-new">Baru</span>
+    </a>
+    <a href="#" class="nav-item" data-menu="psikososial" data-title="Faktor Psikososial" data-group="hazard">
+      <span class="nav-icon"><i class="fas fa-brain"></i></span>
+      <span class="nav-text">Faktor Psikososial</span>
+      <span class="nav-badge nav-badge-new">Baru</span>
+    </a>
+  </div>
+</div>
+
+<!-- ── GROUP: OTHERS ── -->
+<div class="nav-group" id="navg-others">
+  <div class="nav-group-hdr" onclick="toggleNavGroup('others')">
+    <div class="nav-group-hdr-left">
+      <span class="nav-group-icon"><i class="fas fa-layer-group"></i></span>
+      <span class="nav-group-label">Others</span>
+    </div>
+    <div class="nav-group-hdr-right">
+      <span class="nav-group-count">3</span>
+      <i class="fas fa-chevron-down nav-group-arrow"></i>
+    </div>
+  </div>
+  <div class="nav-group-body">
+    <a href="#" class="nav-item" data-menu="closeout25" data-title="Closeout HRA & IH 2025" data-group="others">
+      <span class="nav-icon"><i class="fas fa-clipboard-check"></i></span>
+      <span class="nav-text">Closeout HRA & IH 2025</span>
+      <span class="nav-badge nav-badge-new">Baru</span>
+    </a>
+    <a href="#" class="nav-item" data-menu="menu6" data-title="Pedoman IH" data-group="others">
+      <span class="nav-icon"><i class="fas fa-book-open"></i></span>
+      <span class="nav-text">Pedoman IH</span>
+    </a>
+    <a href="#" class="nav-item" data-menu="dokumentasi" data-title="Dokumentasi" data-group="others">
+      <span class="nav-icon"><i class="fas fa-images"></i></span>
+      <span class="nav-text">Dokumentasi</span>
+    </a>
+  </div>
+</div>
+
 </nav>
 
 <div class="sidebar-footer">
@@ -789,6 +843,41 @@
 
 </main>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- ===== MOBILE BOTTOM NAV ===== -->
+<nav class="m-bottom-nav" id="mBottomNav" role="navigation" aria-label="Mobile navigation">
+  <div class="m-nav-pill" id="mNavPill"></div>
+  <button class="m-nav-btn active" data-menu="hra" data-title="HRA & IH" data-group="monitoring" onclick="mNavClick(this)">
+    <span class="m-nav-icon"><i class="fas fa-lungs"></i></span>
+    <span class="m-nav-lbl">HRA & IH</span>
+  </button>
+  <button class="m-nav-btn" data-menu="dat" data-title="Drugs & Alcohol Test" data-group="monitoring" onclick="mNavClick(this)">
+    <span class="m-nav-icon"><i class="fas fa-vial"></i></span>
+    <span class="m-nav-lbl">DAT</span>
+  </button>
+  <button class="m-nav-btn" data-menu="pest" data-title="Pest & Rodent" data-group="monitoring" onclick="mNavClick(this)">
+    <span class="m-nav-icon"><i class="fas fa-bug"></i></span>
+    <span class="m-nav-lbl">Pest</span>
+  </button>
+  <button class="m-nav-btn" data-menu="fisika" data-title="Faktor Fisika" data-group="hazard" onclick="mNavClick(this)">
+    <span class="m-nav-icon"><i class="fas fa-triangle-exclamation"></i></span>
+    <span class="m-nav-lbl">Hazard</span>
+  </button>
+  <button class="m-nav-btn" id="mMenuBtn" onclick="mOpenSidebar()">
+    <span class="m-nav-icon"><i class="fas fa-grid-2"></i></span>
+    <span class="m-nav-lbl">Menu</span>
+  </button>
+</nav>
+
+<!-- ===== MOBILE QUICK STATS BAR (Dashboard) ===== -->
+<div class="m-stats-strip" id="mStatsStrip" style="display:none">
+  <div class="m-stat-pill"><span class="m-stat-v" id="mStatKapal">85</span><span class="m-stat-l">Kapal</span></div>
+  <div class="m-stat-div"></div>
+  <div class="m-stat-pill"><span class="m-stat-v" id="mStatDone">—</span><span class="m-stat-l">Done</span></div>
+  <div class="m-stat-div"></div>
+  <div class="m-stat-pill"><span class="m-stat-v" id="mStatCvg">—</span><span class="m-stat-l">Coverage</span></div>
+</div>
+
 <div class="toast-container" id="toastContainer"></div>
 <div class="drive-progress" id="driveProgress"><i class="fas fa-circle-notch fa-spin"></i><span id="driveProgressMsg">Mengupload...</span></div>
 <script src="script.js"></script>
