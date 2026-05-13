@@ -3,7 +3,7 @@
 /* ✅ Pedoman PDF & Foto Dokumentasi → Google Drive (multi-device)    */
 /* ✅ IndexedDB dihapus — data terpusat di GAS/Drive                  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbzqCyLLFs-rLkahFThbzxIDWCpeoCjv_cvRZqw00_28Q96W6BerasPhmCaV8_Qel2lrPQ/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzaeYbZypyQ5sC8-OI-Xp0aR8hpsT-Bat3MFz6VgbR_D3F3uC3xwDlRV184u4GNoo7TAg/exec";
 
 async function gasPost(payload) {
   const controller = new AbortController();
@@ -144,6 +144,7 @@ const TOTAL_KAPAL=85;
 const BULAN_ORDER=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 let rawHRA=[],rawDAT=[],rawPest=[],filteredHRA=[],filteredDAT=[],filteredPest=[];
 let rawFisika=[],rawKimia=[],rawBiologi=[],rawErgonomi=[],rawPsikososial=[];
+let rawCloseout25=[];
 let filteredFisika=[],filteredKimia=[],filteredBiologi=[],filteredErgonomi=[],filteredPsikososial=[];
 let hraBarChart,hraDonutChart,datBarChart,datDonutChart,pestBarChart,pestDonutChart,pestTemuanChart,pestBiayaChart;
 let fisikaBarChart,fisikaDonutChart,kimiaBarChart,kimiaDonutChart,biologiBarChart,biologiDonutChart;
@@ -162,6 +163,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   const btnRefresh=document.getElementById("btnRefresh");if(btnRefresh)btnRefresh.addEventListener("click",()=>{if(isSessionValid())loadData();else alert("Sesi habis. Silakan login kembali.");});
   document.querySelectorAll('.nav-item[data-menu="menu6"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(renderPedomanList,80));});
   document.querySelectorAll('.nav-item[data-menu="dokumentasi"]').forEach(item=>{item.addEventListener("click",()=>{currentDokFolder="hra_ih";setTimeout(renderDokGallery,80);});});
+  document.querySelectorAll('.nav-item[data-menu="closeout25"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(renderCO25Page,80));});
 });
 
 /* NAV */
@@ -194,6 +196,28 @@ async function loadData(){
     filteredHRA=[...rawHRA];filteredDAT=[...rawDAT];filteredPest=[...rawPest];
     filteredFisika=[...rawFisika];filteredKimia=[...rawKimia];filteredBiologi=[...rawBiologi];
     filteredErgonomi=[...rawErgonomi];filteredPsikososial=[...rawPsikososial];
+    /* ── CLOSEOUT 2025: ambil live dari GAS jika sheet Closeout_25 sudah ditambahkan ── */
+    if(data.closeout25&&data.closeout25.length>0){
+      rawCloseout25=data.closeout25.map(function(r){
+        return {
+          kapal:    r["Nama Kapal"]||r["kapal"]||"",
+          jenis:    (r["Jenis"]||r["jenis"]||"").trim(),
+          fleet:    (r["Fleet"]||r["fleet"]||"").trim(),
+          statusMon:r["Status Monitoring"]||r["statusMon"]||"Sudah Terlaksana",
+          laporan:  r["Laporan & Memo"]||r["laporan"]||"",
+          closeout: (r["Closeout Status"]||r["closeout"]||"").trim().toUpperCase()
+        };
+      });
+      filteredCO25=[...rawCloseout25];
+      showToast("Closeout 2025: "+rawCloseout25.length+" data live dari Google Sheets ✅","info");
+    } else {
+      /* Fallback ke data statis sampai sheet GAS ditambahkan */
+      rawCloseout25=[...RAW_CLOSEOUT_2025];
+      filteredCO25=[...RAW_CLOSEOUT_2025];
+    }
+    /* Re-render closeout page jika sedang aktif */
+    const pgCo25=document.getElementById("page-closeout25");
+    if(pgCo25&&pgCo25.classList.contains("active"))renderCO25Page();
     const now=new Date();
     const lastEl=document.getElementById("lastUpdated");
     if(lastEl)lastEl.textContent="Update: "+now.toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"});
@@ -204,6 +228,9 @@ async function loadData(){
     rawFisika=[];rawKimia=[];rawBiologi=[];rawErgonomi=[];rawPsikososial=[];
     filteredHRA=[];filteredDAT=[];filteredPest=[];
     filteredFisika=[];filteredKimia=[];filteredBiologi=[];filteredErgonomi=[];filteredPsikososial=[];
+    /* Closeout tetap pakai data statis saat koneksi gagal */
+    rawCloseout25=[...RAW_CLOSEOUT_2025];
+    filteredCO25=[...RAW_CLOSEOUT_2025];
     const lastEl=document.getElementById("lastUpdated");
     if(lastEl)lastEl.textContent="Gagal terhubung";
   }
@@ -887,5 +914,205 @@ function clearPsikoFilters(){
   filteredPsikososial=[...rawPsikososial];renderPsikoPage();
 }
 function searchPsikoTable(){const q=(document.getElementById("psiko-search")||{}).value||"";document.querySelectorAll("#psikoTableBody tr").forEach(row=>{row.style.display=row.textContent.toLowerCase().includes(q.toLowerCase())?"":"none";});}
+
+/* ═══════════════════════════════════════════════
+   CLOSEOUT HRA & IH 2025 — DATA STATIS
+═══════════════════════════════════════════════ */
+const RAW_CLOSEOUT_2025 = [
+  {kapal:"PIS NATUNA",jenis:"HRA",fleet:"Fleet Product II",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"PIS ROKAN",jenis:"HRA",fleet:"Fleet Product II",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"PRIMA XP",jenis:"IHM",fleet:"Fleet Product I",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"PATRA TANKER II",jenis:"IHM",fleet:"Fleet Product II",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"PATRA TANKER I",jenis:"IHM",fleet:"Fleet Product II",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"PEGADEN",jenis:"IHM",fleet:"Fleet Product I",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"SUNGAI GERONG",jenis:"IHM",fleet:"Fleet Product I",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"MT.GAMALAMA",jenis:"HRA",fleet:"Fleet Crude",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"PIS PRABUMULIH",jenis:"HRA",fleet:"Fleet Product II",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"PIS JATIBARANG",jenis:"HRA",fleet:"Fleet Product II",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"PIS CEPU",jenis:"HRA",fleet:"Fleet Product II",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"PIS CINTA",jenis:"HRA",fleet:"Fleet Product II",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"KASIM",jenis:"IHM",fleet:"Fleet Product I",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"SEI PAKNING",jenis:"IHM",fleet:"Fleet Product I",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"SENIPAH",jenis:"IHM",fleet:"Fleet Product I",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"PATRA TANKER III",jenis:"IHM",fleet:"Fleet Product II",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"KAKAP",jenis:"IHM",fleet:"Fleet Product I",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"SAMBU",jenis:"IHM",fleet:"Fleet Product I",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"PERTAMINA GAS 2",jenis:"IHM",fleet:"Fleet Gas & Petchem",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"PANGKALAN BRANDAN",jenis:"IHM",fleet:"Fleet Product I",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"PIS PATRIOT",jenis:"IHM",fleet:"Fleet Product I",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"PAGERUNGAN",jenis:"IHM",fleet:"Fleet Product I",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"TRANSKO BIMA",jenis:"IHM",fleet:"Fleet Gas & Petchem",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"KAMOJANG",jenis:"IHM",fleet:"Fleet Product I",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"OPEN"},
+  {kapal:"PANDAN",jenis:"IHM",fleet:"Fleet Product I",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"OPEN"},
+  {kapal:"MAUHAU",jenis:"IHM",fleet:"Fleet Product II",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"OPEN"},
+  {kapal:"PALU SIPAT",jenis:"IHM",fleet:"Fleet Product I",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"OPEN"},
+  {kapal:"PIS MAHAKAM",jenis:"IHM",fleet:"Fleet Gas & Petchem",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"OPEN"},
+  {kapal:"KLASOGUN",jenis:"IHM",fleet:"Fleet Product II",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"GAS ARIMBI",jenis:"IHM",fleet:"Fleet Gas & Petchem",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"OPEN"},
+  {kapal:"PANDERMAN",jenis:"IHM",fleet:"Fleet Crude",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"GAS AMBALAT",jenis:"HRA",fleet:"Fleet Gas & Petchem",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"OPEN"},
+  {kapal:"PANGRANGO",jenis:"IHM",fleet:"Fleet Crude",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"GEDE",jenis:"HRA",fleet:"Fleet Crude",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"OPEN"},
+  {kapal:"GELISH",jenis:"HRA",fleet:"Fleet Crude",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"PARIGI",jenis:"IHM",fleet:"Fleet Product I",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"OPEN"},
+  {kapal:"TRANSKO AQUILA",jenis:"IHM",fleet:"Fleet Gas & Petchem",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"OPEN"},
+  {kapal:"KRASAK",jenis:"IHM",fleet:"Fleet Product II",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"OPEN"},
+  {kapal:"KLAWOTONG",jenis:"IHM",fleet:"Fleet Product II",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"OPEN"},
+  {kapal:"PLAJU",jenis:"IHM",fleet:"Fleet Product II",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"MATINDOK",jenis:"IHM",fleet:"Fleet Product II",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"SERUI",jenis:"HRA",fleet:"Fleet Crude",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"BALONGAN",jenis:"IHM",fleet:"Fleet Product II",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"PERTAMINA GAS 1",jenis:"IHM",fleet:"Fleet Gas & Petchem",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"KUANG",jenis:"IHM",fleet:"Fleet Product II",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"OPEN"},
+  {kapal:"TRANSKO ANTASENA",jenis:"IHM",fleet:"Fleet Product I",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"OPEN"},
+  {kapal:"TRANSKO ARAFURA",jenis:"IHM",fleet:"Fleet Product II",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"GAS PATRA 2",jenis:"IHM",fleet:"Fleet Gas & Petchem",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"OPEN"},
+  {kapal:"MERAUKE",jenis:"IHM",fleet:"Fleet Product II",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"MUNDU",jenis:"IHM",fleet:"Fleet Product II",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"OPEN"},
+  {kapal:"GAS PATRA 3",jenis:"IHM",fleet:"Fleet Gas & Petchem",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"OPEN"},
+  {kapal:"TRANSKO TAURUS",jenis:"IHM",fleet:"Fleet Gas & Petchem",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"OPEN"},
+  {kapal:"KATOMAS",jenis:"IHM",fleet:"Fleet Product II",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"OPEN"},
+  {kapal:"MUSI",jenis:"IHM",fleet:"Fleet Product II",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"OPEN"},
+  {kapal:"MEDITRAN",jenis:"IHM",fleet:"Fleet Product II",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"KETALING",jenis:"IHM",fleet:"Fleet Product II",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"OPEN"},
+  {kapal:"PAPANDAYAN",jenis:"IHM",fleet:"Fleet Crude",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"OPEN"},
+  {kapal:"TRANSKO ARIES",jenis:"IHM",fleet:"Fleet Gas & Petchem",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"OPEN"},
+  {kapal:"PANJANG",jenis:"IHM",fleet:"Fleet Product II",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"OPEN"},
+  {kapal:"GAS ATTAKA",jenis:"IHM",fleet:"Fleet Gas & Petchem",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"OPEN"},
+  {kapal:"GAS ARAR",jenis:"IHM",fleet:"Fleet Gas & Petchem",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"OPEN"},
+  {kapal:"FASTRON",jenis:"IHM",fleet:"Fleet Crude",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"OPEN"},
+  {kapal:"PASAMAN",jenis:"IHM",fleet:"Fleet Product II",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"HRA PIS BANGKA",jenis:"HRA",fleet:"Fleet Gas & Petchem",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"OPEN"},
+  {kapal:"HRA PIS BELITUNG",jenis:"HRA",fleet:"Fleet Crude",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"OPEN"},
+  {kapal:"HRA GALUNGGUNG",jenis:"HRA",fleet:"Fleet Gas & Petchem",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"OPEN"},
+  {kapal:"HRA GAMKONORA",jenis:"HRA",fleet:"Fleet Gas & Petchem",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"OPEN"},
+  {kapal:"HRA SANGGAU",jenis:"HRA",fleet:"Fleet Crude",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"OPEN"},
+  {kapal:"HRA GAS ARJUNA",jenis:"HRA",fleet:"Fleet Gas & Petchem",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"CLOSE"},
+  {kapal:"HRA PIS BINTAN",jenis:"HRA",fleet:"Fleet Product I",statusMon:"Sudah Terlaksana",laporan:"Sudah Terkirim Ke Email Kapal",closeout:"OPEN"}
+];
+
+let filteredCO25=[...RAW_CLOSEOUT_2025];
+let co25SortCol=-1,co25SortDir=1;
+let co25BarChart,co25DonutChart;
+
+function renderCO25Page(){
+  const data=filteredCO25;
+  const total=data.length;
+  const closeCount=data.filter(r=>r.closeout.trim()==="CLOSE").length;
+  const openCount=data.filter(r=>r.closeout.trim()==="OPEN").length;
+  const pct=total?Math.round(closeCount/total*100):0;
+  const hraCount=data.filter(r=>r.jenis.trim()==="HRA").length;
+  const ihmCount=data.filter(r=>r.jenis.trim()==="IHM").length;
+  const el=id=>document.getElementById(id);
+  if(el("co25-total"))el("co25-total").textContent=total;
+  if(el("co25-close"))el("co25-close").textContent=closeCount;
+  if(el("co25-open"))el("co25-open").textContent=openCount;
+  if(el("co25-pct"))el("co25-pct").textContent=pct+"%";
+  if(el("co25-hra"))el("co25-hra").textContent=hraCount;
+  if(el("co25-ihm"))el("co25-ihm").textContent=ihmCount;
+  renderCO25BarChart(data);
+  renderCO25DonutChart(data);
+  renderCO25OpenList(data);
+  renderCO25Table(data);
+}
+
+function renderCO25BarChart(data){
+  const fleets=["Fleet Product I","Fleet Product II","Fleet Crude","Fleet Gas & Petchem"];
+  const closeData=fleets.map(f=>data.filter(r=>r.fleet===f&&r.closeout.trim()==="CLOSE").length);
+  const openData=fleets.map(f=>data.filter(r=>r.fleet===f&&r.closeout.trim()==="OPEN").length);
+  const ctx=document.getElementById("co25BarChart");if(!ctx)return;
+  if(co25BarChart)co25BarChart.destroy();
+  co25BarChart=new Chart(ctx.getContext("2d"),{
+    type:"bar",
+    data:{
+      labels:["FP I","FP II","FC","FGP"],
+      datasets:[
+        {label:"CLOSE",data:closeData,backgroundColor:"#43A047",borderRadius:5},
+        {label:"OPEN",data:openData,backgroundColor:"#FB8C00",borderRadius:5}
+      ]
+    },
+    options:{...chartOpts(),plugins:{...chartOpts().plugins,legend:{display:true,position:"top",labels:{color:"var(--text)",font:{size:11},boxWidth:12}}},scales:{x:{stacked:false},y:{stacked:false,beginAtZero:true,ticks:{stepSize:1}}}}
+  });
+}
+
+function renderCO25DonutChart(data){
+  const closeCount=data.filter(r=>r.closeout.trim()==="CLOSE").length;
+  const openCount=data.filter(r=>r.closeout.trim()==="OPEN").length;
+  const ctx=document.getElementById("co25DonutChart");if(!ctx)return;
+  if(co25DonutChart)co25DonutChart.destroy();
+  co25DonutChart=new Chart(ctx.getContext("2d"),{
+    type:"doughnut",
+    data:{labels:["CLOSE","OPEN"],datasets:[{data:[closeCount,openCount],backgroundColor:["#43A047","#FB8C00"],borderColor:"#fff",borderWidth:3,hoverOffset:8}]},
+    options:donutOpts()
+  });
+}
+
+function renderCO25OpenList(data){
+  const list=document.getElementById("co25OpenList");if(!list)return;
+  const openItems=data.filter(r=>r.closeout.trim()==="OPEN");
+  if(!openItems.length){list.innerHTML='<div style="padding:20px;text-align:center;color:var(--text-muted)"><i class="fas fa-check-circle" style="color:#43A047;font-size:28px;margin-bottom:8px;display:block"></i>Semua kapal sudah CLOSE</div>';return;}
+  list.innerHTML=openItems.map(r=>`<div class="hazard-item" style="border-left:3px solid #FB8C00">
+    <div class="hazard-name" style="font-weight:700">${r.kapal}</div>
+    <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${r.jenis} &middot; ${r.fleet}</div>
+    <span style="display:inline-block;margin-top:4px;background:#FFF3E0;color:#E65100;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700">OPEN</span>
+  </div>`).join("");
+}
+
+function renderCO25Table(data){
+  const tbody=document.getElementById("co25TableBody");if(!tbody)return;
+  tbody.innerHTML=data.map(r=>{
+    const badge=r.closeout.trim()==="CLOSE"
+      ?'<span class="badge-close"><i class="fas fa-check" style="font-size:9px"></i>CLOSE</span>'
+      :'<span class="badge-open-co"><i class="fas fa-clock" style="font-size:9px"></i>OPEN</span>';
+    const jenisBadge=r.jenis.trim()==="HRA"
+      ?'<span class="badge-jenis-hra">HRA</span>'
+      :'<span class="badge-jenis-ihm">IHM</span>';
+    return `<tr>
+      <td><strong style="color:var(--sidebar-bg)">${r.kapal}</strong></td>
+      <td>${jenisBadge}</td>
+      <td><span style="background:#F5F5F5;color:#37474F;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600">${r.fleet}</span></td>
+      <td><i class="fas fa-check-circle" style="color:#43A047;margin-right:5px"></i>${r.statusMon}</td>
+      <td style="font-size:11px;color:var(--text-muted)">${r.laporan}</td>
+      <td>${badge}</td>
+    </tr>`;
+  }).join("");
+  const f=document.getElementById("co25TableFooter");
+  if(f)f.textContent="Menampilkan "+data.length+" dari "+RAW_CLOSEOUT_2025.length+" entri";
+}
+
+function applyCO25Filters(){
+  const fleet=(document.getElementById("co25-filter-fleet")||{}).value||"";
+  const type=(document.getElementById("co25-filter-type")||{}).value||"";
+  const status=(document.getElementById("co25-filter-status")||{}).value||"";
+  const kapal=(document.getElementById("co25-filter-kapal")||{}).value||"";
+  filteredCO25=RAW_CLOSEOUT_2025.filter(r=>
+    (!fleet||r.fleet===fleet)&&
+    (!type||r.jenis.trim()===type)&&
+    (!status||r.closeout.trim()===status)&&
+    (!kapal||r.kapal.toLowerCase().includes(kapal.toLowerCase()))
+  );
+  renderCO25Page();
+}
+
+function clearCO25Filters(){
+  ["co25-filter-fleet","co25-filter-type","co25-filter-status"].forEach(id=>{const e=document.getElementById(id);if(e)e.value="";});
+  const k=document.getElementById("co25-filter-kapal");if(k)k.value="";
+  filteredCO25=[...RAW_CLOSEOUT_2025];
+  renderCO25Page();
+}
+
+function searchCO25Table(){
+  const q=(document.getElementById("co25-search")||{}).value||"";
+  document.querySelectorAll("#co25TableBody tr").forEach(row=>{
+    row.style.display=row.textContent.toLowerCase().includes(q.toLowerCase())?"":"none";
+  });
+}
+
+function sortCO25Table(col){
+  if(co25SortCol===col)co25SortDir*=-1;else{co25SortCol=col;co25SortDir=1;}
+  const keys=["kapal","jenis","fleet","statusMon","laporan","closeout"];
+  filteredCO25.sort((a,b)=>String(a[keys[col]]||"").localeCompare(String(b[keys[col]]||""),"id")*co25SortDir);
+  renderCO25Table(filteredCO25);
+}
 function sortPsikoTable(col){if(psikoSortCol===col)psikoSortDir*=-1;else{psikoSortCol=col;psikoSortDir=1;}const keys=["Nama Kapal","Fleet","Departemen / Jabatan","Instrumen","Jumlah Responden","Total Skor","Level Risiko","Program Intervensi","Status TL"];filteredPsikososial.sort((a,b)=>String(a[keys[col]]||"").localeCompare(String(b[keys[col]]||""),"id")*psikoSortDir);renderPsikoTable(filteredPsikososial);}
 function togglePsikoChartType(btn,type){psikoChartType=type;btn.closest(".pill-group").querySelectorAll(".pill").forEach(p=>p.classList.remove("active"));btn.classList.add("active");renderPsikoBarChart(filteredPsikososial);}
