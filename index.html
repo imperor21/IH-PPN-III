@@ -161,6 +161,11 @@
 <span class="nav-badge nav-badge-new">Baru</span>
 </a>
 <div class="nav-label">Others</div>
+<a href="#" class="nav-item" data-menu="closeout25" data-title="Closeout HRA & IH 2025">
+<span class="nav-icon"><i class="fas fa-clipboard-check"></i></span>
+<span class="nav-text">Closeout HRA & IH 2025</span>
+<span class="nav-badge nav-badge-new">Baru</span>
+</a>
 <a href="#" class="nav-item" data-menu="menu6" data-title="Pedoman IH">
 <span class="nav-icon"><i class="fas fa-book-open"></i></span>
 <span class="nav-text">Pedoman IH</span>
@@ -696,6 +701,90 @@
 </div>
 <div class="table-footer" id="psikoTableFooter">Memuat data...</div>
 </div></div>
+</section>
+
+<!-- ===== PAGE CLOSEOUT HRA & IH 2025 ===== -->
+<section class="page-content" id="page-closeout25">
+<div class="filter-bar">
+  <div class="filter-group">
+    <label>Jenis Fleet</label>
+    <select id="co25-filter-fleet" onchange="applyCO25Filters()">
+      <option value="">Semua Fleet</option>
+      <option>Fleet Product I</option>
+      <option>Fleet Product II</option>
+      <option>Fleet Crude</option>
+      <option>Fleet Gas &amp; Petchem</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>Jenis Monitoring</label>
+    <select id="co25-filter-type" onchange="applyCO25Filters()">
+      <option value="">HRA &amp; IHM</option>
+      <option>HRA</option>
+      <option>IHM</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>Closeout Status</label>
+    <select id="co25-filter-status" onchange="applyCO25Filters()">
+      <option value="">Semua Status</option>
+      <option value="CLOSE">CLOSE</option>
+      <option value="OPEN">OPEN</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>Nama Kapal</label>
+    <input type="text" id="co25-filter-kapal" placeholder="Cari nama kapal..." oninput="applyCO25Filters()">
+  </div>
+  <button class="btn-clear" onclick="clearCO25Filters()"><i class="fas fa-xmark"></i> Reset</button>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi-card blue"><div class="kpi-icon"><i class="fas fa-ship"></i></div><div class="kpi-body"><div class="kpi-value" id="co25-total">70</div><div class="kpi-label">Total Kapal Dimonitor</div></div></div>
+  <div class="kpi-card green"><div class="kpi-icon"><i class="fas fa-circle-check"></i></div><div class="kpi-body"><div class="kpi-value" id="co25-close">&#8212;</div><div class="kpi-label">Status CLOSE</div></div></div>
+  <div class="kpi-card orange"><div class="kpi-icon"><i class="fas fa-clock"></i></div><div class="kpi-body"><div class="kpi-value" id="co25-open">&#8212;</div><div class="kpi-label">Status OPEN</div></div></div>
+  <div class="kpi-card teal"><div class="kpi-icon"><i class="fas fa-percent"></i></div><div class="kpi-body"><div class="kpi-value" id="co25-pct">&#8212;</div><div class="kpi-label">% Closeout</div></div></div>
+  <div class="kpi-card purple"><div class="kpi-icon"><i class="fas fa-lungs"></i></div><div class="kpi-body"><div class="kpi-value" id="co25-hra">&#8212;</div><div class="kpi-label">Total HRA</div></div></div>
+  <div class="kpi-card indigo"><div class="kpi-icon"><i class="fas fa-microscope"></i></div><div class="kpi-body"><div class="kpi-value" id="co25-ihm">&#8212;</div><div class="kpi-label">Total IHM</div></div></div>
+</div>
+
+<div class="chart-row">
+  <div class="chart-card">
+    <div class="chart-header"><span class="chart-title"><i class="fas fa-chart-column"></i> Close vs Open per Fleet</span></div>
+    <div class="chart-body"><canvas id="co25BarChart"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-header"><span class="chart-title"><i class="fas fa-chart-pie"></i> Status Closeout Keseluruhan</span></div>
+    <div class="chart-body"><canvas id="co25DonutChart"></canvas></div>
+  </div>
+</div>
+
+<div class="bottom-row">
+  <div class="hazard-card">
+    <div class="chart-header"><span class="chart-title"><i class="fas fa-folder-open"></i> Status OPEN &#8212; Perlu Tindak Lanjut</span></div>
+    <div id="co25OpenList" class="hazard-list"></div>
+  </div>
+  <div class="table-card">
+    <div class="chart-header">
+      <span class="chart-title"><i class="fas fa-table-list"></i> Data Closeout HRA &amp; IH 2025</span>
+      <input type="text" id="co25-search" placeholder="Cari data..." oninput="searchCO25Table()" class="search-input">
+    </div>
+    <div class="table-wrap">
+      <table class="data-table" id="co25Table">
+        <thead><tr>
+          <th onclick="sortCO25Table(0)">Nama Kapal <i class="fas fa-sort fa-xs"></i></th>
+          <th onclick="sortCO25Table(1)">Jenis <i class="fas fa-sort fa-xs"></i></th>
+          <th onclick="sortCO25Table(2)">Fleet <i class="fas fa-sort fa-xs"></i></th>
+          <th onclick="sortCO25Table(3)">Status Monitoring <i class="fas fa-sort fa-xs"></i></th>
+          <th onclick="sortCO25Table(4)">Laporan &amp; Memo <i class="fas fa-sort fa-xs"></i></th>
+          <th onclick="sortCO25Table(5)">Closeout Status <i class="fas fa-sort fa-xs"></i></th>
+        </tr></thead>
+        <tbody id="co25TableBody"></tbody>
+      </table>
+    </div>
+    <div class="table-footer" id="co25TableFooter">Memuat data...</div>
+  </div>
+</div>
 </section>
 
 </main>
