@@ -246,7 +246,8 @@
 <main class="main" id="mainContent">
 
 <!-- TOPBAR -->
-<header class="topbar">
+<header class="topbar" id="mainTopbar">
+<div class="topbar-inner">
 <div class="topbar-left">
 <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
 <div class="page-breadcrumb">
@@ -256,12 +257,29 @@
 </div>
 </div>
 <div class="topbar-right">
-<div class="topbar-icon-btn" title="Notifikasi"><i class="fas fa-bell"></i></div>
+<div class="topbar-icon-btn" title="Notifikasi" id="mBellBtn"><i class="fas fa-bell"></i></div>
 <div class="topbar-icon-btn" title="Pengaturan"><i class="fas fa-gear"></i></div>
 <button class="btn-refresh" id="btnRefresh">
 <i class="fas fa-rotate-right"></i> Refresh
 </button>
 </div>
+</div>
+<div class="m-topbar-strip" id="mTopbarStrip">
+  <div class="m-strip-card" onclick="mNavGoPage('hra','HRA & IH','monitoring')">
+    <span class="m-strip-card-v teal" id="mKpiCoverage">—</span>
+    <span class="m-strip-card-l">Coverage HRA</span>
+    <div class="m-strip-bar"><div class="m-strip-bar-fill" id="mKpiBar" style="width:0%"></div></div>
+  </div>
+  <div class="m-strip-card" onclick="mNavGoPage('dat','Drugs & Alcohol Test','monitoring')">
+    <span class="m-strip-card-v" id="mKpiDone">—</span>
+    <span class="m-strip-card-l">Kapal Selesai</span>
+  </div>
+  <div class="m-strip-card danger" id="mKpiAlertCard">
+    <span class="m-strip-card-v red" id="mKpiAlert">—</span>
+    <span class="m-strip-card-l">Hazard Kritis</span>
+  </div>
+</div>
+<div class="m-filter-chips" id="mFilterChips" style="display:none"></div>
 </header>
 
 <!-- LOADING -->
