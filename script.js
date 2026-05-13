@@ -224,58 +224,149 @@ function restoreNavGroups(){
 function setupSidebar(){var overlay=document.getElementById("sidebarOverlay");if(overlay)overlay.addEventListener("click",closeSidebar);var tog=document.getElementById("sidebarToggle");if(tog)tog.addEventListener("click",function(){var open=document.getElementById("sidebar").classList.toggle("open");var ov=document.getElementById("sidebarOverlay");if(ov)ov.classList.toggle("show",open);});}
 function closeSidebar(){document.getElementById("sidebar").classList.remove("open");document.getElementById("sidebarOverlay").classList.remove("show");}
 
-/* ═══ MOBILE BOTTOM NAV ═══ */
-function mNavClick(btn){
-  /* Sync with main nav */
-  const menu=btn.dataset.menu;
-  const title=btn.dataset.title||menu;
-  const group=btn.dataset.group;
-  /* Switch page */
+/* ════════════════════════════════════════════════════════
+   MOBILE — CONCEPT C (Teekay Navy Bold)
+   Primary #0F2A4A · Accent #00C2A8
+════════════════════════════════════════════════════════ */
+
+/* Switch page via mobile nav or strip tap */
+function mNavGoPage(menu,title,group){
   document.querySelectorAll(".page-content").forEach(p=>p.classList.remove("active"));
   document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));
   const page=document.getElementById("page-"+menu);
   if(page)page.classList.add("active");
-  /* Sync sidebar active item */
   const sideItem=document.querySelector('.nav-item[data-menu="'+menu+'"]');
   if(sideItem){
     sideItem.classList.add("active");
     if(group){const grp=document.getElementById("navg-"+group);if(grp&&!grp.classList.contains("open"))toggleNavGroup(group);}
   }
-  document.getElementById("pageTitle").textContent=title;
-  /* Update mobile nav active state */
+  const titleEl=document.getElementById("pageTitle");
+  if(titleEl)titleEl.textContent=title;
+  /* Sync bottom nav */
+  const mBtn=document.querySelector('.m-nav-btn[data-menu="'+menu+'"]');
   document.querySelectorAll(".m-nav-btn").forEach(b=>b.classList.remove("active"));
+  if(mBtn){mBtn.classList.add("active");moveMNavPill(mBtn);}
+  else{document.querySelectorAll(".m-nav-btn").forEach(b=>b.classList.remove("active"));}
+  /* Update filter chips for this page */
+  mUpdateFilterChips(menu);
+  /* Trigger render */
+  if(menu==="closeout25")setTimeout(renderCO25Page,80);
+  closeSidebar();
+}
+
+function mNavClick(btn){
+  const menu=btn.dataset.menu;
+  const title=btn.dataset.title||menu;
+  const group=btn.dataset.group||"";
+  mNavGoPage(menu,title,group);
   btn.classList.add("active");
   moveMNavPill(btn);
-  /* Trigger render if needed */
-  if(menu==="closeout25")setTimeout(renderCO25Page,80);
 }
+
 function mOpenSidebar(){
   document.getElementById("sidebar").classList.add("open");
   document.getElementById("sidebarOverlay").classList.add("show");
 }
+
 function moveMNavPill(activeBtn){
   const pill=document.getElementById("mNavPill");
   if(!pill||!activeBtn)return;
   const nav=document.getElementById("mBottomNav");
   if(!nav)return;
-  const btnRect=activeBtn.getBoundingClientRect();
-  const navRect=nav.getBoundingClientRect();
-  const left=btnRect.left-navRect.left+8;
-  const w=btnRect.width-16;
-  pill.style.left=left+"px";
-  pill.style.width=w+"px";
+  const bR=activeBtn.getBoundingClientRect();
+  const nR=nav.getBoundingClientRect();
+  pill.style.left=(bR.left-nR.left+6)+"px";
+  pill.style.width=(bR.width-12)+"px";
 }
+
+/* ── KPI Strip update (called after data loaded) ── */
+function mUpdateKpiStrip(){
+  const isMobile=window.innerWidth<=768;
+  if(!isMobile)return;
+  /* Coverage HRA */
+  const total=85;
+  const done=rawHRA?new Set(rawHRA.filter(function(r){return(r["Status"]||"").toLowerCase()==="done";}).map(function(r){return r["Nama Kapal"];})).size:0;
+  const pct=total?Math.round(done/total*100):0;
+  const cv=document.getElementById("mKpiCoverage");
+  const bar=document.getElementById("mKpiBar");
+  if(cv)cv.textContent=pct+"%";
+  if(bar)bar.style.width=pct+"%";
+  /* Total selesai (HRA done kapal) */
+  const doneEl=document.getElementById("mKpiDone");
+  if(doneEl)doneEl.textContent=done||"—";
+  /* Closeout OPEN count */
+  const openCo=filteredCO25?filteredCO25.filter(function(r){return(r.closeout||"").trim()==="OPEN";}).length:0;
+  const alertEl=document.getElementById("mKpiAlert");
+  if(alertEl)alertEl.textContent=openCo||"0";
+}
+
+/* ── Filter chips per halaman ── */
+var M_CHIPS={
+  hra:[{l:"Semua Fleet",v:""},{l:"FP I",v:"Fleet Product I"},{l:"FP II",v:"Fleet Product II"},{l:"FC",v:"Fleet Crude"},{l:"FGP",v:"Fleet Gas & Petchem"}],
+  dat:[{l:"Semua Fleet",v:""},{l:"FP I",v:"Fleet Product I"},{l:"FP II",v:"Fleet Product II"},{l:"FC",v:"Fleet Crude"},{l:"FGP",v:"Fleet Gas & Petchem"}],
+  pest:[{l:"Semua Lokasi",v:""},{l:"Kapal",v:"Kapal"},{l:"Kantor",v:"Kantor"},{l:"Gudang",v:"Gudang"}],
+  closeout25:[{l:"HRA & IHM",v:""},{l:"HRA",v:"HRA"},{l:"IHM",v:"IHM"},{l:"CLOSE",v:"CLOSE"},{l:"OPEN",v:"OPEN"}],
+  fisika:[{l:"Semua",v:""},{l:"Fisika",v:"Fisika"}],
+};
+var mChipActive={};
+
+function mUpdateFilterChips(menu){
+  const isMobile=window.innerWidth<=768;
+  const chipsEl=document.getElementById("mFilterChips");
+  if(!chipsEl)return;
+  const defs=M_CHIPS[menu];
+  if(!isMobile||!defs){chipsEl.style.display="none";return;}
+  chipsEl.style.display="flex";
+  if(!mChipActive[menu])mChipActive[menu]="";
+  chipsEl.innerHTML=defs.map(function(c){
+    const isActive=mChipActive[menu]===c.v;
+    return'<button class="m-chip'+(isActive?" active":"")+'" onclick="mChipClick(''+menu+'',''+c.v.replace(/'/g,"\'")+'')">'
+      +c.l+'</button>';
+  }).join("");
+}
+
+function mChipClick(menu,val){
+  mChipActive[menu]=val;
+  mUpdateFilterChips(menu);
+  /* Apply filter to the relevant module */
+  if(menu==="hra"){
+    const sel=document.getElementById("hra-filter-fleet");
+    if(sel){sel.value=val;applyHRAFilters();}
+  } else if(menu==="dat"){
+    const sel=document.getElementById("dat-filter-fleet");
+    if(sel){sel.value=val;applyDATFilters();}
+  } else if(menu==="closeout25"){
+    if(val==="CLOSE"||val==="OPEN"){
+      const sel=document.getElementById("co25-filter-status");
+      if(sel){sel.value=val;applyCO25Filters();}
+    } else {
+      const sel=document.getElementById("co25-filter-type");
+      if(sel){sel.value=val;applyCO25Filters();}
+    }
+  }
+}
+
 function initMobileNav(){
   const firstActive=document.querySelector(".m-nav-btn.active");
-  if(firstActive)setTimeout(()=>moveMNavPill(firstActive),100);
-  /* Sync mobile bottom nav when sidebar nav is clicked */
-  document.querySelectorAll(".nav-item").forEach(item=>{
-    item.addEventListener("click",()=>{
+  if(firstActive)setTimeout(function(){moveMNavPill(firstActive);},120);
+  /* Sync when sidebar nav is clicked */
+  document.querySelectorAll(".nav-item").forEach(function(item){
+    item.addEventListener("click",function(){
       const menu=item.dataset.menu;
+      document.querySelectorAll(".m-nav-btn").forEach(function(b){b.classList.remove("active");});
       const mBtn=document.querySelector('.m-nav-btn[data-menu="'+menu+'"]');
-      document.querySelectorAll(".m-nav-btn").forEach(b=>b.classList.remove("active"));
-      if(mBtn){mBtn.classList.add("active");moveMNavPill(mBtn);}
+      if(mBtn){mBtn.classList.add("active");setTimeout(function(){moveMNavPill(mBtn);},50);}
+      mUpdateFilterChips(menu);
     });
+  });
+  /* Initial filter chips */
+  const curActive=document.querySelector(".page-content.active");
+  if(curActive){const id=curActive.id.replace("page-","");mUpdateFilterChips(id);}
+  /* Resize pill on window resize */
+  window.addEventListener("resize",function(){
+    const activeBtn=document.querySelector(".m-nav-btn.active");
+    if(activeBtn)moveMNavPill(activeBtn);
+    mUpdateKpiStrip();
   });
 }
 
@@ -345,6 +436,8 @@ async function loadData(){
   renderHRAPage();renderDATPage();renderPestPage();
   renderFisikaPage();renderKimiaPage();renderBiologiPage();renderErgonomiPage();renderPsikoPage();
   showLoading(false);
+  /* Update mobile KPI strip after data loaded */
+  setTimeout(mUpdateKpiStrip,200);
 }
 function showLoading(v){document.getElementById("loadingOverlay").style.display=v?"flex":"none";}
 function showError(msg){document.getElementById("errorBanner").style.display="flex";document.getElementById("errorMsg").textContent=msg;}
