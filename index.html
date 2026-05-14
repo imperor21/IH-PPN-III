@@ -36,8 +36,8 @@
 </div>
 </div>
 <div class="login-hero-text">
-<h1 class="login-hero-title">MARITIME<br>INDUSTRIAL HYGIENE<br>SYSTEM</h1>
-<p class="login-hero-desc">Development Phase</p>
+<h1 class="login-hero-title">IH 2026<br>MONITORING<br>SYSTEM</h1>
+<p class="login-hero-desc">Masih Tahap Pengembangan.</p>
 </div>
 <div class="login-stats-row">
 <div class="login-stat"><span class="ls-num">85</span><span class="ls-lbl">Est Kapal Milik</span></div>
@@ -332,6 +332,13 @@
 <div class="kpi-card orange"><a class="kpi-link" href="#">View Detail</a><div class="kpi-icon"><i class="fas fa-clock"></i></div><div class="kpi-body"><div class="kpi-value" id="hra-belum">—</div><div class="kpi-label">Belum Monitoring</div></div></div>
 <div class="kpi-card purple"><a class="kpi-link" href="#">View Detail</a><div class="kpi-icon"><i class="fas fa-sack-dollar"></i></div><div class="kpi-body"><div class="kpi-value" id="hra-budget">—</div><div class="kpi-label">Est. Budget</div></div></div>
 <div class="kpi-card teal"><a class="kpi-link" href="#">View Detail</a><div class="kpi-icon"><i class="fas fa-percent"></i></div><div class="kpi-body"><div class="kpi-value" id="hra-coverage">—</div><div class="kpi-label">Coverage</div></div></div>
+</div>
+<div class="hcv-btn-row">
+  <button class="hcv-trigger-btn" onclick="openHazardMap()">
+    <i class="fas fa-map-location-dot"></i>
+    <span>Hazard Control View</span>
+    <i class="fas fa-arrow-up-right-from-square hcv-ext-icon"></i>
+  </button>
 </div>
 <div class="chart-row">
 <div class="chart-card">
@@ -858,6 +865,81 @@
   </div>
 </div>
 </section>
+
+
+<!-- ═══════════════ HAZARD CONTROL VIEW MODAL ═══════════════ -->
+<div class="hcv-modal" id="hazardMapModal">
+  <div class="hcv-box">
+
+    <!-- HEADER -->
+    <div class="hcv-head">
+      <div class="hcv-head-left">
+        <div>
+          <div class="hcv-head-title">HAZARD MAPPING — TANKER</div>
+          <div class="hcv-head-sub">Industrial Hygiene &amp; Occupational Health · Pertamina Patra Niaga</div>
+        </div>
+        <div class="hcv-head-info" id="hcvShipInfo">
+          <div class="hcv-info-chip"><i class="fas fa-ship"></i><span>Crude Oil Tanker</span></div>
+          <div class="hcv-info-chip"><i class="fas fa-weight-hanging"></i><span>DWT 75,000</span></div>
+          <div class="hcv-info-chip"><i class="fas fa-users"></i><span>Crew 22</span></div>
+          <div class="hcv-info-chip"><i class="fas fa-calendar"></i><span id="hcvDate">2026</span></div>
+        </div>
+      </div>
+      <button class="hcv-close-btn" onclick="closeHazardMap()"><i class="fas fa-times"></i></button>
+    </div>
+
+    <!-- BODY -->
+    <div class="hcv-body">
+
+      <!-- LEFT LEGEND -->
+      <div class="hcv-legend">
+        <div class="hcv-legend-block">
+          <div class="hcv-leg-title">HAZARD CATEGORY</div>
+          <div class="hcv-leg-item"><span class="hcv-hicon" style="background:#7B2FBE20;color:#7B2FBE"><i class="fas fa-flask"></i></span>Chemical Exposure</div>
+          <div class="hcv-leg-item"><span class="hcv-hicon" style="background:#E6392620;color:#E63926"><i class="fas fa-fire"></i></span>Flammable / Explosion</div>
+          <div class="hcv-leg-item"><span class="hcv-hicon" style="background:#0066CC20;color:#0066CC"><i class="fas fa-volume-high"></i></span>Noise / Kebisingan</div>
+          <div class="hcv-leg-item"><span class="hcv-hicon" style="background:#FF800020;color:#FF8000"><i class="fas fa-temperature-three-quarters"></i></span>Heat Stress</div>
+          <div class="hcv-leg-item"><span class="hcv-hicon" style="background:#00968820;color:#009688"><i class="fas fa-wave-square"></i></span>Vibration / Getaran</div>
+          <div class="hcv-leg-item"><span class="hcv-hicon" style="background:#43A04720;color:#43A047"><i class="fas fa-person-rays"></i></span>Ergonomi</div>
+          <div class="hcv-leg-item"><span class="hcv-hicon" style="background:#E91E6320;color:#E91E63"><i class="fas fa-virus"></i></span>Biological</div>
+          <div class="hcv-leg-item"><span class="hcv-hicon" style="background:#37474F20;color:#37474F"><i class="fas fa-lock"></i></span>Confined Space</div>
+          <div class="hcv-leg-item"><span class="hcv-hicon" style="background:#FF572220;color:#FF5722"><i class="fas fa-person-falling"></i></span>Slips / Falls</div>
+          <div class="hcv-leg-item"><span class="hcv-hicon" style="background:#FDD83520;color:#F9A825"><i class="fas fa-bolt"></i></span>Electrical</div>
+        </div>
+        <div class="hcv-legend-block" style="margin-top:12px">
+          <div class="hcv-leg-title">RISK LEVEL</div>
+          <div class="hcv-risk-item"><span class="hcv-risk-dot" style="background:#B71C1C"></span><span class="hcv-risk-ring" style="border-color:#B71C1C"></span>EXTREME</div>
+          <div class="hcv-risk-item"><span class="hcv-risk-dot" style="background:#E63946"></span><span class="hcv-risk-ring" style="border-color:#E63946"></span>HIGH</div>
+          <div class="hcv-risk-item"><span class="hcv-risk-dot" style="background:#FF8F00"></span><span class="hcv-risk-ring" style="border-color:#FF8F00"></span>MODERATE</div>
+          <div class="hcv-risk-item"><span class="hcv-risk-dot" style="background:#43A047"></span><span class="hcv-risk-ring" style="border-color:#43A047"></span>LOW</div>
+          <div class="hcv-risk-item"><span class="hcv-risk-dot" style="background:#9E9E9E"></span><span class="hcv-risk-ring" style="border-color:#9E9E9E"></span>VERY LOW</div>
+        </div>
+      </div>
+
+      <!-- CENTER: SHIP SVG -->
+      <div class="hcv-center">
+        <div class="hcv-view-label"><i class="fas fa-chevron-right"></i> PROFILE VIEW (STARBOARD) — Klik zona untuk detail hazard</div>
+        <div class="hcv-svg-wrap" id="hcvProfileWrap">
+          <svg id="hcvProfileSVG" viewBox="0 0 1000 295" preserveAspectRatio="xMidYMid meet"></svg>
+        </div>
+        <div class="hcv-view-label" style="margin-top:10px"><i class="fas fa-chevron-right"></i> MAIN DECK PLAN (TOP VIEW)</div>
+        <div class="hcv-svg-wrap" id="hcvTopWrap">
+          <svg id="hcvTopSVG" viewBox="0 0 1000 195" preserveAspectRatio="xMidYMid meet"></svg>
+        </div>
+        <div class="hcv-matrix-bar" id="hcvMatrix"></div>
+      </div>
+
+      <!-- RIGHT: ZONE DETAIL -->
+      <div class="hcv-detail" id="hcvDetail">
+        <div class="hcv-detail-placeholder">
+          <i class="fas fa-map-pin" style="font-size:28px;color:#ccc;margin-bottom:8px"></i>
+          <p>Klik zona pada peta kapal untuk melihat detail hazard</p>
+        </div>
+      </div>
+
+    </div><!-- /hcv-body -->
+  </div><!-- /hcv-box -->
+</div>
 
 </main>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
