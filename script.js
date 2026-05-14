@@ -1317,112 +1317,94 @@ function sortPsikoTable(col){if(psikoSortCol===col)psikoSortDir*=-1;else{psikoSo
 function togglePsikoChartType(btn,type){psikoChartType=type;btn.closest(".pill-group").querySelectorAll(".pill").forEach(p=>p.classList.remove("active"));btn.classList.add("active");renderPsikoBarChart(filteredPsikososial);}
 
 /* ════════════════════════════════════════════════════════════════
-   HAZARD CONTROL VIEW — Interactive Ship Hazard Map
-   Referensi: Permenaker No.5/2018 + ACGIH TLV/BEI 2024
-   Konteks: Crude Oil Tanker / VLCC Pertamina Patra Niaga
+   HAZARD CONTROL VIEW — Per Kapal, Filterable
+   Zona: Bridge · Cargo Tank · Engine Room · Pump Room · Forecastle
 ════════════════════════════════════════════════════════════════ */
 
-var HCV_ZONES = [
-  {
-    id:'bridge', name:'Akomodasi & Anjungan', nameEn:'Accommodation & Navigation Bridge',
-    risk:'MODERATE', riskColor:'#FF8F00', riskBg:'rgba(255,143,0,.15)',
-    icons:['fa-volume-high','fa-person-rays','fa-wind','fa-bolt','fa-brain'],
+/* ── Per-zone hazard data (default for all ships) ── */
+var HCV_ZONE_DATA = {
+  bridge:{
+    name:'Akomodasi & Anjungan', nameEn:'Accommodation & Navigation Bridge',
+    risk:'MODERATE', rc:'#FF8F00', rb:'rgba(255,143,0,.15)',
     hazards:[
-      {n:'Kebisingan',v:'72–78 dB(A)',nab:'85 dB(A)',col:'#43A047',lvl:'LOW'},
-      {n:'Ergonomi (REBA)',v:'Skor 5–6',nab:'Skor <7',col:'#FF8F00',lvl:'MODERATE'},
-      {n:'Indoor Air Quality',v:'CO₂ 600–800 ppm',nab:'<1000 ppm',col:'#43A047',lvl:'LOW'},
-      {n:'Psikososial / Fatigue',v:'Sedang',nab:'Rendah',col:'#FF8F00',lvl:'MODERATE'},
-      {n:'Pencahayaan Malam',v:'3–5 lux',nab:'<5 lux (nav)',col:'#43A047',lvl:'LOW'},
+      {n:'Kebisingan',v:'72–78 dB(A)',nab:'85 dB(A)',st:'a',c:'#43A047'},
+      {n:'Ergonomi (REBA)',v:'Skor 5–6',nab:'Skor <7',st:'p',c:'#FF8F00'},
+      {n:'Indoor Air Quality',v:'CO₂ 600–800 ppm',nab:'<1000 ppm',st:'a',c:'#43A047'},
+      {n:'Psikososial / Fatigue',v:'Sedang',nab:'Rendah',st:'p',c:'#FF8F00'},
+      {n:'Pencahayaan Malam',v:'3–5 lux',nab:'<5 lux (nav)',st:'a',c:'#43A047'},
     ],
-    activities:['Navigasi & watch keeping','Komunikasi radio','Administrasi kapal','Meteorologi & charting'],
-    controls:['Hearing protection di zona bising','Ergonomic workstation adjustable','AC & ventilasi HVAC memadai','Fatigue monitoring pre-jaga'],
-    reg:'Permenaker No.5/2018 Tabel 1,3 · MLC 2006 Reg.2.3',
+    ctrl:['Hearing protection di zona bising','Ergonomic workstation adjustable','AC & ventilasi HVAC memadai','Fatigue Risk Management System'],
+    act:['Navigasi & watch keeping','Komunikasi radio','Administrasi & charting'],
+    reg:'Permenaker No.5/2018 Tabel 1,3 · MLC 2006 Reg.2.3'
   },
-  {
-    id:'cargo', name:'Area Cargo Tank', nameEn:'Cargo Tank Area (Typical)',
-    risk:'EXTREME', riskColor:'#B71C1C', riskBg:'rgba(183,28,28,.15)',
-    icons:['fa-flask','fa-fire','fa-lock','fa-temperature-three-quarters','fa-virus'],
+  cargo:{
+    name:'Cargo Tank Area', nameEn:'Cargo Tank Area (Typical)',
+    risk:'EXTREME', rc:'#B71C1C', rb:'rgba(183,28,28,.15)',
     hazards:[
-      {n:'H₂S / Toxic Vapor',v:'1–20 ppm',nab:'1 ppm',col:'#B71C1C',lvl:'EXTREME'},
-      {n:'LEL Methane/Flammable',v:'5–25% LEL',nab:'<10% LEL',col:'#B71C1C',lvl:'EXTREME'},
-      {n:'O₂ Confined Space',v:'17–21%',nab:'19.5–23.5%',col:'#E63946',lvl:'HIGH'},
-      {n:'Heat Stress (WBGT)',v:'32–38°C',nab:'31°C',col:'#E63946',lvl:'HIGH'},
-      {n:'VOC Total',v:'150–310 ppm',nab:'200 ppm',col:'#E63946',lvl:'HIGH'},
+      {n:'H₂S / Toxic Vapor',v:'1–20 ppm',nab:'1 ppm',st:'m',c:'#B71C1C'},
+      {n:'LEL / Flammable Gas',v:'5–25% LEL',nab:'<10% LEL',st:'m',c:'#B71C1C'},
+      {n:'O₂ Deficiency',v:'17–21%',nab:'19.5–23.5%',st:'m',c:'#E63946'},
+      {n:'Heat Stress (WBGT)',v:'32–38°C',nab:'31°C',st:'m',c:'#E63946'},
+      {n:'VOC Total',v:'150–310 ppm',nab:'200 ppm',st:'p',c:'#FF8F00'},
     ],
-    activities:['Loading/unloading crude oil','Tank inspection & survey','Tank cleaning & gas freeing','Coating & maintenance'],
-    controls:['Permit to Work WAJIB (Permenaker 26/2014)','SCBA full face untuk tank entry','Fixed gas detector H₂S & LEL otomatis','Atmospheric testing sebelum entry wajib'],
-    reg:'Permenaker No.5/2018 (NAB Kimia) · No.26/2014 · ACGIH TLV-BEI 2024',
+    ctrl:['Permit to Work WAJIB (Permenaker 26/2014)','SCBA full face untuk confined entry','Fixed gas detector H₂S & LEL otomatis','Atmospheric testing sebelum entry'],
+    act:['Loading/unloading crude oil','Tank inspection & survey','Gas freeing & tank cleaning'],
+    reg:'Permenaker No.5/2018 + No.26/2014 · ACGIH TLV-BEI 2024'
   },
-  {
-    id:'pump', name:'Pump Room & Machinery', nameEn:'Cargo Pump Room',
-    risk:'HIGH', riskColor:'#E63946', riskBg:'rgba(230,57,70,.15)',
-    icons:['fa-flask','fa-volume-high','fa-temperature-three-quarters','fa-bolt','fa-lock'],
+  engine:{
+    name:'Kamar Mesin', nameEn:'Engine Room',
+    risk:'HIGH', rc:'#C62828', rb:'rgba(198,40,40,.15)',
     hazards:[
-      {n:'H₂S',v:'1–5 ppm',nab:'1 ppm',col:'#E63946',lvl:'HIGH'},
-      {n:'Kebisingan (Pompa)',v:'88–96 dB(A)',nab:'85 dB(A)',col:'#E63946',lvl:'HIGH'},
-      {n:'Heat Stress (ISBB)',v:'32–40°C',nab:'28°C',col:'#E63946',lvl:'HIGH'},
-      {n:'Benzena',v:'0.5–1.2 ppm',nab:'0.5 ppm',col:'#FF8F00',lvl:'MODERATE'},
-      {n:'Electrical Hazard (ATEX)',v:'Zone 1',nab:'ATEX Zone',col:'#FF8F00',lvl:'MODERATE'},
+      {n:'Kebisingan',v:'90–98 dB(A)',nab:'85 dB(A)',st:'m',c:'#E63946'},
+      {n:'Heat Stress (WBGT)',v:'35–45°C',nab:'28–31°C',st:'m',c:'#E63946'},
+      {n:'Getaran WBV',v:'0.8–6.1 m/s²',nab:'0.5 m/s²',st:'m',c:'#E63946'},
+      {n:'Oil Mist / Fumes',v:'3–8 mg/m³',nab:'5 mg/m³',st:'p',c:'#FF8F00'},
+      {n:'Ergonomi (MSDs)',v:'REBA 6–8',nab:'REBA <7',st:'p',c:'#FF8F00'},
     ],
-    activities:['Operasi pompa kargo','Maintenance pompa & seal','Inspeksi pipa & valve','Pengukuran ullage'],
-    controls:['Earplug NRR ≥25 dB atau double protection','Gas detector portable H₂S','Ventilasi mekanis 20+ ACH aktif','ATEX certified equipment only'],
-    reg:'Permenaker No.5/2018 Lamp.I · No.26/2014 Confined · ACGIH H₂S TLV 2024',
+    ctrl:['Double hearing protection (earplug+earmuff)','Cooling vest & thermal PPE','Anti-vibration boots & gloves','Respirator oil mist P100'],
+    act:['Operasi & monitoring mesin utama','Maintenance generator & turbo','Operasi pompa ballast'],
+    reg:'Permenaker No.5/2018 Tabel 1,3,4 · MLC 2006 · ACGIH TLV 2024'
   },
-  {
-    id:'engine', name:'Kamar Mesin', nameEn:'Engine Room',
-    risk:'HIGH', riskColor:'#C62828', riskBg:'rgba(198,40,40,.15)',
-    icons:['fa-volume-high','fa-temperature-three-quarters','fa-wave-square','fa-smog','fa-person-rays'],
+  pump:{
+    name:'Pump Room', nameEn:'Cargo Pump Room',
+    risk:'HIGH', rc:'#E63946', rb:'rgba(230,57,70,.15)',
     hazards:[
-      {n:'Kebisingan',v:'90–98 dB(A)',nab:'85 dB(A)',col:'#E63946',lvl:'HIGH'},
-      {n:'Heat Stress (WBGT)',v:'35–45°C',nab:'28–31°C',col:'#E63946',lvl:'HIGH'},
-      {n:'Getaran WBV',v:'0.8–6.1 m/s²',nab:'0.5 m/s²',col:'#E63946',lvl:'HIGH'},
-      {n:'Oil Mist / Fumes',v:'3–8 mg/m³',nab:'5 mg/m³',col:'#E63946',lvl:'HIGH'},
-      {n:'Ergonomi (MSDs)',v:'REBA 6–8',nab:'REBA <7',col:'#FF8F00',lvl:'MODERATE'},
+      {n:'H₂S',v:'1–5 ppm',nab:'1 ppm',st:'m',c:'#E63946'},
+      {n:'Kebisingan (pompa)',v:'88–96 dB(A)',nab:'85 dB(A)',st:'m',c:'#E63946'},
+      {n:'Heat Stress (ISBB)',v:'32–40°C',nab:'28°C',st:'m',c:'#E63946'},
+      {n:'Benzena',v:'0.5–1.2 ppm',nab:'0.5 ppm',st:'p',c:'#FF8F00'},
     ],
-    activities:['Operasi & monitoring mesin utama','Maintenance generator & turbo','Operasi pompa ballast','Bunkering & fuel transfer'],
-    controls:['Double hearing protection (earplug + earmuff)','Cooling vest & thermal PPE','Anti-vibration boots & gloves','Respirator oil mist P100 filter'],
-    reg:'Permenaker No.5/2018 Tabel 1,3,4 · MLC 2006 · ACGIH TLV Noise+Heat 2024',
+    ctrl:['Earplug NRR ≥25 dB','Gas detector portable H₂S','Ventilasi mekanis 20+ ACH aktif','ATEX certified equipment only'],
+    act:['Operasi pompa kargo','Maintenance pompa & seal','Pengukuran ullage'],
+    reg:'Permenaker No.5/2018 · No.26/2014 Confined · ACGIH H₂S 2024'
   },
-  {
-    id:'fore', name:'Haluan & Area Mooring', nameEn:'Forecastle (Mooring Area)',
-    risk:'MODERATE', riskColor:'#FF8F00', riskBg:'rgba(255,143,0,.15)',
-    icons:['fa-person-rays','fa-person-falling','fa-volume-high','fa-sun','fa-bolt'],
+  fore:{
+    name:'Haluan & Mooring', nameEn:'Forecastle (Mooring Area)',
+    risk:'MODERATE', rc:'#FF8F00', rb:'rgba(255,143,0,.15)',
     hazards:[
-      {n:'Ergonomi Manual Handling',v:'RULA 5–7',nab:'RULA <7',col:'#FF8F00',lvl:'MODERATE'},
-      {n:'Slips / Trips / Falls',v:'Risk Sedang',nab:'Risk Rendah',col:'#FF8F00',lvl:'MODERATE'},
-      {n:'Radiasi UV',v:'UVI 8–14',nab:'UVI 6',col:'#E63946',lvl:'HIGH'},
-      {n:'Kebisingan (Winch)',v:'80–88 dB(A)',nab:'85 dB(A)',col:'#FF8F00',lvl:'MODERATE'},
-      {n:'Electrical (Mooring Equip)',v:'Terkontrol',nab:'Safe Zone',col:'#43A047',lvl:'LOW'},
+      {n:'Ergonomi Manual Handling',v:'RULA 5–7',nab:'RULA <7',st:'p',c:'#FF8F00'},
+      {n:'Radiasi UV',v:'UVI 8–14',nab:'UVI 6',st:'m',c:'#E63946'},
+      {n:'Kebisingan (winch)',v:'80–88 dB(A)',nab:'85 dB(A)',st:'p',c:'#FF8F00'},
+      {n:'Slips / Falls',v:'Risk Sedang',nab:'Risk Rendah',st:'p',c:'#FF8F00'},
     ],
-    activities:['Mooring & unmooring','Anchor handling','Deck painting & maintenance','Bunkering hose connection'],
-    controls:['Safety harness full body wajib','Anti-slip safety footwear','Sunscreen SPF ≥50 + UPF clothing','Winch mechanical assist — no manual line pull >15 kg'],
-    reg:'Permenaker No.5/2018 (Ergonomi, Radiasi UV) · MLC 2006 · ACGIH TLV HAL 2024',
+    ctrl:['Safety harness full body wajib','Anti-slip safety footwear','Sunscreen SPF ≥50 + UPF clothing','Mechanical assist winch'],
+    act:['Mooring & unmooring','Anchor handling','Deck maintenance'],
+    reg:'Permenaker No.5/2018 · ACGIH TLV HAL + UV 2024'
   },
-  {
-    id:'void', name:'Void Space & Ballast Tank', nameEn:'Void Spaces (Confined)',
-    risk:'HIGH', riskColor:'#455A64', riskBg:'rgba(69,90,100,.15)',
-    icons:['fa-lock','fa-wind','fa-flask','fa-person-falling'],
-    hazards:[
-      {n:'Oxygen Deficiency',v:'16–19%',nab:'19.5–23.5%',col:'#E63946',lvl:'HIGH'},
-      {n:'H₂S (sisa muatan)',v:'0.5–3 ppm',nab:'1 ppm',col:'#FF8F00',lvl:'MODERATE'},
-      {n:'Confined Space Risk',v:'PTW Req.',nab:'PTW + Rescue',col:'#E63946',lvl:'HIGH'},
-      {n:'Slips / Falls (gelap)',v:'Risk Tinggi',nab:'Risk Rendah',col:'#E63946',lvl:'HIGH'},
-    ],
-    activities:['Inspeksi ballast tank & void space','Coating & anti-corrosion treatment','Survey struktural lambung','NDT thickness measurement'],
-    controls:['PTW Confined Space wajib (Permenaker 26/2014)','Atmospheric testing: O₂, H₂S, LEL sebelum entry','SCBA full face + lifeline wajib','Rescue team terlatih standby di luar'],
-    reg:'Permenaker No.5/2018 · No.26/2014 Confined Space · ACGIH Industrial Ventilation 31st Ed.',
-  },
-];
+};
 
+/* Current selected ship */
+var hcvCurrentShip = null;
+
+/* ── OPEN MODAL ── */
 function openHazardMap(){
   var modal=document.getElementById('hazardMapModal');
-  if(modal){
-    modal.classList.add('open');
-    document.getElementById('hcvDate').textContent=new Date().toLocaleDateString('id-ID',{month:'long',year:'numeric'});
-    hcvRenderProfile();
-    hcvRenderTop();
-    hcvRenderMatrix();
-  }
+  if(!modal)return;
+  modal.classList.add('open');
+  hcvBuildShipDropdown();
+  hcvRenderProfile();
+  hcvRenderTop();
+  hcvRenderZoneSummary();
 }
 function closeHazardMap(){
   var modal=document.getElementById('hazardMapModal');
@@ -1431,7 +1413,109 @@ function closeHazardMap(){
 window.openHazardMap=openHazardMap;
 window.closeHazardMap=closeHazardMap;
 
-/* ── PROFILE VIEW SVG — Realistic Crude Oil Tanker (Starboard) ── */
+/* ── BUILD SHIP DROPDOWN from RAW_CLOSEOUT_2025 ── */
+function hcvBuildShipDropdown(){
+  var sel=document.getElementById('hcvShipFilter');
+  if(!sel)return;
+  var data=(typeof rawCloseout25!=='undefined'&&rawCloseout25.length>0)
+    ?rawCloseout25
+    :(typeof RAW_CLOSEOUT_2025!=='undefined'?RAW_CLOSEOUT_2025:[]);
+  /* unique ships sorted */
+  var ships=[...new Set(data.map(function(r){return r.kapal;}))].sort();
+  sel.innerHTML='<option value="">— Semua / Tipikal —</option>';
+  ships.forEach(function(s){
+    var opt=document.createElement('option');
+    opt.value=s; opt.textContent=s;
+    sel.appendChild(opt);
+  });
+}
+
+/* ── FILTER BY FLEET → update ship dropdown ── */
+function hcvApplyFleetFilter(){
+  var fleet=document.getElementById('hcvFleetFilter').value;
+  var sel=document.getElementById('hcvShipFilter');
+  var data=(typeof rawCloseout25!=='undefined'&&rawCloseout25.length>0)
+    ?rawCloseout25
+    :(typeof RAW_CLOSEOUT_2025!=='undefined'?RAW_CLOSEOUT_2025:[]);
+  var filtered=fleet?data.filter(function(r){return r.fleet===fleet;}):data;
+  var ships=[...new Set(filtered.map(function(r){return r.kapal;}))].sort();
+  sel.innerHTML='<option value="">— Semua / Tipikal —</option>';
+  ships.forEach(function(s){
+    var opt=document.createElement('option');
+    opt.value=s; opt.textContent=s;
+    sel.appendChild(opt);
+  });
+  hcvApplyShipFilter();
+}
+
+/* ── SELECT SHIP ── */
+function hcvApplyShipFilter(){
+  var ship=document.getElementById('hcvShipFilter').value;
+  if(!ship){
+    hcvCurrentShip=null;
+    hcvUpdateShipStrip(null);
+    hcvRenderZoneSummary();
+    document.getElementById('hcvDetail').innerHTML='<div class="hcv-detail-placeholder"><i class="fas fa-ship" style="font-size:26px;color:rgba(0,180,216,.3);margin-bottom:8px"></i><p>Pilih kapal untuk melihat hazard spesifik per zona</p></div>';
+    return;
+  }
+  var data=(typeof rawCloseout25!=='undefined'&&rawCloseout25.length>0)
+    ?rawCloseout25
+    :(typeof RAW_CLOSEOUT_2025!=='undefined'?RAW_CLOSEOUT_2025:[]);
+  var rec=data.find(function(r){return r.kapal===ship;})||{kapal:ship,fleet:'—',jenis:'—',closeout:'—'};
+  hcvCurrentShip=rec;
+  hcvUpdateShipStrip(rec);
+  hcvRenderZoneSummary();
+  /* auto-show bridge zone when ship selected */
+  hcvZoneClick('bridge');
+}
+window.hcvApplyShipFilter=hcvApplyShipFilter;
+window.hcvApplyFleetFilter=hcvApplyFleetFilter;
+
+/* ── SHIP INFO STRIP ── */
+function hcvUpdateShipStrip(rec){
+  var nm=document.getElementById('hcvShipName');
+  var fl=document.getElementById('hcvShipFleet');
+  var jn=document.getElementById('hcvShipJenis');
+  var st=document.getElementById('hcvShipStatus');
+  if(!rec){
+    nm.textContent='Tampilan Tipikal — Pilih kapal untuk data spesifik';
+    fl.textContent=''; jn.textContent=''; st.style.display='none'; return;
+  }
+  nm.textContent=rec.kapal||'—';
+  fl.textContent=rec.fleet||'';
+  jn.textContent=rec.jenis?'Jenis: '+rec.jenis:'';
+  var isCl=(rec.closeout||'').trim().toUpperCase()==='CLOSE';
+  st.textContent=isCl?'✓ CLOSE':'⏳ OPEN';
+  st.style.cssText='font-size:10px;font-weight:700;padding:2px 10px;border-radius:10px;display:inline-block;'
+    +(isCl?'background:rgba(67,160,71,.2);color:#43A047;border:1px solid #43A07455;'
+           :'background:rgba(255,143,0,.2);color:#FF8F00;border:1px solid #FF8F0055;');
+}
+
+/* ── ZONE SUMMARY CARDS ── */
+function hcvRenderZoneSummary(){
+  var el=document.getElementById('hcvZoneSummary');
+  if(!el)return;
+  var zones=[
+    {id:'bridge',label:'Bridge',icon:'fas fa-building',col:'#FF8F00'},
+    {id:'cargo', label:'Cargo Tank',icon:'fas fa-oil-well',col:'#B71C1C'},
+    {id:'engine',label:'Engine Room',icon:'fas fa-gears',col:'#C62828'},
+    {id:'pump',  label:'Pump Room',icon:'fas fa-faucet-drip',col:'#E63946'},
+    {id:'fore',  label:'Haluan',icon:'fas fa-anchor',col:'#FF8F00'},
+  ];
+  el.innerHTML=zones.map(function(z){
+    var d=HCV_ZONE_DATA[z.id];
+    var lvlColors={'EXTREME':'#B71C1C','HIGH':'#E63946','MODERATE':'#FF8F00','LOW':'#43A047'};
+    var lc=lvlColors[d.risk]||'#90A4AE';
+    return '<div onclick="hcvZoneClick(\''+z.id+'\')" style="display:flex;align-items:center;gap:6px;background:rgba(0,180,216,.07);border:1px solid rgba(0,180,216,.18);border-radius:8px;padding:5px 10px;cursor:pointer;transition:background .15s;flex:1;min-width:0" onmouseover="this.style.background=\'rgba(0,180,216,.15)\'" onmouseout="this.style.background=\'rgba(0,180,216,.07)\'">'
+      +'<i class="'+z.icon+'" style="font-size:12px;color:'+z.col+';flex-shrink:0"></i>'
+      +'<div style="min-width:0">'
+      +'<div style="font-size:9.5px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+z.label+'</div>'
+      +'<div style="font-size:8.5px;font-weight:700;color:'+lc+'">'+d.risk+'</div>'
+      +'</div></div>';
+  }).join('');
+}
+
+/* ── PROFILE SVG ── */
 function hcvRenderProfile(){
   var svg=document.getElementById('hcvProfileSVG');
   if(!svg)return;
@@ -1442,177 +1526,167 @@ function hcvRenderProfile(){
     Object.keys(attrs).forEach(function(k){e.setAttribute(k,attrs[k]);});
     return e;
   }
-  function tx(x,y,txt,fill,sz,anchor,fw){
+  function tx(x,y,txt,attrs){
     var t=document.createElementNS(S,'text');
     t.setAttribute('x',x);t.setAttribute('y',y);
-    t.setAttribute('text-anchor',anchor||'middle');
-    t.setAttribute('fill',fill||'#fff');
-    t.setAttribute('font-size',sz||'9');
-    t.setAttribute('font-family','sans-serif');
-    if(fw)t.setAttribute('font-weight',fw);
+    Object.keys(attrs||{}).forEach(function(k){t.setAttribute(k,attrs[k]);});
     t.textContent=txt;return t;
   }
-
-  /* Sky & water background */
-  svg.appendChild(el('rect',{x:0,y:0,width:1000,height:245,fill:'#B8CEDD'}));
-  svg.appendChild(el('rect',{x:0,y:220,width:1000,height:25,fill:'#C8D8E8'}));
-  svg.appendChild(el('rect',{x:0,y:245,width:1000,height:55,fill:'#2E6E9E'}));
-  svg.appendChild(el('rect',{x:0,y:245,width:1000,height:5,fill:'#4A8EBE'}));
-  svg.appendChild(el('line',{x1:0,y1:256,x2:1000,y2:256,stroke:'#3A7BAD',strokeWidth:1.5}));
-  svg.appendChild(el('line',{x1:0,y1:268,x2:1000,y2:268,stroke:'#3A7BAD',strokeWidth:1.2}));
-
-  /* HULL MAIN (dark navy) */
-  svg.appendChild(el('path',{d:'M 45 252 L 45 155 C 45 150 62 146 85 145 L 878 130 Q 928 127 948 140 L 952 167 L 944 232 C 920 248 882 256 845 256 L 70 256 Q 50 258 45 252 Z',fill:'#1B2736'}));
-  /* Anti-fouling red band */
-  svg.appendChild(el('path',{d:'M 47 248 L 47 208 L 875 194 C 915 190 942 202 946 218 L 944 240 C 920 252 882 258 842 258 L 68 256 Q 50 258 47 248 Z',fill:'#7B1A1A'}));
-  /* Boot topping white line */
-  svg.appendChild(el('path',{d:'M 49 206 L 873 192 C 912 188 940 200 944 215 L 944 221 C 920 207 884 200 873 200 L 49 214 Z',fill:'#DCE0D8'}));
-  /* Hull sheen */
-  svg.appendChild(el('path',{d:'M 47 155 L 877 130 L 879 136 L 47 161 Z',fill:'#253545'}));
-  /* Stern face */
-  svg.appendChild(el('rect',{x:38,y:142,width:10,height:112,fill:'#141E28',rx:1}));
-
-  /* SUPERSTRUCTURE (white/gray) */
-  svg.appendChild(el('rect',{x:45,y:70,width:165,height:90,fill:'#D4D8DC',rx:2}));
-  [90,108,126].forEach(function(y){svg.appendChild(el('line',{x1:45,y1:y,x2:210,y2:y,stroke:'#B0B4B8',strokeWidth:1.5}));});
-  /* Windows row by row */
-  var wrows=[[74,10,[48,63,78,93,108,123,138,153,168,183]],[93,9,[48,62,76,90,110,124,140,158,174]],[111,8,[50,65,88,112,134,158,177]],[129,7,[54,76,114,152,176]]];
-  wrows.forEach(function(row){
-    var y=row[0],h=row[1],xs=row[2];
-    xs.forEach(function(x){
-      var w=el('rect',{x:x,y:y,width:11,height:h,fill:'#7FC3E8',rx:1,opacity:row[0]>119?'0.6':'0.85'});
-      svg.appendChild(w);
-    });
-  });
-  /* Bridge deck */
-  svg.appendChild(el('rect',{x:32,y:50,width:188,height:23,fill:'#C4C8CE',rx:2}));
-  svg.appendChild(el('rect',{x:38,y:53,width:176,height:14,fill:'#7FC3E8',rx:1,opacity:'.65'}));
-  /* Compass deck */
-  svg.appendChild(el('rect',{x:55,y:34,width:140,height:18,fill:'#B8BBC2',rx:1}));
-  /* Monkey island */
-  svg.appendChild(el('rect',{x:78,y:20,width:98,height:15,fill:'#AAADB4',rx:1}));
-
-  /* FUNNEL */
-  svg.appendChild(el('rect',{x:210,y:26,width:50,height:62,fill:'#2A3240',rx:3}));
-  svg.appendChild(el('rect',{x:204,y:22,width:62,height:10,fill:'#364050',rx:2}));
-  svg.appendChild(el('ellipse',{cx:235,cy:22,rx:31,ry:6,fill:'#1E2830'}));
-  svg.appendChild(el('rect',{x:210,y:42,width:50,height:11,fill:'#CC1A1A'})); /* Pertamina red stripe */
-  svg.appendChild(el('ellipse',{cx:235,cy:18,rx:8,ry:4,fill:'#3A4050',opacity:'.35'}));
-
-  /* AFT MAST */
-  svg.appendChild(el('line',{x1:142,y1:34,x2:142,y2:4,stroke:'#6A7880',strokeWidth:3}));
-  svg.appendChild(el('line',{x1:114,y1:12,x2:172,y2:12,stroke:'#6A7880',strokeWidth:2}));
-  svg.appendChild(el('circle',{cx:142,cy:4,r:5,fill:'#8A9098'}));
-  svg.appendChild(el('rect',{x:130,y:10,width:8,height:6,fill:'#7A8090',rx:1}));
-  svg.appendChild(el('rect',{x:148,y:10,width:8,height:6,fill:'#7A8090',rx:1}));
-
-  /* MAIN DECK */
-  svg.appendChild(el('rect',{x:213,y:138,width:566,height:18,fill:'#28364A'}));
-  svg.appendChild(el('rect',{x:213,y:138,width:566,height:4,fill:'#364858'}));
-  svg.appendChild(el('rect',{x:45,y:154,width:170,height:6,fill:'#283646'}));
-
-  /* CARGO TANK STRUCTURES */
-  [[218,100,78,38],[308,102,75,36],[395,104,70,34],[476,106,64,32]].forEach(function(t){
-    svg.appendChild(el('rect',{x:t[0],y:t[1],width:t[2],height:t[3],fill:'#20303E',rx:2}));
-    svg.appendChild(el('ellipse',{cx:t[0]+t[2]/2,cy:t[1],rx:t[2]/2-2,ry:9,fill:'#1A2838'}));
-    svg.appendChild(el('ellipse',{cx:t[0]+t[2]/2,cy:t[1],rx:t[2]/4,ry:4,fill:'#243244'}));
-  });
-  [302,392,472,542].forEach(function(x){
-    svg.appendChild(el('line',{x1:x,y1:138,x2:x,y2:180,stroke:'#364858',strokeWidth:2}));
-  });
-
-  /* MANIFOLD */
-  svg.appendChild(el('rect',{x:450,y:124,width:36,height:30,fill:'#364858',rx:2}));
-  svg.appendChild(el('rect',{x:445,y:130,width:46,height:5,fill:'#4A6070',rx:1}));
-
-  /* PIPELINES */
-  svg.appendChild(el('rect',{x:215,y:147,width:564,height:5,fill:'#4A6878',rx:2}));
-  svg.appendChild(el('rect',{x:215,y:154,width:564,height:3.5,fill:'#3A5868',rx:1.5}));
-  svg.appendChild(el('rect',{x:215,y:159,width:564,height:3,fill:'#3A5868',rx:1}));
-  [260,302,346,392,435,476,520].forEach(function(x){
-    svg.appendChild(el('line',{x1:x,y1:145,x2:x,y2:157,stroke:'#4A6878',strokeWidth:2.5}));
-  });
-
-  /* PUMP ROOM DECKHOUSE */
-  svg.appendChild(el('rect',{x:618,y:114,width:80,height:48,fill:'#283646',rx:2}));
-  svg.appendChild(el('rect',{x:622,y:118,width:72,height:10,fill:'#364858',rx:1}));
-  [626,642,658,672].forEach(function(x){
-    svg.appendChild(el('rect',{x:x,y:132,width:10,height:9,fill:'#4A8AAE',rx:1,opacity:'.8'}));
-  });
-
-  /* RAILING */
-  [215,248,286,326,366,406,446,486,520,556].forEach(function(x){
-    svg.appendChild(el('line',{x1:x,y1:154,x2:x,y2:140,stroke:'#4A6070',strokeWidth:1.5}));
-  });
-  svg.appendChild(el('line',{x1:215,y1:140,x2:698,y2:129,stroke:'#4A6070',strokeWidth:1.5}));
-  svg.appendChild(el('line',{x1:215,y1:147,x2:694,y2:136,stroke:'#4A6070',strokeWidth:1}));
-
-  /* FORE MAST */
-  svg.appendChild(el('line',{x1:680,y1:138,x2:680,y2:84,stroke:'#5A6870',strokeWidth:3}));
-  svg.appendChild(el('line',{x1:656,y1:96,x2:706,y2:96,stroke:'#5A6870',strokeWidth:2}));
-  svg.appendChild(el('circle',{cx:680,cy:84,r:5,fill:'#6A7880'}));
-  svg.appendChild(el('line',{x1:680,y1:94,x2:950,y2:158,stroke:'#4A5860',strokeWidth:1,opacity:'.4'}));
-  svg.appendChild(el('line',{x1:680,y1:94,x2:235,y2:56,stroke:'#4A5860',strokeWidth:1,opacity:'.3'}));
-
-  /* FORECASTLE */
-  svg.appendChild(el('rect',{x:712,y:126,width:60,height:30,fill:'#283646',rx:2}));
-  svg.appendChild(el('rect',{x:710,y:126,width:64,height:4,fill:'#364858'}));
-  [728,748].forEach(function(x){svg.appendChild(el('ellipse',{cx:x,cy:137,rx:11,ry:5,fill:'#364858'}));});
-  [715,732,748].forEach(function(x){svg.appendChild(el('rect',{x:x,y:146,width:7,height:7,fill:'#364858',rx:1}));});
-  svg.appendChild(el('circle',{cx:760,cy:165,r:6,fill:'#1A2530',stroke:'#4A5860',strokeWidth:1.5}));
-  svg.appendChild(el('circle',{cx:758,cy:178,r:5,fill:'#1A2530',stroke:'#4A5860',strokeWidth:1.5}));
-
-  /* MOORING BITTS */
-  [218,270,330,390,450,510,570].forEach(function(x){
-    svg.appendChild(el('rect',{x:x,y:136,width:8,height:5,fill:'#364858',rx:1}));
-  });
-
-  /* BOW BULB */
-  svg.appendChild(el('ellipse',{cx:952,cy:238,rx:19,ry:11,fill:'#141E2A',opacity:'.7'}));
-  /* PROPELLER hint */
-  svg.appendChild(el('ellipse',{cx:40,cy:234,rx:15,ry:9,fill:'#1A2535',opacity:'.6'}));
-
-  /* WATER REFLECTION */
-  svg.appendChild(el('rect',{x:46,y:254,width:900,height:9,fill:'#1A4570',opacity:'.4'}));
-
-  /* ═══ CLICKABLE HAZARD ZONE OVERLAYS ═══ */
-  var zones=[
-    {id:'bridge', x:28,  y:18,  w:190, h:140, col:'#FF8F00', lbl:'AKOMODASI & ANJUNGAN', lx:122, ly:12},
-    {id:'engine', x:44,  y:156, w:172, h:98,  col:'#C62828',  lbl:'KAMAR MESIN',         lx:128, ly:264},
-    {id:'cargo',  x:212, y:88,  w:404, h:168, col:'#B71C1C',  lbl:'AREA CARGO TANK',     lx:415, ly:82},
-    {id:'pump',   x:614, y:108, w:90,  h:148, col:'#E63946',  lbl:'PUMP ROOM',           lx:660, ly:102},
-    {id:'fore',   x:708, y:118, w:68,  h:138, col:'#FF8F00',  lbl:'HALUAN & MOORING',    lx:742, ly:112},
-  ];
-  zones.forEach(function(z){
+  function zone(id,x,y,w,h,col,lbl,ly){
     var g=document.createElementNS(S,'g');
     g.setAttribute('cursor','pointer');
-    var r=el('rect',{x:z.x,y:z.y,width:z.w,height:z.h,fill:z.col,opacity:'.18',rx:3,stroke:z.col,strokeWidth:1.5});
+    var r=el('rect',{x:x,y:y,width:w,height:h,fill:col,opacity:'.18',rx:3,stroke:col,'stroke-width':1.5});
     g.appendChild(r);
-    g.appendChild(el('rect',{x:z.x+1,y:z.y+1,width:5,height:z.h-2,fill:z.col,rx:3}));
-    g.addEventListener('click',function(){hcvZoneClick(z.id);});
+    g.appendChild(el('rect',{x:x+1,y:y+1,width:5,height:h-2,fill:col,rx:3}));
+    /* leader line up */
+    g.appendChild(el('line',{x1:x+w/2,y1:y,x2:x+w/2,y2:ly+11,stroke:col,'stroke-width':1,'stroke-dasharray':'3,2',opacity:'.7'}));
+    /* label box */
+    var bw=lbl.length*6.5+14; var bh=12;
+    var bx=Math.max(2,Math.min(896-bw,x+w/2-bw/2));
+    g.appendChild(el('rect',{x:bx,y:ly-1,width:bw,height:bh,fill:'#060E1E',stroke:col,'stroke-width':1.2,rx:3,opacity:'.94'}));
+    var t=document.createElementNS(S,'text');
+    t.setAttribute('x',bx+bw/2);t.setAttribute('y',ly+8);t.setAttribute('text-anchor','middle');
+    t.setAttribute('fill',col);t.setAttribute('font-size','8');t.setAttribute('font-family','Arial');t.setAttribute('font-weight','700');
+    t.textContent=lbl;g.appendChild(t);
+    g.addEventListener('click',function(){hcvZoneClick(id);});
     g.addEventListener('mouseenter',function(){r.setAttribute('opacity','.36');});
     g.addEventListener('mouseleave',function(){r.setAttribute('opacity','.18');});
     svg.appendChild(g);
-    /* Leader line */
-    var isAbove=z.ly<z.y;
-    var lY2=isAbove?z.y:z.y+z.h;
-    svg.appendChild(el('line',{x1:z.lx,y1:z.ly+(isAbove?10:0),x2:z.lx,y2:lY2,stroke:z.col,strokeWidth:1,strokeDasharray:'3,2',opacity:'.7'}));
-    /* Label box */
-    var bw=z.lbl.length*6.0+14;
-    var bh=14;
-    var bx=Math.max(4,Math.min(996-bw,z.lx-bw/2));
-    var by=isAbove?z.ly-bh:z.ly+2;
-    svg.appendChild(el('rect',{x:bx,y:by,width:bw,height:bh,fill:'#060E1E',stroke:z.col,strokeWidth:1.2,rx:3,opacity:'.93'}));
-    var t=document.createElementNS(S,'text');
-    t.setAttribute('x',bx+bw/2);t.setAttribute('y',by+10);
-    t.setAttribute('text-anchor','middle');t.setAttribute('fill',z.col);
-    t.setAttribute('font-size','8');t.setAttribute('font-family','sans-serif');t.setAttribute('font-weight','700');
-    t.textContent=z.lbl;svg.appendChild(t);
+  }
+
+  /* Sky */
+  svg.appendChild(el('rect',{x:0,y:0,width:900,height:195,fill:'#C8D8E8'}));
+  svg.appendChild(el('rect',{x:0,y:175,width:900,height:20,fill:'#B8CCDC'}));
+  /* Water */
+  svg.appendChild(el('rect',{x:0,y:195,width:900,height:50,fill:'#2E6E9E'}));
+  svg.appendChild(el('rect',{x:0,y:195,width:900,height:4,fill:'#3A80B8'}));
+  svg.appendChild(el('line',{x1:0,y1:206,x2:900,y2:206,stroke:'#3A80B8','stroke-width':1,opacity:'.6'}));
+  svg.appendChild(el('line',{x1:0,y1:218,x2:900,y2:218,stroke:'#3A80B8','stroke-width':.8,opacity:'.35'}));
+
+  /* HULL */
+  svg.appendChild(el('path',{d:'M 30,198 L 30,160 L 52,157 L 795,143 Q 830,140 848,150 L 854,168 L 854,198 Z',fill:'#181818'}));
+  /* Red anti-fouling */
+  svg.appendChild(el('path',{d:'M 31,198 L 31,210 Q 32,220 60,222 L 798,218 Q 826,216 840,210 L 852,202 L 854,195 Q 840,195 830,196 L 35,196 Z',fill:'#8C1A14'}));
+  /* White waterline */
+  svg.appendChild(el('line',{x1:31,y1:198,x2:795,y2:198,stroke:'#D8DDD5','stroke-width':2.5}));
+  svg.appendChild(el('line',{x1:795,y1:198,x2:843,y2:192,stroke:'#D8DDD5','stroke-width':2.5}));
+  /* Hull sheer line */
+  svg.appendChild(el('line',{x1:52,y1:157,x2:795,y2:143,stroke:'#252E38','stroke-width':1.5}));
+  /* Stern */
+  svg.appendChild(el('rect',{x:22,y:155,width:9,height:46,fill:'#101010',rx:1}));
+  svg.appendChild(el('rect',{x:22,y:198,width:9,height:24,fill:'#6A1210',rx:1}));
+  /* Bow */
+  svg.appendChild(el('path',{d:'M 844,150 Q 855,148 862,158 L 868,175 L 868,198 L 854,198 L 852,168 Z',fill:'#181818'}));
+  svg.appendChild(el('path',{d:'M 854,198 L 868,198 L 868,212 Q 858,220 838,222 L 798,222 Q 822,220 836,214 Z',fill:'#8C1A14'}));
+  svg.appendChild(el('ellipse',{cx:866,cy:212,rx:12,ry:8,fill:'#6A1210',opacity:'.65'}));
+
+  /* SUPERSTRUCTURE */
+  svg.appendChild(el('rect',{x:30,y:66,width:185,height:96,fill:'#D8DCDE',rx:1}));
+  [78,90,102,114,126,138,150].forEach(function(y){
+    svg.appendChild(el('line',{x1:30,y1:y,x2:215,y2:y,stroke:'#BCC0C4','stroke-width':1.2}));
   });
-  svg.appendChild(tx(980,288,'STARBOARD VIEW','#4A6878','8','end'));
+  /* Windows */
+  [[68,11],[80,10],[92,10],[104,9],[116,9],[128,8],[140,8],[152,7]].forEach(function(row,fi){
+    var y=row[0],h=row[1];
+    for(var x=36;x<213;x+=14){
+      svg.appendChild(el('rect',{x:x,y:y,width:10,height:h,fill:'#7AAEC2',rx:1,opacity:String(0.95-fi*0.08)}));
+    }
+  });
+  /* Bridge deck */
+  svg.appendChild(el('rect',{x:18,y:50,width:208,height:18,fill:'#CDD2D6',rx:1}));
+  svg.appendChild(el('rect',{x:24,y:53,width:196,height:12,fill:'#7ABCD0',rx:1,opacity:'.6'}));
+  [52,84,116,148,180,208].forEach(function(x){
+    svg.appendChild(el('line',{x1:x,y1:53,x2:x,y2:65,stroke:'#9CC8D8','stroke-width':1}));
+  });
+  svg.appendChild(el('rect',{x:40,y:36,width:152,height:15,fill:'#C0C6CC',rx:1}));
+  svg.appendChild(el('rect',{x:62,y:22,width:108,height:15,fill:'#B4BAC0',rx:1}));
+
+  /* FUNNEL (orange/amber) */
+  svg.appendChild(el('path',{d:'M 222,22 L 220,100 L 270,100 L 268,22 Z',fill:'#D4780A'}));
+  svg.appendChild(el('path',{d:'M 215,18 Q 218,12 245,12 Q 272,12 274,18 L 268,24 Q 265,18 245,18 Q 225,18 222,24 Z',fill:'#B86808'}));
+  svg.appendChild(el('ellipse',{cx:245,cy:12,rx:31,ry:6.5,fill:'#0A1218'}));
+  /* Red stripe */
+  svg.appendChild(el('rect',{x:220,y:42,width:50,height:14,fill:'#CC2200'}));
+  svg.appendChild(el('rect',{x:218,y:93,width:62,height:8,fill:'#A86006',rx:1}));
+
+  /* Mast */
+  svg.appendChild(el('line',{x1:124,y1:36,x2:124,y2:6,stroke:'#7A8A94','stroke-width':3}));
+  svg.appendChild(el('line',{x1:96,y1:13,x2:154,y2:13,stroke:'#7A8A94','stroke-width':2}));
+  svg.appendChild(el('circle',{cx:124,cy:6,r:3.5,fill:'#909AA4'}));
+
+  /* Lifeboats */
+  [[222,106,15,9],[240,106,15,9],[222,118,15,9],[240,118,15,9]].forEach(function(b){
+    svg.appendChild(el('rect',{x:b[0],y:b[1],width:b[2],height:b[3],fill:'#E8D8A8',rx:2,stroke:'#C4A870','stroke-width':.8}));
+  });
+
+  /* CARGO DECK */
+  svg.appendChild(el('rect',{x:276,y:157,width:466,height:14,fill:'#2A3A28'}));
+  svg.appendChild(el('rect',{x:276,y:157,width:466,height:3,fill:'#364A34'}));
+
+  /* CARGO TANK DOMES */
+  [[288,157,310,138],[322,157,352,140],[368,157,396,142],[412,157,438,144],[454,157,478,146]].forEach(function(t){
+    svg.appendChild(el('path',{d:'M '+t[0]+','+t[1]+' Q '+t[0]+','+t[2]+' '+t[3]+','+t[2]+' Q '+(t[3]+((t[3]-t[0])*1))+','+t[2]+' '+(t[3]+((t[3]-t[0])*1))+','+t[1],fill:'#1C2C38'}));
+    var cx=t[3]; var cy=t[2];
+    svg.appendChild(el('ellipse',{cx:cx,cy:cy,rx:String(t[3]-t[0]),ry:'8',fill:'#182230'}));
+    svg.appendChild(el('ellipse',{cx:cx,cy:cy,rx:String((t[3]-t[0])/2),ry:'3.5',fill:'#1C2A36'}));
+  });
+
+  /* Tank dividers */
+  [318,370,414,456,508].forEach(function(x){
+    svg.appendChild(el('rect',{x:x,y:157,width:3,height:20,fill:'#364852'}));
+  });
+
+  /* Manifold */
+  svg.appendChild(el('rect',{x:456,y:143,width:32,height:24,fill:'#3A5060',rx:2}));
+  svg.appendChild(el('rect',{x:452,y:150,width:40,height:5,fill:'#4A6272',rx:1}));
+
+  /* Pipelines */
+  svg.appendChild(el('rect',{x:278,y:163,width:464,height:4,fill:'#3A5A6E',rx:1.5}));
+  svg.appendChild(el('rect',{x:278,y:168,width:464,height:3,fill:'#2E4A5A',rx:1}));
+
+  /* Railing */
+  svg.appendChild(el('line',{x1:278,y1:162,x2:280,y2:150,stroke:'#446070','stroke-width':1.2}));
+  svg.appendChild(el('line',{x1:280,y1:150,x2:720,y2:138,stroke:'#446070','stroke-width':1.2}));
+  [300,344,386,430,474,516,560,604,648,692].forEach(function(x){
+    var y2=150-(x-280)*12/440;
+    svg.appendChild(el('line',{x1:x,y1:162-(x-280)*12/440+6,x2:x,y2:y2,stroke:'#446070','stroke-width':1}));
+  });
+
+  /* Pump room deckhouse */
+  svg.appendChild(el('rect',{x:548,y:126,width:76,height:46,fill:'#1E2E3A',rx:1}));
+  svg.appendChild(el('rect',{x:546,y:126,width:80,height:4,fill:'#2A3E4E'}));
+  [556,570,584,598,612].forEach(function(x){
+    svg.appendChild(el('rect',{x:x,y:134,width:9,height:8,fill:'#4A8098',rx:1,opacity:'.8'}));
+  });
+  [558,572,588].forEach(function(x){
+    svg.appendChild(el('rect',{x:x,y:114,width:5,height:13,fill:'#2A3E4E',rx:1}));
+  });
+
+  /* Fore mast */
+  svg.appendChild(el('line',{x1:658,y1:157,x2:658,y2:102,stroke:'#5A6A78','stroke-width':3}));
+  svg.appendChild(el('line',{x1:636,y1:113,x2:680,y2:113,stroke:'#5A6A78','stroke-width':2}));
+  svg.appendChild(el('circle',{cx:658,cy:102,r:3.5,fill:'#6A7880'}));
+
+  /* Forecastle */
+  svg.appendChild(el('path',{d:'M 726,157 L 726,146 Q 728,143 748,141 L 808,139 Q 826,138 832,143 L 836,153 L 836,157 Z',fill:'#1E2C38'}));
+  svg.appendChild(el('rect',{x:726,y:145,width:112,height:3,fill:'#2A3E4E'}));
+  [744,766].forEach(function(x){svg.appendChild(el('ellipse',{cx:x,cy:153,rx:11,ry:5,fill:'#2E4050'}));});
+  [732,750,768,786,804,820].forEach(function(x){svg.appendChild(el('rect',{x:x,y:157,width:7,height:7,fill:'#2A3C4E',rx:1}));});
+  svg.appendChild(el('circle',{cx:838,cy:168,r:5.5,fill:'#101820',stroke:'#384858','stroke-width':1.5}));
+  svg.appendChild(el('circle',{cx:836,cy:180,r:4.5,fill:'#101820',stroke:'#384858','stroke-width':1.5}));
+
+  /* ZONE OVERLAYS */
+  zone('bridge', 18,  18, 204, 145, '#FF8F00', 'AKOMODASI & ANJUNGAN', 18);
+  zone('cargo',  278, 128, 268, 86,  '#B71C1C', 'CARGO TANK AREA',      18);
+  zone('engine', 22,  164, 256, 72,  '#C62828', 'KAMAR MESIN',          222);
+  zone('pump',   544, 118, 90,  96,  '#E63946', 'PUMP ROOM',            18);
+  zone('fore',   722, 132, 130, 98,  '#FF8F00', 'HALUAN & MOORING',     18);
+
+  /* Waterline label */
+  svg.appendChild(tx(880,240,'STARBOARD VIEW',{'text-anchor':'end',fill:'#607888','font-size':'8','font-family':'Arial','font-style':'italic'}));
 }
 
-/* ── TOP VIEW SVG — Realistic Deck Plan ── */
+/* ── TOP VIEW SVG ── */
 function hcvRenderTop(){
   var svg=document.getElementById('hcvTopSVG');
   if(!svg)return;
@@ -1623,19 +1697,18 @@ function hcvRenderTop(){
     Object.keys(attrs).forEach(function(k){e.setAttribute(k,attrs[k]);});
     return e;
   }
-  svg.appendChild(el('rect',{x:0,y:0,width:1000,height:195,fill:'#0D1E36'}));
-  /* Ship outline */
-  svg.appendChild(el('path',{d:'M 46 22 L 46 172 L 862 172 Q 958 172 976 97 Q 958 22 862 22 Z',fill:'#1E2E3E',stroke:'#2A3E54',strokeWidth:1.5}));
-
+  svg.appendChild(el('rect',{x:0,y:0,width:900,height:170,fill:'#0D1E36'}));
+  svg.appendChild(el('path',{d:'M 38 15 L 38 155 L 738 155 Q 848 155 868 85 Q 848 15 738 15 Z',fill:'#1A2E40',stroke:'#2A3E54','stroke-width':1.5}));
   var tZones=[
-    {id:'bridge',path:'M 46 22 L 46 172 L 194 172 L 194 22 Z',col:'#FF8F00',lbls:['Akomodasi','& Anjungan'],lx:118,ly:97},
-    {id:'cargo', path:'M 197 22 L 197 172 L 668 172 L 668 22 Z',col:'#B71C1C',lbls:['CARGO TANKS'],lx:430,ly:97},
-    {id:'pump',  path:'M 671 22 L 671 172 L 764 172 L 764 22 Z',col:'#E63946',lbls:['Pump','Room'],lx:715,ly:97},
-    {id:'fore',  path:'M 767 22 L 767 172 L 862 172 Q 958 172 976 97 Q 958 22 862 22 Z',col:'#FF8F00',lbls:['Forecastle','Mooring'],lx:870,ly:97},
+    {id:'bridge',path:'M 38 15 L 38 155 L 180 155 L 180 15 Z',col:'#FF8F00',lbls:['Akomodasi','& Anjungan'],lx:108,ly:85},
+    {id:'cargo', path:'M 184 15 L 184 155 L 592 155 L 592 15 Z',col:'#B71C1C',lbls:['CARGO TANKS'],lx:388,ly:85},
+    {id:'pump',  path:'M 596 15 L 596 155 L 686 155 L 686 15 Z',col:'#E63946',lbls:['Pump','Room'],lx:640,ly:85},
+    {id:'engine',path:'M 38 90 L 38 155 L 180 155 L 180 90 Z',col:'#C62828',lbls:['Engine','(Bawah)'],lx:108,ly:120},
+    {id:'fore',  path:'M 690 15 L 690 155 L 738 155 Q 848 155 868 85 Q 848 15 738 15 Z',col:'#FF8F00',lbls:['Forecastle'],lx:778,ly:85},
   ];
   tZones.forEach(function(z){
     var g=document.createElementNS(S,'g');g.setAttribute('cursor','pointer');
-    var p=el('path',{d:z.path,fill:z.col,opacity:'.28',stroke:z.col,strokeWidth:1.2});
+    var p=el('path',{d:z.path,fill:z.col,opacity:'.28',stroke:z.col,'stroke-width':1.2});
     g.appendChild(p);
     g.addEventListener('click',function(){hcvZoneClick(z.id);});
     g.addEventListener('mouseenter',function(){p.setAttribute('opacity','.45');});
@@ -1645,101 +1718,92 @@ function hcvRenderTop(){
       var t=document.createElementNS(S,'text');
       t.setAttribute('x',z.lx);t.setAttribute('y',z.ly-((z.lbls.length-1)*8)+li*16);
       t.setAttribute('text-anchor','middle');t.setAttribute('fill','#fff');
-      t.setAttribute('font-size',z.lbls.length>1?'8.5':'10');
-      t.setAttribute('font-family','sans-serif');t.setAttribute('font-weight','700');
+      t.setAttribute('font-size',z.lbls.length>1?'8':'10');
+      t.setAttribute('font-family','Arial');t.setAttribute('font-weight','700');
       t.textContent=line;svg.appendChild(t);
     });
   });
-  /* Tank dividers */
-  [340,458,562,668].forEach(function(x){svg.appendChild(el('line',{x1:x,y1:22,x2:x,y2:172,stroke:'rgba(0,180,216,.28)',strokeWidth:1.5}));});
-  [764,197].forEach(function(x){svg.appendChild(el('line',{x1:x,y1:22,x2:x,y2:172,stroke:'rgba(0,180,216,.35)',strokeWidth:1.5}));});
+  [340,490,592].forEach(function(x){svg.appendChild(el('line',{x1:x,y1:15,x2:x,y2:155,stroke:'rgba(0,180,216,.25)','stroke-width':1.5}));});
+  [184,686,690].forEach(function(x){svg.appendChild(el('line',{x1:x,y1:15,x2:x,y2:155,stroke:'rgba(0,180,216,.3)','stroke-width':1.5}));});
   /* Void strips */
-  svg.appendChild(el('rect',{x:197,y:22,width:471,height:14,fill:'#455A64',opacity:'.35'}));
-  svg.appendChild(el('rect',{x:197,y:158,width:471,height:14,fill:'#455A64',opacity:'.35'}));
+  svg.appendChild(el('rect',{x:184,y:15,width:408,height:14,fill:'#455A64',opacity:'.35'}));
+  svg.appendChild(el('rect',{x:184,y:141,width:408,height:14,fill:'#455A64',opacity:'.35'}));
   var vt=document.createElementNS(S,'text');
-  vt.setAttribute('x','430');vt.setAttribute('y','23');vt.setAttribute('text-anchor','middle');
-  vt.setAttribute('fill','rgba(144,164,174,.7)');vt.setAttribute('font-size','8');vt.setAttribute('font-family','sans-serif');
-  vt.textContent='VOID SPACE / BALLAST';svg.appendChild(vt);
+  vt.setAttribute('x','388');vt.setAttribute('y','26');vt.setAttribute('text-anchor','middle');
+  vt.setAttribute('fill','rgba(144,164,174,.7)');vt.setAttribute('font-size','8');vt.setAttribute('font-family','Arial');
+  vt.textContent='VOID / BALLAST SPACE';svg.appendChild(vt);
   /* Manifold */
-  svg.appendChild(el('rect',{x:432,y:82,width:64,height:28,fill:'#4A6070',rx:3,opacity:'.7'}));
+  svg.appendChild(el('rect',{x:386,y:70,width:56,height:24,fill:'#4A6070',rx:3,opacity:'.7'}));
   var mt=document.createElementNS(S,'text');
-  mt.setAttribute('x','464');mt.setAttribute('y','99');mt.setAttribute('text-anchor','middle');
-  mt.setAttribute('fill','#7FC3E8');mt.setAttribute('font-size','8');mt.setAttribute('font-family','sans-serif');
+  mt.setAttribute('x','414');mt.setAttribute('y','85');mt.setAttribute('text-anchor','middle');
+  mt.setAttribute('fill','#7FC3E8');mt.setAttribute('font-size','8');mt.setAttribute('font-family','Arial');
   mt.textContent='MANIFOLD';svg.appendChild(mt);
-  /* N arrow */
   var nt=document.createElementNS(S,'text');
-  nt.setAttribute('x','970');nt.setAttribute('y','18');nt.setAttribute('text-anchor','end');
+  nt.setAttribute('x','886');nt.setAttribute('y','18');nt.setAttribute('text-anchor','end');
   nt.setAttribute('fill','rgba(0,180,216,.55)');nt.setAttribute('font-size','11');
-  nt.setAttribute('font-weight','700');nt.setAttribute('font-family','sans-serif');
+  nt.setAttribute('font-weight','700');nt.setAttribute('font-family','Arial');
   nt.textContent='N \u2191';svg.appendChild(nt);
-  var bt=document.createElementNS(S,'text');
-  bt.setAttribute('x','500');bt.setAttribute('y','190');bt.setAttribute('text-anchor','middle');
-  bt.setAttribute('fill','#4A6878');bt.setAttribute('font-size','8.5');
-  bt.setAttribute('letter-spacing','0.8');bt.setAttribute('font-family','sans-serif');
-  bt.textContent='MAIN DECK PLAN (TOP VIEW) \u2014 CRUDE OIL TANKER';svg.appendChild(bt);
 }
 
-/* ── MATRIX BAR ── */
-function hcvRenderMatrix(){
-  var el=document.getElementById('hcvMatrix');
-  if(!el)return;
-  var counts={EXTREME:0,HIGH:0,MODERATE:0,LOW:0};
-  var zoneMap={EXTREME:[],HIGH:[],MODERATE:[],LOW:[]};
-  HCV_ZONES.forEach(function(z){
-    counts[z.risk]=(counts[z.risk]||0)+1;
-    (zoneMap[z.risk]=zoneMap[z.risk]||[]).push(z.name.split(' ')[0]);
-  });
-  el.innerHTML=Object.entries(counts).map(function(pair){
-    var lvl=pair[0],n=pair[1];
-    if(!n)return'';
-    var c={EXTREME:'#B71C1C',HIGH:'#E63946',MODERATE:'#FF8F00',LOW:'#43A047'}[lvl];
-    var zones=(zoneMap[lvl]||[]).join(', ');
-    return'<div class="hcv-mx-item"><div class="hcv-mx-dot" style="background:'+c+'"></div>'
-      +'<span class="hcv-mx-label" style="color:'+c+'">'+lvl+'</span>'
-      +'<span class="hcv-mx-zone">('+n+' zona: '+zones+')</span></div>';
-  }).join('');
-}
-
-/* ── ZONE CLICK DETAIL ── */
+/* ── ZONE CLICK — show detail ── */
 function hcvZoneClick(zoneId){
-  document.querySelectorAll('.hcv-zone').forEach(function(el){el.classList.remove('selected');});
-  document.querySelectorAll('.hcv-zone[data-zone="'+zoneId+'"]').forEach(function(el){el.classList.add('selected');});
-  var z=HCV_ZONES.find(function(h){return h.id===zoneId;});
-  if(!z)return;
-  var detail=document.getElementById('hcvDetail');
-  if(!detail)return;
+  /* Highlight */
+  document.querySelectorAll('.hcv-zone-hit').forEach(function(el){el.setAttribute('opacity','.18');});
+  var z=HCV_ZONE_DATA[zoneId]; if(!z)return;
+  var ship=hcvCurrentShip;
+  var det=document.getElementById('hcvDetail'); if(!det)return;
+  var lc={'EXTREME':'#B71C1C','HIGH':'#E63946','MODERATE':'#FF8F00','LOW':'#43A047'}[z.risk]||'#90A4AE';
 
-  var lvlColors={EXTREME:'#B71C1C',HIGH:'#E63946',MODERATE:'#FF8F00',LOW:'#43A047'};
-  var c=lvlColors[z.risk]||'#90A4AE';
+  /* Ship-specific context note */
+  var shipNote='';
+  if(ship){
+    var isCl=(ship.closeout||'').trim().toUpperCase()==='CLOSE';
+    shipNote='<div style="margin-bottom:10px;padding:8px 10px;background:rgba(0,180,216,.08);border-radius:7px;border:1px solid rgba(0,180,216,.2)">'
+      +'<div style="font-size:9px;font-weight:700;color:#00B4D8;letter-spacing:.8px;margin-bottom:3px">KAPAL: '+ship.kapal+'</div>'
+      +'<div style="font-size:9px;color:rgba(255,255,255,.55)">Fleet: '+ship.fleet+' &nbsp;|&nbsp; Jenis: '+ship.jenis+'</div>'
+      +'<div style="font-size:9px;margin-top:3px;font-weight:700;color:'+(isCl?'#43A047':'#FF8F00')+'">'
+      +'Status Closeout: '+(isCl?'✓ CLOSE':'⏳ OPEN')+'</div></div>';
+  }
 
   var hazHtml=z.hazards.map(function(h){
-    var hc={EXTREME:'#B71C1C',HIGH:'#E63946',MODERATE:'#FF8F00',LOW:'#43A047'}[h.lvl]||'#90A4AE';
-    return'<div class="hcv-haz-row" style="border-left-color:'+hc+'">'
-      +'<span class="hcv-haz-name">'+h.n+'</span>'
-      +'<div><div class="hcv-haz-val" style="color:'+hc+'">'+h.v+'</div>'
-      +'<div class="hcv-haz-nab">NAB: '+h.nab+'</div></div>'
-      +'</div>';
+    var pct=h.st==='m'?100:h.st==='p'?65:40;
+    var bc={'m':'#EE1111','p':'#FF8800','a':'#00AA33'}[h.st]||'#90A4AE';
+    var sl={'m':'MELEBIHI NAB','p':'PERHATIAN','a':'AMAN'}[h.st]||'—';
+    var scc={'m':'background:#FFECEC;color:#BB1100;border:1px solid #FFBBBB',
+             'p':'background:#FFF4E0;color:#BB5500;border:1px solid #FFD090',
+             'a':'background:#E8F8EE;color:#005520;border:1px solid #90D8A8'}[h.st]||'';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 7px;border-radius:6px;background:rgba(255,255,255,.04);margin-bottom:3px;border-left:3px solid '+h.c+'">'
+      +'<span style="font-size:10px;color:rgba(255,255,255,.8);font-weight:500;flex:1">'+h.n+'</span>'
+      +'<div style="text-align:right">'
+      +'<div style="font-size:11px;font-weight:700;color:'+h.c+'">'+h.v+'</div>'
+      +'<div style="font-size:8.5px;color:rgba(255,255,255,.3)">NAB: '+h.nab+'</div>'
+      +'<span style="font-size:8px;font-weight:700;padding:1px 6px;border-radius:8px;'+scc+'">'+sl+'</span>'
+      +'</div></div>';
   }).join('');
 
-  var ctrlHtml=z.controls.map(function(c){
-    return'<div class="hcv-ctrl-item"><i class="fas fa-shield-halved"></i>'+c+'</div>';
+  var ctrlHtml=z.ctrl.map(function(c){
+    return '<div style="display:flex;align-items:flex-start;gap:5px;font-size:9.5px;color:rgba(255,255,255,.55);margin-bottom:4px;line-height:1.35">'
+      +'<i class="fas fa-shield-halved" style="font-size:10px;color:#00B4D8;flex-shrink:0;margin-top:1px"></i>'+c+'</div>';
   }).join('');
 
-  var actHtml=z.activities.map(function(a){
-    return'<div class="hcv-act-item">'+a+'</div>';
+  var actHtml=z.act.map(function(a){
+    return '<div style="font-size:9.5px;color:rgba(255,255,255,.5);margin-bottom:2px;padding-left:8px;position:relative">'
+      +'<span style="position:absolute;left:0;color:#00B4D8">&bull;</span>'+a+'</div>';
   }).join('');
 
-  detail.innerHTML=
-    '<div class="hcv-zone-name">'+z.name+'</div>'
-    +'<div class="hcv-zone-en">'+z.nameEn+'</div>'
-    +'<div class="hcv-risk-badge" style="background:'+z.riskBg+';color:'+c+';border:1px solid '+c+'55">'
-    +'⚠ RISK LEVEL: '+z.risk+'</div>'
-    +'<div class="hcv-haz-block"><div class="hcv-haz-title">Hazard Teridentifikasi</div>'+hazHtml+'</div>'
-    +'<div class="hcv-ctrl-block"><div class="hcv-haz-title">Tindak Pengendalian</div>'+ctrlHtml+'</div>'
-    +'<div class="hcv-act-block"><div class="hcv-act-title">Aktivitas Tipikal</div>'+actHtml+'</div>'
-    +'<div style="margin-top:10px;padding:7px 9px;background:rgba(0,100,180,.12);border-radius:6px;border:1px solid rgba(0,180,216,.18)">'
-    +'<div style="font-size:8.5px;font-weight:700;color:rgba(0,180,216,.7);letter-spacing:.8px;margin-bottom:3px">REFERENSI REGULASI</div>'
-    +'<div style="font-size:10px;color:rgba(255,255,255,.45);line-height:1.5">'+z.reg+'</div>'
-    +'</div>';
+  det.innerHTML=shipNote
+    +'<div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:2px">'+z.name+'</div>'
+    +'<div style="font-size:9px;color:rgba(0,180,216,.6);letter-spacing:.5px;margin-bottom:8px">'+z.nameEn+'</div>'
+    +'<div style="display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:700;padding:3px 10px;border-radius:20px;margin-bottom:10px;background:'+z.rb+';color:'+z.rc+';border:1px solid '+z.rc+'55">⚠ RISK LEVEL: '+z.risk+'</div>'
+    +'<div style="font-size:8.5px;font-weight:700;letter-spacing:1px;color:rgba(0,180,216,.5);text-transform:uppercase;margin-bottom:5px">Hazard Teridentifikasi</div>'
+    +hazHtml
+    +'<div style="font-size:8.5px;font-weight:700;letter-spacing:1px;color:rgba(0,180,216,.5);text-transform:uppercase;margin:8px 0 5px">Tindak Pengendalian</div>'
+    +ctrlHtml
+    +'<div style="margin-top:8px;padding:7px 9px;background:rgba(0,180,216,.07);border-radius:6px;border:1px solid rgba(0,180,216,.15)">'
+    +'<div style="font-size:8px;font-weight:700;color:#00B4D8;letter-spacing:.8px;margin-bottom:4px">AKTIVITAS TIPIKAL</div>'
+    +actHtml+'</div>'
+    +'<div style="margin-top:7px;padding:6px 8px;background:rgba(0,80,160,.12);border-radius:5px;border:1px solid rgba(0,180,216,.18)">'
+    +'<div style="font-size:8px;font-weight:700;color:rgba(0,180,216,.6);letter-spacing:.8px;margin-bottom:2px">REFERENSI REGULASI</div>'
+    +'<div style="font-size:9px;color:rgba(255,255,255,.35);line-height:1.4">'+z.reg+'</div></div>';
 }
 window.hcvZoneClick=hcvZoneClick;
