@@ -3,7 +3,7 @@
 /* ✅ Pedoman PDF & Foto Dokumentasi → Google Drive (multi-device)    */
 /* ✅ IndexedDB dihapus — data terpusat di GAS/Drive                  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbzqCyLLFs-rLkahFThbzxIDWCpeoCjv_cvRZqw00_28Q96W6BerasPhmCaV8_Qel2lrPQ/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzaeYbZypyQ5sC8-OI-Xp0aR8hpsT-Bat3MFz6VgbR_D3F3uC3xwDlRV184u4GNoo7TAg/exec";
 
 async function gasPost(payload) {
   const controller = new AbortController();
@@ -163,6 +163,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   const btnRefresh=document.getElementById("btnRefresh");if(btnRefresh)btnRefresh.addEventListener("click",()=>{if(isSessionValid())loadData();else alert("Sesi habis. Silakan login kembali.");});
   document.querySelectorAll('.nav-item[data-menu="menu6"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(renderPedomanList,80));});
   document.querySelectorAll('.nav-item[data-menu="dokumentasi"]').forEach(item=>{item.addEventListener("click",()=>{currentDokFolder="hra_ih";setTimeout(renderDokGallery,80);});});
+  document.querySelectorAll('.nav-item[data-menu="biomonitoring"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(initBiomonitoring,80));});
   document.querySelectorAll('.nav-item[data-menu="closeout25"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(renderCO25Page,80));});
 });
 
@@ -436,6 +437,8 @@ async function loadData(){
   showLoading(false);
   /* Update mobile KPI strip after data loaded */
   setTimeout(mUpdateKpiStrip,200);
+  /* Fetch biomonitoring data from GAS */
+  fetchBiomonitoring();
 }
 function showLoading(v){document.getElementById("loadingOverlay").style.display=v?"flex":"none";}
 function showError(msg){document.getElementById("errorBanner").style.display="flex";document.getElementById("errorMsg").textContent=msg;}
@@ -1807,3 +1810,454 @@ function hcvZoneClick(zoneId){
     +'<div style="font-size:9px;color:rgba(255,255,255,.35);line-height:1.4">'+z.reg+'</div></div>';
 }
 window.hcvZoneClick=hcvZoneClick;
+
+/* ═══════════════════════════════════════════════════════════════
+   BIOMONITORING BENZENE MODULE
+   Kolom Biomarker : nama_kapal, fleet, nama_pekerja, kreatinin, rujukan
+   Kolom Personal  : nama_kapal, fleet, nama_pekerja, lokasi, hasil, nab
+   Tahun data      : 2023 & 2025
+═══════════════════════════════════════════════════════════════ */
+
+/* ── SAMPLE DATA — ganti dengan data real dari Google Sheets ── */
+var RAW_BIOMARKER = [
+  /* 2023 */
+  {tahun:"2024",kapal:"PIS NATUNA",fleet:"Fleet Product II",pekerja:"Ahmad Fauzi",kreatinin:12.4,rujukan:25},
+  {tahun:"2024",kapal:"PIS NATUNA",fleet:"Fleet Product II",pekerja:"Budi Santoso",kreatinin:8.2,rujukan:25},
+  {tahun:"2024",kapal:"PIS ROKAN",fleet:"Fleet Product II",pekerja:"Cahyo Pratama",kreatinin:18.7,rujukan:25},
+  {tahun:"2024",kapal:"PIS ROKAN",fleet:"Fleet Product II",pekerja:"Dian Kurniawan",kreatinin:9.1,rujukan:25},
+  {tahun:"2024",kapal:"KAMOJANG",fleet:"Fleet Product I",pekerja:"Eko Wahyudi",kreatinin:22.4,rujukan:25},
+  {tahun:"2024",kapal:"KAMOJANG",fleet:"Fleet Product I",pekerja:"Fajar Ramadhan",kreatinin:26.8,rujukan:25},
+  {tahun:"2024",kapal:"PANDERMAN",fleet:"Fleet Product I",pekerja:"Gunawan Saputra",kreatinin:14.3,rujukan:25},
+  {tahun:"2024",kapal:"GAS ARIMBI",fleet:"Fleet Gas & Petchem",pekerja:"Hendra Wijaya",kreatinin:31.2,rujukan:25},
+  {tahun:"2024",kapal:"GAS ARIMBI",fleet:"Fleet Gas & Petchem",pekerja:"Irfan Maulana",kreatinin:28.5,rujukan:25},
+  {tahun:"2024",kapal:"GAS ARIMBI",fleet:"Fleet Gas & Petchem",pekerja:"Joko Susilo",kreatinin:19.6,rujukan:25},
+  {tahun:"2024",kapal:"MT GAMALAMA",fleet:"Fleet Crude",pekerja:"Kurniawan Adi",kreatinin:7.8,rujukan:25},
+  {tahun:"2024",kapal:"MT GAMALAMA",fleet:"Fleet Crude",pekerja:"Lukman Hakim",kreatinin:11.2,rujukan:25},
+  {tahun:"2024",kapal:"TRANSKO BIMA",fleet:"Fleet Gas & Petchem",pekerja:"Muhamad Ilham",kreatinin:33.4,rujukan:25},
+  {tahun:"2024",kapal:"PRIMA XP",fleet:"Fleet Product I",pekerja:"Nugroho Seto",kreatinin:16.8,rujukan:25},
+  /* 2025 */
+  {tahun:"2026",kapal:"PIS NATUNA",fleet:"Fleet Product II",pekerja:"Ahmad Fauzi",kreatinin:9.8,rujukan:25},
+  {tahun:"2026",kapal:"PIS NATUNA",fleet:"Fleet Product II",pekerja:"Budi Santoso",kreatinin:6.4,rujukan:25},
+  {tahun:"2026",kapal:"PIS ROKAN",fleet:"Fleet Product II",pekerja:"Cahyo Pratama",kreatinin:15.2,rujukan:25},
+  {tahun:"2026",kapal:"PIS ROKAN",fleet:"Fleet Product II",pekerja:"Dian Kurniawan",kreatinin:7.6,rujukan:25},
+  {tahun:"2026",kapal:"KAMOJANG",fleet:"Fleet Product I",pekerja:"Eko Wahyudi",kreatinin:19.3,rujukan:25},
+  {tahun:"2026",kapal:"KAMOJANG",fleet:"Fleet Product I",pekerja:"Fajar Ramadhan",kreatinin:21.1,rujukan:25},
+  {tahun:"2026",kapal:"PANDERMAN",fleet:"Fleet Product I",pekerja:"Gunawan Saputra",kreatinin:11.8,rujukan:25},
+  {tahun:"2026",kapal:"GAS ARIMBI",fleet:"Fleet Gas & Petchem",pekerja:"Hendra Wijaya",kreatinin:24.6,rujukan:25},
+  {tahun:"2026",kapal:"GAS ARIMBI",fleet:"Fleet Gas & Petchem",pekerja:"Irfan Maulana",kreatinin:22.3,rujukan:25},
+  {tahun:"2026",kapal:"GAS ARIMBI",fleet:"Fleet Gas & Petchem",pekerja:"Joko Susilo",kreatinin:14.1,rujukan:25},
+  {tahun:"2026",kapal:"MT GAMALAMA",fleet:"Fleet Crude",pekerja:"Kurniawan Adi",kreatinin:6.2,rujukan:25},
+  {tahun:"2026",kapal:"MT GAMALAMA",fleet:"Fleet Crude",pekerja:"Lukman Hakim",kreatinin:9.4,rujukan:25},
+  {tahun:"2026",kapal:"TRANSKO BIMA",fleet:"Fleet Gas & Petchem",pekerja:"Muhamad Ilham",kreatinin:27.8,rujukan:25},
+  {tahun:"2026",kapal:"PRIMA XP",fleet:"Fleet Product I",pekerja:"Nugroho Seto",kreatinin:13.2,rujukan:25},
+  {tahun:"2026",kapal:"PATRA TANKER II",fleet:"Fleet Product II",pekerja:"Otto Pribadi",kreatinin:18.9,rujukan:25},
+  {tahun:"2026",kapal:"PATRA TANKER II",fleet:"Fleet Product II",pekerja:"Pandu Kusuma",kreatinin:12.4,rujukan:25},
+];
+
+var RAW_PERSONAL_BENZENE = [
+  /* 2023 */
+  {tahun:"2024",kapal:"PIS NATUNA",fleet:"Fleet Product II",pekerja:"Ahmad Fauzi",lokasi:"Pump Room",hasil:0.08,nab:0.5},
+  {tahun:"2024",kapal:"PIS NATUNA",fleet:"Fleet Product II",pekerja:"Budi Santoso",lokasi:"Cargo Tank Area",hasil:0.14,nab:0.5},
+  {tahun:"2024",kapal:"PIS ROKAN",fleet:"Fleet Product II",pekerja:"Cahyo Pratama",lokasi:"Pump Room",hasil:0.22,nab:0.5},
+  {tahun:"2024",kapal:"KAMOJANG",fleet:"Fleet Product I",pekerja:"Eko Wahyudi",lokasi:"Engine Room",hasil:0.06,nab:0.5},
+  {tahun:"2024",kapal:"KAMOJANG",fleet:"Fleet Product I",pekerja:"Fajar Ramadhan",lokasi:"Pump Room",hasil:0.38,nab:0.5},
+  {tahun:"2024",kapal:"GAS ARIMBI",fleet:"Fleet Gas & Petchem",pekerja:"Hendra Wijaya",lokasi:"Cargo Tank Area",hasil:0.54,nab:0.5},
+  {tahun:"2024",kapal:"GAS ARIMBI",fleet:"Fleet Gas & Petchem",pekerja:"Irfan Maulana",lokasi:"Pump Room",hasil:0.48,nab:0.5},
+  {tahun:"2024",kapal:"GAS ARIMBI",fleet:"Fleet Gas & Petchem",pekerja:"Joko Susilo",lokasi:"Main Deck",hasil:0.19,nab:0.5},
+  {tahun:"2024",kapal:"MT GAMALAMA",fleet:"Fleet Crude",pekerja:"Kurniawan Adi",lokasi:"Engine Room",hasil:0.04,nab:0.5},
+  {tahun:"2024",kapal:"TRANSKO BIMA",fleet:"Fleet Gas & Petchem",pekerja:"Muhamad Ilham",lokasi:"Cargo Tank Area",hasil:0.61,nab:0.5},
+  /* 2025 */
+  {tahun:"2026",kapal:"PIS NATUNA",fleet:"Fleet Product II",pekerja:"Ahmad Fauzi",lokasi:"Pump Room",hasil:0.06,nab:0.5},
+  {tahun:"2026",kapal:"PIS NATUNA",fleet:"Fleet Product II",pekerja:"Budi Santoso",lokasi:"Cargo Tank Area",hasil:0.11,nab:0.5},
+  {tahun:"2026",kapal:"PIS ROKAN",fleet:"Fleet Product II",pekerja:"Cahyo Pratama",lokasi:"Pump Room",hasil:0.18,nab:0.5},
+  {tahun:"2026",kapal:"KAMOJANG",fleet:"Fleet Product I",pekerja:"Eko Wahyudi",lokasi:"Engine Room",hasil:0.05,nab:0.5},
+  {tahun:"2026",kapal:"KAMOJANG",fleet:"Fleet Product I",pekerja:"Fajar Ramadhan",lokasi:"Pump Room",hasil:0.29,nab:0.5},
+  {tahun:"2026",kapal:"GAS ARIMBI",fleet:"Fleet Gas & Petchem",pekerja:"Hendra Wijaya",lokasi:"Cargo Tank Area",hasil:0.44,nab:0.5},
+  {tahun:"2026",kapal:"GAS ARIMBI",fleet:"Fleet Gas & Petchem",pekerja:"Irfan Maulana",lokasi:"Pump Room",hasil:0.38,nab:0.5},
+  {tahun:"2026",kapal:"GAS ARIMBI",fleet:"Fleet Gas & Petchem",pekerja:"Joko Susilo",lokasi:"Main Deck",hasil:0.14,nab:0.5},
+  {tahun:"2026",kapal:"MT GAMALAMA",fleet:"Fleet Crude",pekerja:"Kurniawan Adi",lokasi:"Engine Room",hasil:0.03,nab:0.5},
+  {tahun:"2026",kapal:"TRANSKO BIMA",fleet:"Fleet Gas & Petchem",pekerja:"Muhamad Ilham",lokasi:"Cargo Tank Area",hasil:0.49,nab:0.5},
+  {tahun:"2026",kapal:"PATRA TANKER II",fleet:"Fleet Product II",pekerja:"Otto Pribadi",lokasi:"Pump Room",hasil:0.16,nab:0.5},
+  {tahun:"2026",kapal:"PATRA TANKER II",fleet:"Fleet Product II",pekerja:"Pandu Kusuma",lokasi:"Cargo Tank Area",hasil:0.21,nab:0.5},
+];
+
+/* Working data */
+var rawBiomarker=[...RAW_BIOMARKER];
+var rawPersonal=[...RAW_PERSONAL_BENZENE];
+var filteredBiomarker=[...rawBiomarker];
+var filteredPersonal=[...rawPersonal];
+var bioCurrentTab='biomarker';
+var bioDistChart=null, bioTrendChart=null;
+
+/* ── STATUS HELPER ── */
+function bioStatus(pct){
+  if(pct<50) return 'normal';
+  if(pct<100) return 'perhatian';
+  return 'melebihi';
+}
+function bioStatusBadge(status){
+  if(status==='normal')    return '<span class="bio-status-normal">✓ Normal</span>';
+  if(status==='perhatian') return '<span class="bio-status-perhatian">⚠ Perhatian</span>';
+  return '<span class="bio-status-melebihi">⛔ Melebihi</span>';
+}
+function bioBarColor(status){
+  if(status==='normal')    return '#43A047';
+  if(status==='perhatian') return '#FF8F00';
+  return '#C62828';
+}
+
+/* ── TAB SWITCH ── */
+function switchBioTab(tab){
+  bioCurrentTab=tab;
+  document.querySelectorAll('.bio-tab').forEach(function(b){b.classList.remove('active');});
+  document.getElementById(tab==='biomarker'?'bioTabBiomarker':'bioTabPersonal').classList.add('active');
+  /* Update ref label */
+  var refEl=document.getElementById('bioRefLabel');
+  if(refEl) refEl.textContent=tab==='biomarker'
+    ?'BEI ACGIH 2024: S-PMA ≤ 25 µg/g kreatinin'
+    :'NAB Kemenaker No.5/2018: Benzene ≤ 0.5 ppm';
+  /* Update table title */
+  var ttl=document.getElementById('bioTableTitle');
+  if(ttl) ttl.innerHTML=tab==='biomarker'
+    ?'<i class="fas fa-flask-vial"></i> Data Biomarker Benzene (Urin)'
+    :'<i class="fas fa-wind"></i> Data Benzene Personal (Udara)';
+  renderBioPage();
+}
+window.switchBioTab=switchBioTab;
+
+/* ── FILTER ── */
+function applyBioFilters(){
+  var tahun=document.getElementById('bio-filter-tahun').value;
+  var fleet=document.getElementById('bio-filter-fleet').value;
+  var kapal=document.getElementById('bio-filter-kapal').value;
+  var modul=document.getElementById('bio-filter-modul').value;
+  if(modul) bioCurrentTab=modul;
+  function filt(arr){
+    return arr.filter(function(r){
+      return (!tahun||r.tahun===tahun)
+          &&(!fleet||r.fleet===fleet)
+          &&(!kapal||r.kapal===kapal);
+    });
+  }
+  filteredBiomarker=filt(rawBiomarker);
+  filteredPersonal=filt(rawPersonal);
+  renderBioPage();
+}
+function clearBioFilters(){
+  ['bio-filter-tahun','bio-filter-fleet','bio-filter-kapal'].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.value='';
+  });
+  filteredBiomarker=[...rawBiomarker];
+  filteredPersonal=[...rawPersonal];
+  renderBioPage();
+}
+window.applyBioFilters=applyBioFilters;
+window.clearBioFilters=clearBioFilters;
+
+/* ── SHIP FILTER POPULATE ── */
+function bioPopulateKapalFilter(){
+  var sel=document.getElementById('bio-filter-kapal');
+  if(!sel)return;
+  var all=[...rawBiomarker,...rawPersonal];
+  var ships=[...new Set(all.map(function(r){return r.kapal;}))].sort();
+  sel.innerHTML='<option value="">Semua Kapal</option>';
+  ships.forEach(function(s){
+    var o=document.createElement('option');
+    o.value=s;o.textContent=s;sel.appendChild(o);
+  });
+}
+
+/* ── MAIN RENDER ── */
+function renderBioPage(){
+  var isBiomarker=bioCurrentTab==='biomarker';
+  var data=isBiomarker?filteredBiomarker:filteredPersonal;
+
+  /* Compute per-row status */
+  var rows=data.map(function(r){
+    var val=isBiomarker?r.kreatinin:r.hasil;
+    var ref=isBiomarker?r.rujukan:r.nab;
+    var pct=ref?Math.round(val/ref*100):0;
+    var st=bioStatus(pct);
+    return Object.assign({},r,{val:val,ref:ref,pct:pct,st:st});
+  });
+
+  /* KPIs */
+  var total=rows.length;
+  var normal=rows.filter(function(r){return r.st==='normal';}).length;
+  var perhatian=rows.filter(function(r){return r.st==='perhatian';}).length;
+  var melebihi=rows.filter(function(r){return r.st==='melebihi';}).length;
+  var kapalSet=new Set(rows.map(function(r){return r.kapal;})).size;
+  var pct=total?Math.round((normal/total)*100):0;
+
+  function setEl(id,v){var el=document.getElementById(id);if(el)el.textContent=v;}
+  setEl('bioKpiTotal',total);
+  setEl('bioKpiNormal',normal);
+  setEl('bioKpiPerhatian',perhatian);
+  setEl('bioKpiMelebihi',melebihi);
+  setEl('bioKpiKapal',kapalSet);
+  setEl('bioKpiPct',pct+'%');
+  var nlbl=document.getElementById('bioKpiNormalLbl');
+  var mlbl=document.getElementById('bioKpiMelebihiLbl');
+  if(nlbl)nlbl.textContent=isBiomarker?'Di Bawah BEI':'Di Bawah NAB';
+  if(mlbl)mlbl.textContent=isBiomarker?'Melebihi BEI':'Melebihi NAB';
+
+  /* Table head */
+  var thead=document.getElementById('bioTableHead');
+  if(thead){
+    if(isBiomarker){
+      thead.innerHTML='<tr><th>Kapal</th><th>Fleet</th><th>Nama Pekerja</th><th>Tahun</th>'
+        +'<th>Nilai (µg/g kreat.)</th><th>Rujukan BEI</th><th>% BEI</th><th>Status</th></tr>';
+    } else {
+      thead.innerHTML='<tr><th>Kapal</th><th>Fleet</th><th>Nama Pekerja</th><th>Tahun</th>'
+        +'<th>Lokasi</th><th>Hasil (ppm)</th><th>NAB (ppm)</th><th>% NAB</th><th>Status</th></tr>';
+    }
+  }
+
+  /* Table body */
+  var tbody=document.getElementById('bioTableBody');
+  if(tbody){
+    if(!rows.length){
+      tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--text-muted)">Tidak ada data</td></tr>';
+    } else {
+      tbody.innerHTML=rows.map(function(r){
+        var bar='<div class="bio-bar-wrap"><div class="bio-bar" style="width:'+Math.min(r.pct,100)+'%;background:'+bioBarColor(r.st)+'"></div></div>';
+        if(isBiomarker){
+          return '<tr>'
+            +'<td><strong style="color:var(--text)">'+esc(r.kapal)+'</strong></td>'
+            +'<td>'+esc(r.fleet)+'</td>'
+            +'<td>'+esc(r.pekerja)+'</td>'
+            +'<td><span style="background:var(--blue-bg);color:var(--blue);padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700">'+r.tahun+'</span></td>'
+            +'<td><strong style="color:var(--text)">'+r.val.toFixed(1)+'</strong>'+bar+'</td>'
+            +'<td>'+r.ref+'</td>'
+            +'<td><strong style="color:'+bioBarColor(r.st)+'">'+r.pct+'%</strong></td>'
+            +'<td>'+bioStatusBadge(r.st)+'</td>'
+            +'</tr>';
+        } else {
+          return '<tr>'
+            +'<td><strong style="color:var(--text)">'+esc(r.kapal)+'</strong></td>'
+            +'<td>'+esc(r.fleet)+'</td>'
+            +'<td>'+esc(r.pekerja)+'</td>'
+            +'<td><span style="background:var(--blue-bg);color:var(--blue);padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700">'+r.tahun+'</span></td>'
+            +'<td>'+esc(r.lokasi)+'</td>'
+            +'<td><strong style="color:var(--text)">'+r.val.toFixed(2)+'</strong>'+bar+'</td>'
+            +'<td>'+r.ref+'</td>'
+            +'<td><strong style="color:'+bioBarColor(r.st)+'">'+r.pct+'%</strong></td>'
+            +'<td>'+bioStatusBadge(r.st)+'</td>'
+            +'</tr>';
+        }
+      }).join('');
+    }
+    var footer=document.getElementById('bioTableFooter');
+    if(footer)footer.textContent='Menampilkan '+rows.length+' data';
+    var cnt=document.getElementById('bioTableCount');
+    if(cnt)cnt.textContent=rows.length+' data';
+  }
+
+  /* Alert panel */
+  var alertPanel=document.getElementById('bioAlertPanel');
+  var alertList=document.getElementById('bioAlertList');
+  var alertTitle=document.getElementById('bioAlertTitle');
+  var melebihiRows=rows.filter(function(r){return r.st==='melebihi';});
+  if(alertPanel){
+    alertPanel.style.display=melebihiRows.length?'block':'none';
+  }
+  if(alertTitle && melebihiRows.length){
+    alertTitle.textContent=melebihiRows.length+' Pekerja dengan Nilai Melebihi '+(isBiomarker?'BEI':'NAB')+' — Perlu Tindak Lanjut Medis';
+  }
+  if(alertList){
+    alertList.innerHTML=melebihiRows.map(function(r){
+      return '<div class="bio-alert-item">'
+        +'<div><div class="bio-alert-name">'+esc(r.pekerja)+'</div>'
+        +'<div class="bio-alert-kapal">'+esc(r.kapal)+' · '+r.fleet+' · '+r.tahun+'</div></div>'
+        +(isBiomarker?'':'<div style="font-size:11px;color:var(--text-muted)">'+esc(r.lokasi)+'</div>')
+        +'<div class="bio-alert-val">'+(isBiomarker?r.val.toFixed(1)+' µg/g':r.val.toFixed(2)+' ppm')+'<br>'
+        +'<span style="font-size:10px;font-weight:500;color:#C62828">'+(r.pct)+'% dari '+(isBiomarker?'BEI':'NAB')+'</span></div>'
+        +'</div>';
+    }).join('');
+  }
+
+  /* Charts */
+  renderBioDistChart(rows,isBiomarker);
+  renderBioTrendChart(isBiomarker);
+}
+
+/* ── DISTRIBUTION CHART ── */
+function renderBioDistChart(rows,isBiomarker){
+  var ctx=document.getElementById('bioDistChart');
+  if(!ctx)return;
+  if(bioDistChart){bioDistChart.destroy();bioDistChart=null;}
+  var normal=rows.filter(function(r){return r.st==='normal';}).length;
+  var perhatian=rows.filter(function(r){return r.st==='perhatian';}).length;
+  var melebihi=rows.filter(function(r){return r.st==='melebihi';}).length;
+  bioDistChart=new Chart(ctx,{
+    type:'doughnut',
+    data:{
+      labels:['Normal / Aman','Perhatian (50–99%)','Melebihi '+(isBiomarker?'BEI':'NAB')],
+      datasets:[{data:[normal,perhatian,melebihi],backgroundColor:['#43A047','#FF8F00','#C62828'],
+        borderWidth:2,borderColor:'#fff'}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:12}}}}
+  });
+}
+
+/* ── TREND COMPARISON CHART 2023 vs 2025 ── */
+function renderBioTrendChart(isBiomarker){
+  var ctx=document.getElementById('bioTrendChart');
+  if(!ctx)return;
+  if(bioTrendChart){bioTrendChart.destroy();bioTrendChart=null;}
+  var src=isBiomarker?rawBiomarker:rawPersonal;
+  var kapalSet=[...new Set(src.map(function(r){return r.kapal;}))].sort();
+  /* For each kapal, average value per year */
+  var avg2023=[],avg2025=[];
+  kapalSet.forEach(function(k){
+    var r23=src.filter(function(r){return r.kapal===k&&r.tahun==='2023';});
+    var r25=src.filter(function(r){return r.kapal===k&&r.tahun==='2025';});
+    var getVal=function(r){return isBiomarker?r.kreatinin:r.hasil;};
+    var mean=function(arr){return arr.length?arr.reduce(function(s,r){return s+getVal(r);},0)/arr.length:null;};
+    avg2023.push(r23.length?parseFloat(mean(r23).toFixed(2)):null);
+    avg2025.push(r25.length?parseFloat(mean(r25).toFixed(2)):null);
+  });
+  /* Shorten kapal labels */
+  var labels=kapalSet.map(function(k){return k.length>12?k.substring(0,11)+'…':k;});
+  bioTrendChart=new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels:labels,
+      datasets:[
+        {label:'2023',data:avg2023,backgroundColor:'rgba(21,101,192,.65)',borderColor:'#1565C0',borderWidth:1.5},
+        {label:'2025',data:avg2025,backgroundColor:'rgba(67,160,71,.65)',borderColor:'#43A047',borderWidth:1.5},
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'top',labels:{font:{size:11}}},
+        tooltip:{callbacks:{label:function(ctx){
+          return ctx.dataset.label+': '+(ctx.raw!==null?ctx.raw+(isBiomarker?' µg/g':' ppm'):'Tidak ada data');
+        }}}
+      },
+      scales:{
+        y:{
+          title:{display:true,text:isBiomarker?'µg/g kreatinin':'ppm',font:{size:10}},
+          grid:{color:'rgba(0,0,0,.06)'},
+          ticks:{font:{size:10}},
+          /* Draw BEI/NAB line */
+        },
+        x:{ticks:{font:{size:9},maxRotation:45}},
+      },
+      /* Reference line annotation via borderDash workaround */
+    }
+  });
+  /* Add reference line manually after render */
+  var refVal=isBiomarker?25:0.5;
+  Chart.register({id:'bioRefLine',afterDraw:function(chart){
+    if(!chart.canvas.id==='bioTrendChart')return;
+    var ctx2=chart.ctx;
+    var yScale=chart.scales.y;
+    if(!yScale)return;
+    var y=yScale.getPixelForValue(refVal);
+    ctx2.save();
+    ctx2.beginPath();
+    ctx2.moveTo(chart.chartArea.left,y);
+    ctx2.lineTo(chart.chartArea.right,y);
+    ctx2.strokeStyle='#C62828';
+    ctx2.lineWidth=1.5;
+    ctx2.setLineDash([5,4]);
+    ctx2.stroke();
+    ctx2.fillStyle='#C62828';
+    ctx2.font='10px Arial';
+    ctx2.fillText((isBiomarker?'BEI':'NAB')+' '+refVal+(isBiomarker?' µg/g':' ppm'),chart.chartArea.left+4,y-4);
+    ctx2.restore();
+  }});
+}
+
+/* ── SEARCH ── */
+function searchBioTable(){
+  var q=(document.getElementById('bioSearch').value||'').toLowerCase();
+  var isBiomarker=bioCurrentTab==='biomarker';
+  var src=isBiomarker?filteredBiomarker:filteredPersonal;
+  var filtered=q?src.filter(function(r){
+    return (r.kapal||'').toLowerCase().includes(q)||(r.pekerja||'').toLowerCase().includes(q);
+  }):src;
+  /* Temporarily override for table render */
+  if(isBiomarker)filteredBiomarker=filtered; else filteredPersonal=filtered;
+  renderBioPage();
+  /* Restore */
+  if(isBiomarker)filteredBiomarker=src; else filteredPersonal=src;
+}
+window.searchBioTable=searchBioTable;
+
+/* ── INIT ── */
+function initBiomonitoring(){
+  rawBiomarker=[...RAW_BIOMARKER];
+  rawPersonal=[...RAW_PERSONAL_BENZENE];
+  filteredBiomarker=[...rawBiomarker];
+  filteredPersonal=[...rawPersonal];
+  bioPopulateKapalFilter();
+  renderBioPage();
+}
+
+/* ── FETCH BIOMONITORING FROM GAS ── */
+async function fetchBiomonitoring(){
+  try{
+    var data=await gasPost({action:"biomonitoring",token:getToken()});
+    if(!data||data.status==="error"||data.status==="unauthorized") throw new Error("GAS error");
+
+    /* ── BIOMARKER BENZENE ── */
+    if(data.data&&data.data.biomarker&&data.data.biomarker.length>0){
+      rawBiomarker=data.data.biomarker.map(function(r){
+        var val=parseFloat(r["kreatinin_ugpg"]||r["Kreatinin (µg/g kreat.)"]||r["kreatinin"]||0);
+        var ref=parseFloat(r["nilai_rujukan_bei"]||r["Nilai Rujukan BEI"]||r["rujukan"]||25);
+        return {
+          tahun:  String(r["tahun"]||r["Tahun"]||"").trim(),
+          kapal:  (r["nama_kapal"]||r["Nama Kapal"]||"").trim(),
+          fleet:  (r["fleet"]||r["Fleet"]||"").trim(),
+          pekerja:(r["nama_pekerja"]||r["Nama Pekerja"]||"").trim(),
+          kreatinin: isNaN(val)?0:val,
+          rujukan:   isNaN(ref)?25:ref
+        };
+      }).filter(function(r){return r.kapal&&r.pekerja;});
+      filteredBiomarker=[...rawBiomarker];
+      console.log("Biomarker: "+rawBiomarker.length+" data dari GAS ✅");
+    } else {
+      /* Fallback ke dummy data */
+      rawBiomarker=[...RAW_BIOMARKER];
+      filteredBiomarker=[...rawBiomarker];
+    }
+
+    /* ── BENZENE PERSONAL ── */
+    if(data.data&&data.data.personal&&data.data.personal.length>0){
+      rawPersonal=data.data.personal.map(function(r){
+        var val=parseFloat(r["hasil_ppm"]||r["Hasil (ppm)"]||r["hasil"]||0);
+        var nab=parseFloat(r["nab_ppm"]||r["NAB (ppm)"]||r["nab"]||0.5);
+        return {
+          tahun:  String(r["tahun"]||r["Tahun"]||"").trim(),
+          kapal:  (r["nama_kapal"]||r["Nama Kapal"]||"").trim(),
+          fleet:  (r["fleet"]||r["Fleet"]||"").trim(),
+          pekerja:(r["nama_pekerja"]||r["Nama Pekerja"]||"").trim(),
+          lokasi: (r["lokasi_pengukuran"]||r["Lokasi Pengukuran"]||r["lokasi"]||"").trim(),
+          hasil:  isNaN(val)?0:val,
+          nab:    isNaN(nab)?0.5:nab
+        };
+      }).filter(function(r){return r.kapal&&r.pekerja;});
+      filteredPersonal=[...rawPersonal];
+      console.log("Benzene Personal: "+rawPersonal.length+" data dari GAS ✅");
+    } else {
+      rawPersonal=[...RAW_PERSONAL_BENZENE];
+      filteredPersonal=[...rawPersonal];
+    }
+
+    /* Update dropdown kapal & re-render jika halaman aktif */
+    bioPopulateKapalFilter();
+    var pgBio=document.getElementById("page-biomonitoring");
+    if(pgBio&&pgBio.classList.contains("active")) renderBioPage();
+
+  }catch(err){
+    /* Koneksi gagal: pakai data dummy, tidak crash */
+    console.warn("fetchBiomonitoring fallback ke dummy data:", err.message);
+    rawBiomarker=[...RAW_BIOMARKER];
+    rawPersonal=[...RAW_PERSONAL_BENZENE];
+    filteredBiomarker=[...rawBiomarker];
+    filteredPersonal=[...rawPersonal];
+  }
+}
