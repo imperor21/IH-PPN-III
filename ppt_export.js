@@ -745,3 +745,315 @@ function exportPestPPT(){
     .then(function(){showToast("✅ PPT Pest & Rodent modern berhasil!","success");})
     .catch(function(e){showToast("Gagal: "+e.message,"error");});
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   EXPORT CLOSEOUT HRA & IH 2025 — 8 SLIDES
+   Slide 1: Cover
+   Slide 2: Ringkasan Eksekutif (KPI + Progress)
+   Slide 3: Close vs Open per Fleet (Bar Chart)
+   Slide 4: Distribusi HRA vs IHM (Donut)
+   Slide 5: Daftar Kapal OPEN — Prioritas Tindak Lanjut
+   Slide 6: Data Tabel Lengkap (1)
+   Slide 7: Data Tabel Lengkap (2)
+   Slide 8: Penutup & Rekomendasi
+═══════════════════════════════════════════════════════════════════ */
+function exportCloseout25PPT(){
+  if(!window.PptxGenJS){showToast("PptxGenJS belum siap, coba lagi.","error");return;}
+
+  /* Use filteredCO25 if filtered, fallback to RAW */
+  var data=(typeof filteredCO25!=="undefined"&&filteredCO25.length>0)
+    ?filteredCO25
+    :(typeof RAW_CLOSEOUT_2025!=="undefined"?RAW_CLOSEOUT_2025:[]);
+
+  if(!data.length){showToast("Tidak ada data Closeout 2025 untuk diekspor.","error");return;}
+  showToast("Menyusun PPT Closeout HRA & IH 2025...","info");
+
+  var pres=new PptxGenJS();
+  pres.layout="LAYOUT_16x9";
+  pres.author="IH Dashboard — Pertamina Patra Niaga";
+  pres.title="Closeout HRA & IH 2025";
+
+  var now=new Date();
+  var blbl="Tahun 2025 — Per "+now.toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"});
+  var MOD="Closeout HRA & IH 2025";
+  var PT=8;
+
+  /* ── KPI CALCULATIONS ── */
+  var total=data.length;
+  var closeData=data.filter(function(r){return(r.closeout||"").trim().toUpperCase()==="CLOSE";});
+  var openData =data.filter(function(r){return(r.closeout||"").trim().toUpperCase()==="OPEN";});
+  var closeCount=closeData.length;
+  var openCount =openData.length;
+  var pct=total?Math.round(closeCount/total*100):0;
+  var hraData =data.filter(function(r){return(r.jenis||"").trim().toUpperCase()==="HRA";});
+  var ihmData =data.filter(function(r){return(r.jenis||"").trim().toUpperCase()==="IHM";});
+  var hraCount=hraData.length;
+  var ihmCount=ihmData.length;
+
+  /* Fleet breakdown */
+  var fleets=["Fleet Product I","Fleet Product II","Fleet Crude","Fleet Gas & Petchem"];
+  var fleetShort=["FP I","FP II","FC","FGP"];
+  var fleetClose=fleets.map(function(f){return closeData.filter(function(r){return r.fleet===f;}).length;});
+  var fleetOpen =fleets.map(function(f){return openData.filter(function(r){return r.fleet===f;}).length;});
+  var fleetTotal=fleets.map(function(f){return data.filter(function(r){return r.fleet===f;}).length;});
+
+  /* ══════ S1: COVER ══════ */
+  addCover(pres,
+    "CLOSEOUT HRA","& IH MONITORING 2025",
+    "Status Closeout Health Risk Assessment & Industrial Hygiene — Armada Kapal Milik PIS",
+    blbl,
+    [{val:String(total),label:"Total Kapal"},{val:String(closeCount),label:"Status CLOSE"},{val:pct+"%",label:"% Closeout"}]
+  );
+
+  /* ══════ S2: RINGKASAN EKSEKUTIF ══════ */
+  (function(){
+    var s=pres.addSlide();s.background={color:C.offWhite};
+    addHdr(s,pres,"RINGKASAN EKSEKUTIF — CLOSEOUT HRA & IH 2025","Status closeout monitoring seluruh armada kapal PIS per "+now.toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"}));
+
+    /* 6 KPI cards 2 rows */
+    var kpis=[
+      {label:"Total Kapal",    val:String(total),     color:C.blue,    icon:"🚢"},
+      {label:"Status CLOSE",   val:String(closeCount),color:C.green,   icon:"✅"},
+      {label:"Status OPEN",    val:String(openCount), color:C.orange,  icon:"⏳"},
+      {label:"% Closeout",     val:pct+"%",           color:C.teal,    icon:"📊"},
+      {label:"Total HRA",      val:String(hraCount),  color:C.purple,  icon:"🫁"},
+      {label:"Total IHM",      val:String(ihmCount),  color:"1B5E8A",  icon:"🔬"},
+    ];
+    kpis.forEach(function(k,i){
+      var col=i%3,row=Math.floor(i/3);
+      kpi(s,pres,0.28+col*3.18,1.06+row*1.55,2.95,1.38,k.label,k.val,k.color,k.icon);
+    });
+
+    /* Big progress bar */
+    var pw=Math.max(0.1,9.44*(closeCount/Math.max(total,1)));
+    s.addShape(pres.ShapeType.rect,{x:0.28,y:4.18,w:9.44,h:0.32,fill:{color:C.border},line:{color:C.border},r:0.16});
+    s.addShape(pres.ShapeType.rect,{x:0.28,y:4.18,w:pw,  h:0.32,fill:{color:C.green}, line:{color:C.green},r:0.16});
+
+    s.addText("Progress Closeout: "+pct+"% ("+closeCount+" dari "+total+" kapal)",{
+      x:0.28,y:4.52,w:9.44,h:0.22,fontSize:8.5,color:C.textMuted,valign:"middle"
+    });
+
+    /* Alert box if OPEN > 0 */
+    if(openCount>0){
+      s.addShape(pres.ShapeType.rect,{x:0.28,y:4.8,w:9.44,h:0.52,fill:{color:C.orangeSoft},line:{color:C.orange,pt:1.2}});
+      s.addShape(pres.ShapeType.rect,{x:0.28,y:4.8,w:0.08,h:0.52,fill:{color:C.orange},line:{color:C.orange}});
+      s.addText("⚠  "+openCount+" kapal masih berstatus OPEN — segera tindak lanjuti pengiriman laporan & memo closeout.",{
+        x:0.45,y:4.83,w:9.1,h:0.44,fontSize:10,bold:true,color:C.goldDark,valign:"middle"
+      });
+    }
+    addFtr(s,pres,MOD,blbl,2,PT);
+  })();
+
+  /* ══════ S3: CLOSE vs OPEN PER FLEET ══════ */
+  (function(){
+    var s=pres.addSlide();s.background={color:C.offWhite};
+    addHdr(s,pres,"STATUS CLOSEOUT PER FLEET","Perbandingan jumlah CLOSE vs OPEN di setiap jenis fleet armada");
+
+    s.addChart(pres.ChartType.bar,[
+      {name:"CLOSE",labels:fleetShort,values:fleetClose},
+      {name:"OPEN", labels:fleetShort,values:fleetOpen},
+    ],{
+      x:0.3,y:1.1,w:6.5,h:4.1,barDir:"col",barGrouping:"clustered",
+      chartColors:[C.green,C.orange],
+      chartArea:{fill:{color:C.white}},
+      catAxisLabelColor:C.textMuted,valAxisLabelColor:C.textMuted,
+      valGridLine:{color:C.border,size:0.5},catGridLine:{style:"none"},
+      showValue:true,dataLabelFontSize:9,dataLabelFontBold:true,
+      showLegend:true,legendPos:"t",legendFontSize:10,
+      catAxisLabelFontSize:10,barGapWidthPct:40,
+    });
+
+    /* Right: fleet summary table */
+    var tblHdr=[["Fleet","Total","CLOSE","OPEN","%"].map(function(h){
+      return{text:h,options:{fill:{color:C.navy},color:C.white,bold:true,fontSize:9,align:"center",valign:"middle"}};
+    })];
+    var tblRows=tblHdr;
+    fleets.forEach(function(f,i){
+      var tot=fleetTotal[i],cl=fleetClose[i],op=fleetOpen[i];
+      var pctF=tot?Math.round(cl/tot*100):0;
+      var bg=i%2===0?C.offWhite:C.white;
+      tblRows.push([
+        {text:fleetShort[i],options:{fill:{color:bg},color:C.navy,bold:true,fontSize:9,align:"center",valign:"middle"}},
+        {text:String(tot),  options:{fill:{color:bg},color:C.textMid,fontSize:9,align:"center",valign:"middle"}},
+        {text:String(cl),   options:{fill:{color:bg},color:C.greenDark,bold:true,fontSize:9,align:"center",valign:"middle"}},
+        {text:String(op),   options:{fill:{color:bg},color:op>0?C.orange:C.textMuted,bold:op>0,fontSize:9,align:"center",valign:"middle"}},
+        {text:pctF+"%",     options:{fill:{color:bg},color:pctF===100?C.greenDark:C.blue,bold:true,fontSize:9,align:"center",valign:"middle"}},
+      ]);
+    });
+    s.addTable(tblRows,{x:7.0,y:1.1,w:2.75,h:2.2,colW:[0.7,0.5,0.5,0.5,0.55],border:{pt:0.5,color:C.border},rowH:0.38});
+
+    /* Legend boxes */
+    [[C.green,"CLOSE = Laporan & memo sudah terkirim"],[C.orange,"OPEN = Belum ada konfirmasi penerimaan"]].forEach(function(item,i){
+      s.addShape(pres.ShapeType.rect,{x:7.0,y:3.5+i*0.55,w:2.75,h:0.45,fill:{color:i===0?C.greenSoft:C.orangeSoft},line:{color:item[0],pt:0.8}});
+      s.addShape(pres.ShapeType.rect,{x:7.0,y:3.5+i*0.55,w:0.08,h:0.45,fill:{color:item[0]},line:{color:item[0]}});
+      s.addText(item[1],{x:7.12,y:3.52+i*0.55,w:2.58,h:0.38,fontSize:8.5,color:C.textMid,valign:"middle"});
+    });
+    addFtr(s,pres,MOD,blbl,3,PT);
+  })();
+
+  /* ══════ S4: DISTRIBUSI HRA vs IHM + DONUT ══════ */
+  (function(){
+    var s=pres.addSlide();s.background={color:C.offWhite};
+    addHdr(s,pres,"DISTRIBUSI JENIS MONITORING & STATUS","Proporsi HRA vs IHM dan status closeout keseluruhan");
+
+    /* Donut 1 — CLOSE vs OPEN */
+    s.addChart(pres.ChartType.doughnut,[{name:"Status",labels:["CLOSE","OPEN"],values:[closeCount,openCount]}],{
+      x:0.2,y:1.1,w:4.5,h:4.1,
+      chartColors:[C.green,C.orange],
+      chartArea:{fill:{color:C.white}},
+      showPercent:true,showLegend:true,legendPos:"b",legendFontSize:10,
+      dataLabelFontSize:11,dataLabelFontBold:true,holeSize:58,
+      title:"Close vs Open",showTitle:true,titleFontSize:11,titleColor:C.navy,
+    });
+
+    /* Donut 2 — HRA vs IHM */
+    s.addChart(pres.ChartType.doughnut,[{name:"Jenis",labels:["HRA","IHM"],values:[hraCount,ihmCount]}],{
+      x:4.9,y:1.1,w:4.5,h:4.1,
+      chartColors:[C.purple,"1B5E8A"],
+      chartArea:{fill:{color:C.white}},
+      showPercent:true,showLegend:true,legendPos:"b",legendFontSize:10,
+      dataLabelFontSize:11,dataLabelFontBold:true,holeSize:58,
+      title:"HRA vs IHM",showTitle:true,titleFontSize:11,titleColor:C.navy,
+    });
+
+    /* Summary text */
+    var closedHRA=hraData.filter(function(r){return(r.closeout||"").trim().toUpperCase()==="CLOSE";}).length;
+    var closedIHM=ihmData.filter(function(r){return(r.closeout||"").trim().toUpperCase()==="CLOSE";}).length;
+    var pctHRA=hraCount?Math.round(closedHRA/hraCount*100):0;
+    var pctIHM=ihmCount?Math.round(closedIHM/ihmCount*100):0;
+
+    [
+      {x:0.2,w:4.5,label:"HRA: "+closedHRA+"/"+hraCount+" CLOSE ("+pctHRA+"%)"},
+      {x:4.9,w:4.5,label:"IHM: "+closedIHM+"/"+ihmCount+" CLOSE ("+pctIHM+"%)"},
+    ].forEach(function(box){
+      s.addShape(pres.ShapeType.rect,{x:box.x,y:5.1,w:box.w,h:0.35,fill:{color:C.blueLight},line:{color:C.blue,pt:0.8}});
+      s.addText(box.label,{x:box.x+0.1,y:5.13,w:box.w-0.2,h:0.28,fontSize:9.5,bold:true,color:C.blue,align:"center",valign:"middle"});
+    });
+    addFtr(s,pres,MOD,blbl,4,PT);
+  })();
+
+  /* ══════ S5: DAFTAR KAPAL OPEN ══════ */
+  (function(){
+    var s=pres.addSlide();s.background={color:C.offWhite};
+    addHdr(s,pres,"DAFTAR KAPAL OPEN — PRIORITAS TINDAK LANJUT","Kapal yang belum mengirimkan konfirmasi penerimaan laporan & memo HRA/IHM");
+
+    if(!openCount){
+      s.addShape(pres.ShapeType.rect,{x:0.3,y:1.2,w:9.4,h:3.6,fill:{color:C.greenSoft},line:{color:C.green,pt:1}});
+      s.addText("🎉  Semua kapal sudah berstatus CLOSE!\nSeluruh "+total+" kapal telah mengkonfirmasi penerimaan laporan & memo HRA/IHM.",{
+        x:0.3,y:1.2,w:9.4,h:3.6,fontSize:16,bold:true,color:C.greenDark,align:"center",valign:"middle"
+      });
+    } else {
+      /* Alert banner */
+      s.addShape(pres.ShapeType.rect,{x:0.28,y:1.08,w:9.44,h:0.44,fill:{color:C.orangeSoft},line:{color:C.orange,pt:1}});
+      s.addShape(pres.ShapeType.rect,{x:0.28,y:1.08,w:0.08,h:0.44,fill:{color:C.orange},line:{color:C.orange}});
+      s.addText("⚠  "+openCount+" kapal masih OPEN — segera hubungi nakhoda / ship management untuk konfirmasi penerimaan.",{
+        x:0.42,y:1.1,w:9.2,h:0.4,fontSize:9.5,bold:true,color:C.goldDark,valign:"middle"
+      });
+
+      /* Table of OPEN ships */
+      var hdr=[["No","Nama Kapal","Jenis","Fleet","Status Monitoring","Laporan & Memo"].map(function(h){
+        return{text:h,options:{fill:{color:C.orange},color:C.white,bold:true,fontSize:9,align:"center",valign:"middle"}};
+      })];
+      var rows=hdr;
+      openData.forEach(function(r,i){
+        var bg=i%2===0?C.offWhite:C.white;
+        rows.push([
+          {text:String(i+1),            options:{fill:{color:bg},color:C.textMuted,fontSize:8.5,align:"center",valign:"middle"}},
+          {text:r.kapal||"—",           options:{fill:{color:bg},color:C.navy,bold:true,fontSize:8.5,align:"left",valign:"middle"}},
+          {text:(r.jenis||"—").trim(),  options:{fill:{color:bg},color:C.textMid,fontSize:8.5,align:"center",valign:"middle"}},
+          {text:r.fleet||"—",           options:{fill:{color:bg},color:C.textMid,fontSize:8.5,align:"left",valign:"middle"}},
+          {text:r.statusMon||"—",       options:{fill:{color:bg},color:C.green,fontSize:8.5,align:"left",valign:"middle"}},
+          {text:r.laporan||"—",         options:{fill:{color:"FFF3E5"},color:C.orange,bold:true,fontSize:8.5,align:"left",valign:"middle"}},
+        ]);
+      });
+
+      var maxRows=Math.min(rows.length,17);
+      s.addTable(rows.slice(0,maxRows),{x:0.28,y:1.58,w:9.44,h:3.65,
+        colW:[0.4,2.1,0.65,1.7,1.8,2.79],border:{pt:0.5,color:C.border},rowH:0.27});
+
+      if(openData.length>16){
+        s.addText("... dan "+(openData.length-16)+" kapal OPEN lainnya — lihat Slide 7 untuk data lengkap.",{
+          x:0.28,y:5.22,w:9.44,h:0.18,fontSize:8,color:C.textMuted,italic:true
+        });
+      }
+    }
+    addFtr(s,pres,MOD,blbl,5,PT);
+  })();
+
+  /* ══════ S6: DATA TABEL CLOSEOUT — Bagian 1 ══════ */
+  (function(){
+    var s=pres.addSlide();s.background={color:C.offWhite};
+    addHdr(s,pres,"DATA CLOSEOUT HRA & IH 2025 — Bagian 1","Rekap status closeout seluruh kapal (baris 1 – 35)");
+
+    var hdr=[["No","Nama Kapal","Jenis","Fleet","Status Closeout"].map(function(h){
+      return{text:h,options:{fill:{color:C.navy},color:C.white,bold:true,fontSize:9,align:"center",valign:"middle"}};
+    })];
+    var rows=hdr;
+    var batch1=data.slice(0,35);
+    batch1.forEach(function(r,i){
+      var isCl=(r.closeout||"").trim().toUpperCase()==="CLOSE";
+      var bg=i%2===0?C.offWhite:C.white;
+      rows.push([
+        {text:String(i+1),         options:{fill:{color:bg},color:C.textMuted,fontSize:8.5,align:"center",valign:"middle"}},
+        {text:r.kapal||"—",        options:{fill:{color:bg},color:C.navy,bold:true,fontSize:8.5,align:"left",valign:"middle"}},
+        {text:(r.jenis||"—").trim(),options:{fill:{color:bg},color:C.textMid,fontSize:8.5,align:"center",valign:"middle"}},
+        {text:r.fleet||"—",        options:{fill:{color:bg},color:C.textMid,fontSize:8.5,align:"left",valign:"middle"}},
+        {text:isCl?"✓ CLOSE":"⏳ OPEN",options:{fill:{color:isCl?C.greenSoft:C.orangeSoft},color:isCl?C.greenDark:C.orange,bold:true,fontSize:8.5,align:"center",valign:"middle"}},
+      ]);
+    });
+    s.addTable(rows,{x:0.28,y:1.08,w:9.44,h:4.15,colW:[0.42,2.6,0.7,3.14,1.58],border:{pt:0.5,color:C.border},rowH:0.2});
+    s.addText("Menampilkan "+(Math.min(35,total))+" dari "+total+" entri.",{x:0.28,y:5.2,w:9.44,h:0.18,fontSize:8,color:C.textMuted,italic:true});
+    addFtr(s,pres,MOD,blbl,6,PT);
+  })();
+
+  /* ══════ S7: DATA TABEL CLOSEOUT — Bagian 2 ══════ */
+  (function(){
+    var s=pres.addSlide();s.background={color:C.offWhite};
+    addHdr(s,pres,"DATA CLOSEOUT HRA & IH 2025 — Bagian 2","Rekap status closeout seluruh kapal (baris 36 – "+total+")");
+
+    var hdr=[["No","Nama Kapal","Jenis","Fleet","Status Closeout"].map(function(h){
+      return{text:h,options:{fill:{color:C.navy},color:C.white,bold:true,fontSize:9,align:"center",valign:"middle"}};
+    })];
+    var rows=hdr;
+    var batch2=data.slice(35);
+
+    if(!batch2.length){
+      s.addText("(Semua data sudah ditampilkan di slide sebelumnya)",{
+        x:0.28,y:2.5,w:9.44,h:0.4,fontSize:12,color:C.textMuted,italic:true,align:"center"
+      });
+    } else {
+      batch2.forEach(function(r,i){
+        var isCl=(r.closeout||"").trim().toUpperCase()==="CLOSE";
+        var bg=i%2===0?C.offWhite:C.white;
+        rows.push([
+          {text:String(i+36),        options:{fill:{color:bg},color:C.textMuted,fontSize:8.5,align:"center",valign:"middle"}},
+          {text:r.kapal||"—",        options:{fill:{color:bg},color:C.navy,bold:true,fontSize:8.5,align:"left",valign:"middle"}},
+          {text:(r.jenis||"—").trim(),options:{fill:{color:bg},color:C.textMid,fontSize:8.5,align:"center",valign:"middle"}},
+          {text:r.fleet||"—",        options:{fill:{color:bg},color:C.textMid,fontSize:8.5,align:"left",valign:"middle"}},
+          {text:isCl?"✓ CLOSE":"⏳ OPEN",options:{fill:{color:isCl?C.greenSoft:C.orangeSoft},color:isCl?C.greenDark:C.orange,bold:true,fontSize:8.5,align:"center",valign:"middle"}},
+        ]);
+      });
+      s.addTable(rows,{x:0.28,y:1.08,w:9.44,h:4.15,colW:[0.42,2.6,0.7,3.14,1.58],border:{pt:0.5,color:C.border},rowH:0.2});
+    }
+    s.addText("Total: "+closeCount+" CLOSE ✓  |  "+openCount+" OPEN ⏳  |  Progress "+pct+"%",{
+      x:0.28,y:5.2,w:9.44,h:0.18,fontSize:9,bold:true,color:C.navy
+    });
+    addFtr(s,pres,MOD,blbl,7,PT);
+  })();
+
+  /* ══════ S8: PENUTUP & REKOMENDASI ══════ */
+  addClosing(pres,MOD,blbl,[
+    "Percepat follow-up kepada "+openCount+" kapal yang masih berstatus OPEN",
+    "Konfirmasi penerimaan laporan HRA/IHM via email resmi ship management",
+    "Update status closeout di Google Sheets segera setelah konfirmasi diterima",
+    "Target 100% closeout sebelum tutup buku monitoring tahun 2025",
+  ],
+  "Follow-up closeout dilakukan secara periodik tiap minggu hingga seluruh "+total+" kapal berstatus CLOSE. Update data langsung di Google Sheets Closeout_25 agar dashboard otomatis terupdate.",
+  8,PT);
+
+  /* ── WRITE FILE ── */
+  var fname="Closeout_HRA_IH_2025_"+now.toISOString().slice(0,10)+".pptx";
+  pres.writeFile({fileName:fname})
+    .then(function(){showToast("✅ PPT Closeout 2025 berhasil didownload!","success");})
+    .catch(function(e){showToast("Gagal membuat PPT: "+e.message,"error");});
+}
