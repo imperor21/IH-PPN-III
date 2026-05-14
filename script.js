@@ -3,7 +3,7 @@
 /* ✅ Pedoman PDF & Foto Dokumentasi → Google Drive (multi-device)    */
 /* ✅ IndexedDB dihapus — data terpusat di GAS/Drive                  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbzaeYbZypyQ5sC8-OI-Xp0aR8hpsT-Bat3MFz6VgbR_D3F3uC3xwDlRV184u4GNoo7TAg/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzqCyLLFs-rLkahFThbzxIDWCpeoCjv_cvRZqw00_28Q96W6BerasPhmCaV8_Qel2lrPQ/exec";
 
 async function gasPost(payload) {
   const controller = new AbortController();
@@ -1324,75 +1324,32 @@ function togglePsikoChartType(btn,type){psikoChartType=type;btn.closest(".pill-g
    Zona: Bridge · Cargo Tank · Engine Room · Pump Room · Forecastle
 ════════════════════════════════════════════════════════════════ */
 
-/* ── Per-zone hazard data (default for all ships) ── */
+/* ── Per-zone hazard data — COMING SOON (data aktual belum tersedia) ── */
 var HCV_ZONE_DATA = {
   bridge:{
     name:'Akomodasi & Anjungan', nameEn:'Accommodation & Navigation Bridge',
-    risk:'MODERATE', rc:'#FF8F00', rb:'rgba(255,143,0,.15)',
-    hazards:[
-      {n:'Kebisingan',v:'72–78 dB(A)',nab:'85 dB(A)',st:'a',c:'#43A047'},
-      {n:'Ergonomi (REBA)',v:'Skor 5–6',nab:'Skor <7',st:'p',c:'#FF8F00'},
-      {n:'Indoor Air Quality',v:'CO₂ 600–800 ppm',nab:'<1000 ppm',st:'a',c:'#43A047'},
-      {n:'Psikososial / Fatigue',v:'Sedang',nab:'Rendah',st:'p',c:'#FF8F00'},
-      {n:'Pencahayaan Malam',v:'3–5 lux',nab:'<5 lux (nav)',st:'a',c:'#43A047'},
-    ],
-    ctrl:['Hearing protection di zona bising','Ergonomic workstation adjustable','AC & ventilasi HVAC memadai','Fatigue Risk Management System'],
-    act:['Navigasi & watch keeping','Komunikasi radio','Administrasi & charting'],
-    reg:'Permenaker No.5/2018 Tabel 1,3 · MLC 2006 Reg.2.3'
+    risk:'SOON', rc:'#9E9E9E', rb:'rgba(158,158,158,.12)',
+    hazards:[], ctrl:[], act:[], reg:''
   },
   cargo:{
     name:'Cargo Tank Area', nameEn:'Cargo Tank Area (Typical)',
-    risk:'EXTREME', rc:'#B71C1C', rb:'rgba(183,28,28,.15)',
-    hazards:[
-      {n:'H₂S / Toxic Vapor',v:'1–20 ppm',nab:'1 ppm',st:'m',c:'#B71C1C'},
-      {n:'LEL / Flammable Gas',v:'5–25% LEL',nab:'<10% LEL',st:'m',c:'#B71C1C'},
-      {n:'O₂ Deficiency',v:'17–21%',nab:'19.5–23.5%',st:'m',c:'#E63946'},
-      {n:'Heat Stress (WBGT)',v:'32–38°C',nab:'31°C',st:'m',c:'#E63946'},
-      {n:'VOC Total',v:'150–310 ppm',nab:'200 ppm',st:'p',c:'#FF8F00'},
-    ],
-    ctrl:['Permit to Work WAJIB (Permenaker 26/2014)','SCBA full face untuk confined entry','Fixed gas detector H₂S & LEL otomatis','Atmospheric testing sebelum entry'],
-    act:['Loading/unloading crude oil','Tank inspection & survey','Gas freeing & tank cleaning'],
-    reg:'Permenaker No.5/2018 + No.26/2014 · ACGIH TLV-BEI 2024'
+    risk:'SOON', rc:'#9E9E9E', rb:'rgba(158,158,158,.12)',
+    hazards:[], ctrl:[], act:[], reg:''
   },
   engine:{
     name:'Kamar Mesin', nameEn:'Engine Room',
-    risk:'HIGH', rc:'#C62828', rb:'rgba(198,40,40,.15)',
-    hazards:[
-      {n:'Kebisingan',v:'90–98 dB(A)',nab:'85 dB(A)',st:'m',c:'#E63946'},
-      {n:'Heat Stress (WBGT)',v:'35–45°C',nab:'28–31°C',st:'m',c:'#E63946'},
-      {n:'Getaran WBV',v:'0.8–6.1 m/s²',nab:'0.5 m/s²',st:'m',c:'#E63946'},
-      {n:'Oil Mist / Fumes',v:'3–8 mg/m³',nab:'5 mg/m³',st:'p',c:'#FF8F00'},
-      {n:'Ergonomi (MSDs)',v:'REBA 6–8',nab:'REBA <7',st:'p',c:'#FF8F00'},
-    ],
-    ctrl:['Double hearing protection (earplug+earmuff)','Cooling vest & thermal PPE','Anti-vibration boots & gloves','Respirator oil mist P100'],
-    act:['Operasi & monitoring mesin utama','Maintenance generator & turbo','Operasi pompa ballast'],
-    reg:'Permenaker No.5/2018 Tabel 1,3,4 · MLC 2006 · ACGIH TLV 2024'
+    risk:'SOON', rc:'#9E9E9E', rb:'rgba(158,158,158,.12)',
+    hazards:[], ctrl:[], act:[], reg:''
   },
   pump:{
     name:'Pump Room', nameEn:'Cargo Pump Room',
-    risk:'HIGH', rc:'#E63946', rb:'rgba(230,57,70,.15)',
-    hazards:[
-      {n:'H₂S',v:'1–5 ppm',nab:'1 ppm',st:'m',c:'#E63946'},
-      {n:'Kebisingan (pompa)',v:'88–96 dB(A)',nab:'85 dB(A)',st:'m',c:'#E63946'},
-      {n:'Heat Stress (ISBB)',v:'32–40°C',nab:'28°C',st:'m',c:'#E63946'},
-      {n:'Benzena',v:'0.5–1.2 ppm',nab:'0.5 ppm',st:'p',c:'#FF8F00'},
-    ],
-    ctrl:['Earplug NRR ≥25 dB','Gas detector portable H₂S','Ventilasi mekanis 20+ ACH aktif','ATEX certified equipment only'],
-    act:['Operasi pompa kargo','Maintenance pompa & seal','Pengukuran ullage'],
-    reg:'Permenaker No.5/2018 · No.26/2014 Confined · ACGIH H₂S 2024'
+    risk:'SOON', rc:'#9E9E9E', rb:'rgba(158,158,158,.12)',
+    hazards:[], ctrl:[], act:[], reg:''
   },
   fore:{
     name:'Haluan & Mooring', nameEn:'Forecastle (Mooring Area)',
-    risk:'MODERATE', rc:'#FF8F00', rb:'rgba(255,143,0,.15)',
-    hazards:[
-      {n:'Ergonomi Manual Handling',v:'RULA 5–7',nab:'RULA <7',st:'p',c:'#FF8F00'},
-      {n:'Radiasi UV',v:'UVI 8–14',nab:'UVI 6',st:'m',c:'#E63946'},
-      {n:'Kebisingan (winch)',v:'80–88 dB(A)',nab:'85 dB(A)',st:'p',c:'#FF8F00'},
-      {n:'Slips / Falls',v:'Risk Sedang',nab:'Risk Rendah',st:'p',c:'#FF8F00'},
-    ],
-    ctrl:['Safety harness full body wajib','Anti-slip safety footwear','Sunscreen SPF ≥50 + UPF clothing','Mechanical assist winch'],
-    act:['Mooring & unmooring','Anchor handling','Deck maintenance'],
-    reg:'Permenaker No.5/2018 · ACGIH TLV HAL + UV 2024'
+    risk:'SOON', rc:'#9E9E9E', rb:'rgba(158,158,158,.12)',
+    hazards:[], ctrl:[], act:[], reg:''
   },
 };
 
@@ -1468,7 +1425,7 @@ function hcvApplyShipFilter(){
   hcvCurrentShip=rec;
   hcvUpdateShipStrip(rec);
   hcvRenderZoneSummary();
-  /* auto-show bridge zone when ship selected */
+  /* auto-show info panel */
   hcvZoneClick('bridge');
 }
 window.hcvApplyShipFilter=hcvApplyShipFilter;
@@ -1507,13 +1464,13 @@ function hcvRenderZoneSummary(){
   ];
   el.innerHTML=zones.map(function(z){
     var d=HCV_ZONE_DATA[z.id];
-    var lvlColors={'EXTREME':'#B71C1C','HIGH':'#E63946','MODERATE':'#FF8F00','LOW':'#43A047'};
+    var lvlColors={'EXTREME':'#B71C1C','HIGH':'#E63946','MODERATE':'#FF8F00','LOW':'#43A047','SOON':'#9E9E9E'};
     var lc=lvlColors[d.risk]||'#90A4AE';
     return '<div onclick="hcvZoneClick(\''+z.id+'\')" style="display:flex;align-items:center;gap:6px;background:rgba(0,180,216,.07);border:1px solid rgba(0,180,216,.18);border-radius:8px;padding:5px 10px;cursor:pointer;transition:background .15s;flex:1;min-width:0" onmouseover="this.style.background=\'rgba(0,180,216,.15)\'" onmouseout="this.style.background=\'rgba(0,180,216,.07)\'">'
       +'<i class="'+z.icon+'" style="font-size:12px;color:'+z.col+';flex-shrink:0"></i>'
       +'<div style="min-width:0">'
       +'<div style="font-size:9.5px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+z.label+'</div>'
-      +'<div style="font-size:8.5px;font-weight:700;color:'+lc+'">'+d.risk+'</div>'
+      +(d.risk==='SOON'?'<div style="font-size:8.5px;color:#9E9E9E">Coming Soon</div>':'<div style="font-size:8.5px;font-weight:700;color:'+lc+'">'+d.risk+'</div>')
       +'</div></div>';
   }).join('');
 }
@@ -1750,9 +1707,22 @@ function hcvRenderTop(){
 
 /* ── ZONE CLICK — show detail ── */
 function hcvZoneClick(zoneId){
-  /* Highlight */
   document.querySelectorAll('.hcv-zone-hit').forEach(function(el){el.setAttribute('opacity','.18');});
   var z=HCV_ZONE_DATA[zoneId]; if(!z)return;
+
+  /* SOON state — data belum tersedia */
+  if(z.risk==='SOON'){
+    var det=document.getElementById('hcvDetail'); if(!det)return;
+    det.innerHTML='<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;gap:14px">'
+      +'<i class="fas fa-circle-half-stroke" style="font-size:36px;color:rgba(0,180,216,.35)"></i>'
+      +'<div style="font-size:14px;font-weight:700;color:rgba(255,255,255,.7)">'+z.name+'</div>'
+      +'<div style="font-size:11px;color:rgba(0,180,216,.5);letter-spacing:.8px;text-transform:uppercase">'+z.nameEn+'</div>'
+      +'<div style="background:rgba(0,180,216,.08);border:1px solid rgba(0,180,216,.2);border-radius:10px;padding:14px 18px;max-width:220px">'
+      +'<div style="font-size:11px;font-weight:700;color:#00B4D8;margin-bottom:6px;letter-spacing:.5px">COMING SOON</div>'
+      +'<div style="font-size:11px;color:rgba(255,255,255,.45);line-height:1.6">Data pengukuran aktual untuk zona ini sedang dikembangkan. Akan diisi dari hasil monitoring lapangan.</div>'
+      +'</div></div>';
+    return;
+  }
   var ship=hcvCurrentShip;
   var det=document.getElementById('hcvDetail'); if(!det)return;
   var lc={'EXTREME':'#B71C1C','HIGH':'#E63946','MODERATE':'#FF8F00','LOW':'#43A047'}[z.risk]||'#90A4AE';
