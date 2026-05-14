@@ -1228,3 +1228,19 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
   .hcv-detail{width:240px}
   .hcv-box{height:98vh}
 }
+
+/* Export PPT button */
+.btn-export-ppt{
+  display:inline-flex;align-items:center;gap:7px;
+  background:linear-gradient(135deg,#B7472A 0%,#C55A11 100%);
+  border:none;color:#fff;
+  padding:9px 18px;border-radius:var(--radius-sm);
+  font-size:12.5px;font-weight:700;cursor:pointer;
+  font-family:var(--font);transition:all .2s;
+  box-shadow:0 2px 8px rgba(183,71,42,.3);
+}
+.btn-export-ppt:hover{
+  background:linear-gradient(135deg,#C55A11 0%,#D4691E 100%);
+  transform:translateY(-1px);box-shadow:0 4px 14px rgba(183,71,42,.4);
+}
+.btn-export-ppt i{font-size:14px}
