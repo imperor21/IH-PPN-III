@@ -38,6 +38,7 @@ function getToken(){return sessionStorage.getItem("ppn_token");}
 function getSession(){const s=sessionStorage.getItem("ppn_user");return s?JSON.parse(s):null;}
 function getRole(){const u=getSession();return u?u.role:"";}
 function isAdmin(){return getRole()==="admin";}
+function isDemo(){return getRole()==="demo";}
 
 /* Mapping nama tampilan — override displayName dari server */
 var NAME_MAP = {
@@ -92,6 +93,31 @@ async function doLogin(){
 }
 function shakeCard(){const card=document.querySelector(".login-card");card.style.animation="shake .4s ease";setTimeout(()=>{card.style.animation="";},400);}
 
+/* DEMO LOGIN */
+async function doDemoLogin(){
+  const btn=document.getElementById("btnDemo");
+  btn.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Memuat...';
+  btn.disabled=true;
+  try{
+    clearSession();
+    const data=await gasPost({action:"login",username:"demo",password:"demo1234"});
+    if(data.status==="ok"){
+      saveSession(data,data.token);
+      document.getElementById("loginError").style.display="none";
+      document.getElementById("loginOverlay").classList.add("hidden");
+      document.getElementById("sidebarUsername").textContent="Demo User";
+      applyRoleUI();
+      loadData();
+    } else {
+      showLoginError(data.message||"Gagal masuk mode demo. Pastikan akun demo sudah dibuat di GAS.");
+    }
+  }catch(err){
+    showLoginError("Tidak dapat terhubung ke server: "+err.message);
+  }
+  btn.innerHTML='<i class="fas fa-eye"></i> Lihat Tampilan Demo';
+  btn.disabled=false;
+}
+
 /* LOGOUT */
 async function doLogout(){if(!confirm("Yakin ingin logout?"))return;const token=getToken();if(token)gasPost({action:"logout",token}).catch(()=>{});clearSession();const unEl=document.getElementById("loginUsername");const pwEl=document.getElementById("loginPassword");const errEl=document.getElementById("loginError");const overlay=document.getElementById("loginOverlay");if(unEl)unEl.value="";if(pwEl)pwEl.value="";if(errEl)errEl.style.display="none";if(overlay)overlay.classList.remove("hidden");}
 function showLoginError(msg){document.getElementById("loginErrorMsg").textContent=msg;document.getElementById("loginError").style.display="flex";}
@@ -100,18 +126,19 @@ function togglePassword(){const input=document.getElementById("loginPassword");c
 /* ROLE UI */
 function applyRoleUI(){
   const admin=isAdmin();
-  // Admin-only: sembunyikan jika viewer, tampilkan jika admin
+  const demo=isDemo();
+  // Admin-only: sembunyikan jika viewer/demo, tampilkan jika admin
   document.querySelectorAll(".admin-only").forEach(el=>{
-    if(admin){
+    if(admin&&!demo){
       const tag=el.tagName.toLowerCase();
       el.style.display=(tag==="label"||tag==="button"||tag==="a")?"inline-flex":"flex";
     } else {
       el.style.display="none";
     }
   });
-  // Viewer-only: kebalikannya
+  // Viewer-only: kebalikannya, juga tersembunyi untuk demo
   document.querySelectorAll(".viewer-only").forEach(el=>{
-    if(!admin){
+    if(!admin&&!demo){
       const tag=el.tagName.toLowerCase();
       el.style.display=(tag==="label"||tag==="button"||tag==="a")?"inline-flex":"flex";
     } else {
@@ -119,9 +146,8 @@ function applyRoleUI(){
     }
   });
   // Badge role di sidebar
-  // Role badge disembunyikan (display:none), tapi value tetap disimpan untuk logika internal
   const roleEl=document.querySelector(".user-role");
-  if(roleEl){roleEl.textContent=admin?"Admin":"Viewer";roleEl.style.display="none";}
+  if(roleEl){roleEl.textContent=admin?"Admin":demo?"Demo":"Viewer";roleEl.style.display="none";}
 
   // Update avatar inisial berdasarkan nama
   var avatarEl=document.querySelector(".user-avatar");
@@ -131,6 +157,50 @@ function applyRoleUI(){
     var initials=name.split(" ").map(function(w){return w[0];}).join("").toUpperCase().slice(0,2);
     avatarEl.innerHTML='<span style="font-size:14px;font-weight:800;color:#fff;">'+initials+'</span>';
   }
+
+  // === DEMO MODE ===
+  var existingBanner=document.getElementById("demoBanner");
+  if(demo){
+    // Tampilkan banner demo
+    if(!existingBanner){
+      var banner=document.createElement("div");
+      banner.id="demoBanner";
+      banner.innerHTML='<i class="fas fa-eye" style="margin-right:8px"></i><strong>MODE DEMO</strong> &mdash; Data tidak ditampilkan. <a href="#" onclick="doLogout();return false;" style="color:#fff;font-weight:800;text-decoration:underline;margin-left:6px">Login untuk akses penuh &rarr;</a>';
+      banner.style.cssText="position:fixed;top:0;left:0;right:0;z-index:9998;background:linear-gradient(90deg,#d97706,#f59e0b);color:#1a1a1a;text-align:center;padding:11px 16px;font-size:13px;font-weight:600;letter-spacing:.2px;box-shadow:0 2px 12px rgba(0,0,0,.2);";
+      document.body.prepend(banner);
+      // Geser main content agar tidak tertutup banner
+      var mainEl=document.querySelector(".main");
+      if(mainEl)mainEl.style.paddingTop="44px";
+      var sidebarEl=document.querySelector(".sidebar");
+      if(sidebarEl)sidebarEl.style.top="44px";
+    }
+    // Pasang overlay demo pada setiap section data
+    setTimeout(applyDemoOverlay,300);
+  } else {
+    // Hapus banner demo jika ada
+    if(existingBanner){
+      existingBanner.remove();
+      var mainEl=document.querySelector(".main");
+      if(mainEl)mainEl.style.paddingTop="";
+      var sidebarEl=document.querySelector(".sidebar");
+      if(sidebarEl)sidebarEl.style.top="";
+    }
+    // Hapus semua overlay demo
+    document.querySelectorAll(".demo-overlay").forEach(function(el){el.remove();});
+    document.querySelectorAll(".demo-blur").forEach(function(el){el.classList.remove("demo-blur");});
+  }
+}
+
+/* Pasang overlay "Data Tersembunyi" di setiap card chart & table */
+function applyDemoOverlay(){
+  document.querySelectorAll(".chart-card, .table-card, .kpi-card, .hazard-card").forEach(function(el){
+    if(el.querySelector(".demo-overlay"))return; // sudah ada, skip
+    el.style.position="relative";
+    var overlay=document.createElement("div");
+    overlay.className="demo-overlay";
+    overlay.innerHTML='<div class="demo-overlay-inner"><i class="fas fa-lock"></i><span>Data Tersembunyi</span><small>Login untuk melihat data lengkap</small></div>';
+    el.appendChild(overlay);
+  });
 }
 
 /* VIEWER GUARD — blokir action write jika bukan admin */
@@ -181,6 +251,8 @@ function setupNav(){
       if(page)page.classList.add("active");
       item.classList.add("active");
       document.getElementById("pageTitle").textContent=title;
+      /* Re-apply demo overlay on page switch */
+      if(isDemo())setTimeout(applyDemoOverlay,200);
       /* Auto-open parent group if closed */
       if(group){
         const grpEl=document.getElementById("navg-"+group);
