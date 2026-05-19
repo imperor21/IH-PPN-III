@@ -3,7 +3,7 @@
 /* ✅ Pedoman PDF & Foto Dokumentasi → Google Drive (multi-device)    */
 /* ✅ IndexedDB dihapus — data terpusat di GAS/Drive                  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbzaeYbZypyQ5sC8-OI-Xp0aR8hpsT-Bat3MFz6VgbR_D3F3uC3xwDlRV184u4GNoo7TAg/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzqCyLLFs-rLkahFThbzxIDWCpeoCjv_cvRZqw00_28Q96W6BerasPhmCaV8_Qel2lrPQ/exec";
 
 async function gasPost(payload) {
   const controller = new AbortController();
@@ -38,7 +38,6 @@ function getToken(){return sessionStorage.getItem("ppn_token");}
 function getSession(){const s=sessionStorage.getItem("ppn_user");return s?JSON.parse(s):null;}
 function getRole(){const u=getSession();return u?u.role:"";}
 function isAdmin(){return getRole()==="admin";}
-function isDemo(){return getRole()==="demo";}
 
 /* Mapping nama tampilan — override displayName dari server */
 var NAME_MAP = {
@@ -84,7 +83,8 @@ async function doLogin(){
   btn.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Memverifikasi...';btn.disabled=true;
   try{
     clearSession(); // bersihkan sesi lama sebelum login baru
-    const data=await gasPost({action:"login",username,password});
+    const deviceInfo=getDeviceInfo();
+    const data=await gasPost({action:"login",username,password,deviceInfo});
     if(data.status==="ok"){loginAttempts=0;localStorage.removeItem("ppn_locked_until");saveSession(data,data.token);document.getElementById("loginError").style.display="none";document.getElementById("loginOverlay").classList.add("hidden");document.getElementById("sidebarUsername").textContent=getMappedName(data.displayName);applyRoleUI();loadData();}
     else if(data.status==="locked"){setLoginLockedUntil(Date.now()+15*60*1000);showLoginError(data.message||"Akun dikunci sementara.");shakeCard();}
     else{loginAttempts++;if(loginAttempts>=5){setLoginLockedUntil(Date.now()+15*60*1000);loginAttempts=0;}showLoginError(data.message||"Username atau password salah.");shakeCard();}
@@ -92,31 +92,6 @@ async function doLogin(){
   btn.innerHTML='<i class="fas fa-right-to-bracket"></i> Masuk';btn.disabled=false;
 }
 function shakeCard(){const card=document.querySelector(".login-card");card.style.animation="shake .4s ease";setTimeout(()=>{card.style.animation="";},400);}
-
-/* DEMO LOGIN */
-async function doDemoLogin(){
-  const btn=document.getElementById("btnDemo");
-  btn.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Memuat...';
-  btn.disabled=true;
-  try{
-    clearSession();
-    const data=await gasPost({action:"login",username:"demo",password:"demo1234"});
-    if(data.status==="ok"){
-      saveSession(data,data.token);
-      document.getElementById("loginError").style.display="none";
-      document.getElementById("loginOverlay").classList.add("hidden");
-      document.getElementById("sidebarUsername").textContent="Demo User";
-      applyRoleUI();
-      loadData();
-    } else {
-      showLoginError(data.message||"Gagal masuk mode demo. Pastikan akun demo sudah dibuat di GAS.");
-    }
-  }catch(err){
-    showLoginError("Tidak dapat terhubung ke server: "+err.message);
-  }
-  btn.innerHTML='<i class="fas fa-eye"></i> Lihat Tampilan Demo';
-  btn.disabled=false;
-}
 
 /* LOGOUT */
 async function doLogout(){if(!confirm("Yakin ingin logout?"))return;const token=getToken();if(token)gasPost({action:"logout",token}).catch(()=>{});clearSession();const unEl=document.getElementById("loginUsername");const pwEl=document.getElementById("loginPassword");const errEl=document.getElementById("loginError");const overlay=document.getElementById("loginOverlay");if(unEl)unEl.value="";if(pwEl)pwEl.value="";if(errEl)errEl.style.display="none";if(overlay)overlay.classList.remove("hidden");}
@@ -126,19 +101,18 @@ function togglePassword(){const input=document.getElementById("loginPassword");c
 /* ROLE UI */
 function applyRoleUI(){
   const admin=isAdmin();
-  const demo=isDemo();
-  // Admin-only: sembunyikan jika viewer/demo, tampilkan jika admin
+  // Admin-only: sembunyikan jika viewer, tampilkan jika admin
   document.querySelectorAll(".admin-only").forEach(el=>{
-    if(admin&&!demo){
+    if(admin){
       const tag=el.tagName.toLowerCase();
       el.style.display=(tag==="label"||tag==="button"||tag==="a")?"inline-flex":"flex";
     } else {
       el.style.display="none";
     }
   });
-  // Viewer-only: kebalikannya, juga tersembunyi untuk demo
+  // Viewer-only: kebalikannya
   document.querySelectorAll(".viewer-only").forEach(el=>{
-    if(!admin&&!demo){
+    if(!admin){
       const tag=el.tagName.toLowerCase();
       el.style.display=(tag==="label"||tag==="button"||tag==="a")?"inline-flex":"flex";
     } else {
@@ -146,8 +120,9 @@ function applyRoleUI(){
     }
   });
   // Badge role di sidebar
+  // Role badge disembunyikan (display:none), tapi value tetap disimpan untuk logika internal
   const roleEl=document.querySelector(".user-role");
-  if(roleEl){roleEl.textContent=admin?"Admin":demo?"Demo":"Viewer";roleEl.style.display="none";}
+  if(roleEl){roleEl.textContent=admin?"Admin":"Viewer";roleEl.style.display="none";}
 
   // Update avatar inisial berdasarkan nama
   var avatarEl=document.querySelector(".user-avatar");
@@ -157,50 +132,6 @@ function applyRoleUI(){
     var initials=name.split(" ").map(function(w){return w[0];}).join("").toUpperCase().slice(0,2);
     avatarEl.innerHTML='<span style="font-size:14px;font-weight:800;color:#fff;">'+initials+'</span>';
   }
-
-  // === DEMO MODE ===
-  var existingBanner=document.getElementById("demoBanner");
-  if(demo){
-    // Tampilkan banner demo
-    if(!existingBanner){
-      var banner=document.createElement("div");
-      banner.id="demoBanner";
-      banner.innerHTML='<i class="fas fa-eye" style="margin-right:8px"></i><strong>MODE DEMO</strong> &mdash; Data tidak ditampilkan. <a href="#" onclick="doLogout();return false;" style="color:#fff;font-weight:800;text-decoration:underline;margin-left:6px">Login untuk akses penuh &rarr;</a>';
-      banner.style.cssText="position:fixed;top:0;left:0;right:0;z-index:9998;background:linear-gradient(90deg,#d97706,#f59e0b);color:#1a1a1a;text-align:center;padding:11px 16px;font-size:13px;font-weight:600;letter-spacing:.2px;box-shadow:0 2px 12px rgba(0,0,0,.2);";
-      document.body.prepend(banner);
-      // Geser main content agar tidak tertutup banner
-      var mainEl=document.querySelector(".main");
-      if(mainEl)mainEl.style.paddingTop="44px";
-      var sidebarEl=document.querySelector(".sidebar");
-      if(sidebarEl)sidebarEl.style.top="44px";
-    }
-    // Pasang overlay demo pada setiap section data
-    setTimeout(applyDemoOverlay,300);
-  } else {
-    // Hapus banner demo jika ada
-    if(existingBanner){
-      existingBanner.remove();
-      var mainEl=document.querySelector(".main");
-      if(mainEl)mainEl.style.paddingTop="";
-      var sidebarEl=document.querySelector(".sidebar");
-      if(sidebarEl)sidebarEl.style.top="";
-    }
-    // Hapus semua overlay demo
-    document.querySelectorAll(".demo-overlay").forEach(function(el){el.remove();});
-    document.querySelectorAll(".demo-blur").forEach(function(el){el.classList.remove("demo-blur");});
-  }
-}
-
-/* Pasang overlay "Data Tersembunyi" di setiap card chart & table */
-function applyDemoOverlay(){
-  document.querySelectorAll(".chart-card, .table-card, .kpi-card, .hazard-card").forEach(function(el){
-    if(el.querySelector(".demo-overlay"))return; // sudah ada, skip
-    el.style.position="relative";
-    var overlay=document.createElement("div");
-    overlay.className="demo-overlay";
-    overlay.innerHTML='<div class="demo-overlay-inner"><i class="fas fa-lock"></i><span>Data Tersembunyi</span><small>Login untuk melihat data lengkap</small></div>';
-    el.appendChild(overlay);
-  });
 }
 
 /* VIEWER GUARD — blokir action write jika bukan admin */
@@ -235,6 +166,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   document.querySelectorAll('.nav-item[data-menu="dokumentasi"]').forEach(item=>{item.addEventListener("click",()=>{currentDokFolder="hra_ih";setTimeout(renderDokGallery,80);});});
   document.querySelectorAll('.nav-item[data-menu="biomonitoring"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(initBiomonitoring,80));});
   document.querySelectorAll('.nav-item[data-menu="closeout25"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(renderCO25Page,80));});
+  document.querySelectorAll('.nav-item[data-menu="accesslog"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(loadAccessLog,80));});
 });
 
 /* NAV */
@@ -251,8 +183,6 @@ function setupNav(){
       if(page)page.classList.add("active");
       item.classList.add("active");
       document.getElementById("pageTitle").textContent=title;
-      /* Re-apply demo overlay on page switch */
-      if(isDemo())setTimeout(applyDemoOverlay,200);
       /* Auto-open parent group if closed */
       if(group){
         const grpEl=document.getElementById("navg-"+group);
@@ -2302,4 +2232,185 @@ async function fetchBiomonitoring(){
     filteredBiomarker=[...rawBiomarker];
     filteredPersonal=[...rawPersonal];
   }
+}
+
+/* ═══════════════════════════════════════════════════════
+   ACCESS LOG MODULE
+   Rekam & tampilkan riwayat akses dashboard
+═══════════════════════════════════════════════════════ */
+
+/* Kumpulkan info perangkat dari browser */
+function getDeviceInfo(){
+  var ua=navigator.userAgent||"";
+  var platform=navigator.platform||"";
+  var screen_res=(window.screen?window.screen.width+"x"+window.screen.height:"?");
+  var isMobile=/Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+  var isTablet=/iPad|Android(?!.*Mobile)/i.test(ua);
+  var deviceType=isTablet?"Tablet":isMobile?"Mobile":"Desktop";
+  return{userAgent:ua,platform:platform,screenRes:screen_res,deviceType:deviceType,lang:navigator.language||""};
+}
+
+/* State */
+var rawAlog=[],filteredAlog=[],alogSortCol=0,alogSortDir=-1;
+var alogBarChart=null,alogBrowserChart=null;
+
+/* Load access log dari GAS */
+async function loadAccessLog(){
+  if(!isAdmin()){return;}
+  const tbody=document.getElementById("alogTableBody");
+  if(tbody)tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted)"><i class="fas fa-circle-notch fa-spin" style="margin-right:8px"></i>Memuat log akses...</td></tr>';
+  try{
+    const data=await gasPost({action:"getAccessLog",token:getToken(),days:90});
+    if(data.status==="ok"){
+      rawAlog=data.logs||[];
+      filteredAlog=[...rawAlog];
+      applyAlogFilters();
+    } else {
+      if(tbody)tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:30px;color:#C62828">Gagal memuat log: '+(data.message||"")+'</td></tr>';
+    }
+  }catch(err){
+    if(tbody)tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:30px;color:#C62828">Error: '+err.message+'</td></tr>';
+  }
+}
+
+/* Filter & render */
+function applyAlogFilters(){
+  const userF=document.getElementById("alog-filter-user")?.value||"";
+  const statusF=document.getElementById("alog-filter-status")?.value||"";
+  const daysF=parseInt(document.getElementById("alog-filter-days")?.value||"14");
+  const now=Date.now();
+  const cutoff=daysF>0?(now-daysF*24*60*60*1000):0;
+
+  filteredAlog=rawAlog.filter(r=>{
+    const ts=new Date(r.timestamp||0).getTime();
+    if(daysF>0&&ts<cutoff)return false;
+    if(userF&&r.username!==userF)return false;
+    if(statusF&&r.status!==statusF)return false;
+    return true;
+  });
+
+  /* Populate user filter dropdown */
+  const userSel=document.getElementById("alog-filter-user");
+  if(userSel){
+    const curVal=userSel.value;
+    const users=[...new Set(rawAlog.map(r=>r.username).filter(Boolean))].sort();
+    userSel.innerHTML='<option value="">Semua User</option>'+users.map(u=>`<option${u===curVal?" selected":""}>${u}</option>`).join("");
+  }
+
+  renderAlogKPI();
+  renderAlogBarChart();
+  renderAlogBrowserChart();
+  renderAlogTable(filteredAlog);
+}
+
+/* KPI */
+function renderAlogKPI(){
+  const total=filteredAlog.filter(r=>r.status==="LOGIN_OK"||r.status==="LOGIN_FAIL").length;
+  const success=filteredAlog.filter(r=>r.status==="LOGIN_OK").length;
+  const fail=filteredAlog.filter(r=>r.status==="LOGIN_FAIL").length;
+  const mobile=filteredAlog.filter(r=>r.deviceType==="Mobile").length;
+  const desktop=filteredAlog.filter(r=>r.deviceType==="Desktop"||r.deviceType==="Tablet").length;
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  set("alog-total-login",fmtNum(total));
+  set("alog-success",fmtNum(success));
+  set("alog-fail",fmtNum(fail));
+  set("alog-mobile",fmtNum(mobile));
+  set("alog-desktop",fmtNum(desktop));
+}
+
+/* Bar chart — login per hari */
+function renderAlogBarChart(){
+  const ctx=document.getElementById("alogBarChart");
+  if(!ctx)return;
+  if(alogBarChart){alogBarChart.destroy();alogBarChart=null;}
+  /* Buat 14 hari terakhir */
+  const days=14;
+  const labels=[],dataOk=[],dataFail=[];
+  for(var i=days-1;i>=0;i--){
+    const d=new Date();d.setDate(d.getDate()-i);
+    const key=d.toISOString().slice(0,10);
+    labels.push(key.slice(5));// MM-DD
+    dataOk.push(filteredAlog.filter(r=>r.status==="LOGIN_OK"&&(r.timestamp||"").startsWith(key)).length);
+    dataFail.push(filteredAlog.filter(r=>r.status==="LOGIN_FAIL"&&(r.timestamp||"").startsWith(key)).length);
+  }
+  alogBarChart=new Chart(ctx,{
+    type:"bar",
+    data:{labels,datasets:[
+      {label:"Login Berhasil",data:dataOk,backgroundColor:"#43A047",borderRadius:5},
+      {label:"Login Gagal",data:dataFail,backgroundColor:"#E53935",borderRadius:5}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"top",labels:{font:{size:11}}}},scales:{x:{stacked:false,ticks:{font:{size:10}}},y:{beginAtZero:true,ticks:{stepSize:1,font:{size:10}}}}}
+  });
+}
+
+/* Donut chart — browser */
+function renderAlogBrowserChart(){
+  const ctx=document.getElementById("alogBrowserChart");
+  if(!ctx)return;
+  if(alogBrowserChart){alogBrowserChart.destroy();alogBrowserChart=null;}
+  const bmap={};
+  filteredAlog.forEach(r=>{const b=r.browser||"Unknown";bmap[b]=(bmap[b]||0)+1;});
+  const sorted=Object.entries(bmap).sort((a,b)=>b[1]-a[1]);
+  const palette=["#1976D2","#43A047","#FB8C00","#8E24AA","#00838F","#E53935","#F9A825"];
+  alogBrowserChart=new Chart(ctx,{
+    type:"doughnut",
+    data:{labels:sorted.map(([k])=>k),datasets:[{data:sorted.map(([,v])=>v),backgroundColor:palette,borderColor:"#fff",borderWidth:3,hoverOffset:8}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:"60%",plugins:{legend:{position:"bottom",labels:{font:{size:11},padding:10,boxWidth:12}}}}
+  });
+}
+
+/* Table */
+function renderAlogTable(data){
+  const tbody=document.getElementById("alogTableBody");
+  if(!tbody)return;
+  if(!data.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted)">Tidak ada data log pada periode ini</td></tr>';return;}
+
+  const deviceIcon={Mobile:'<i class="fas fa-mobile-screen" style="color:#7B2FBE"></i>',Tablet:'<i class="fas fa-tablet-screen-button" style="color:#0288D1"></i>',Desktop:'<i class="fas fa-desktop" style="color:#388E3C"></i>'};
+  const statusBadgeAlog={
+    LOGIN_OK:'<span style="background:#E8F5E9;color:#2E7D32;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700"><i class="fas fa-circle-check"></i> Berhasil</span>',
+    LOGIN_FAIL:'<span style="background:#FFEBEE;color:#C62828;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700"><i class="fas fa-circle-xmark"></i> Gagal</span>',
+    LOGOUT:'<span style="background:#F3F4F6;color:#6B7280;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700"><i class="fas fa-right-from-bracket"></i> Logout</span>'
+  };
+
+  tbody.innerHTML=data.map(r=>{
+    const ts=r.timestamp?r.timestamp.replace("T"," ").slice(0,16):"—";
+    const badge=statusBadgeAlog[r.status]||('<span>'+esc(r.status||"—")+'</span>');
+    const devIcon=deviceIcon[r.deviceType]||'<i class="fas fa-question"></i>';
+    const roleColor=r.role==="admin"?"#C62828":r.role==="demo"?"#F59E0B":"#1976D2";
+    return`<tr>
+      <td style="white-space:nowrap;font-weight:600;font-size:12px">${esc(ts)}</td>
+      <td><strong>${esc(r.username||"—")}</strong></td>
+      <td><span style="background:${roleColor}18;color:${roleColor};padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">${esc(r.role||"—")}</span></td>
+      <td>${badge}</td>
+      <td><i class="fab fa-${getBrowserIcon(r.browser)}" style="margin-right:5px"></i>${esc(r.browser||"—")}</td>
+      <td>${esc(r.os||"—")}</td>
+      <td style="text-align:center">${devIcon} ${esc(r.deviceType||"—")}</td>
+      <td style="font-size:11px;color:var(--text-muted)">${esc(r.screenRes||"—")}</td>
+    </tr>`;
+  }).join("");
+  document.getElementById("alogTableFooter").textContent=`Menampilkan ${data.length} dari ${rawAlog.length} entri`;
+}
+
+function getBrowserIcon(b){
+  if(!b)return"globe";
+  const bl=b.toLowerCase();
+  if(bl.includes("chrome"))return"chrome";
+  if(bl.includes("firefox"))return"firefox-browser";
+  if(bl.includes("safari"))return"safari";
+  if(bl.includes("edge"))return"edge";
+  if(bl.includes("opera"))return"opera";
+  return"globe";
+}
+
+function searchAlogTable(){
+  const q=(document.getElementById("alog-search")?.value||"").toLowerCase();
+  const filtered=q?filteredAlog.filter(r=>(r.username||"").toLowerCase().includes(q)||(r.browser||"").toLowerCase().includes(q)||(r.os||"").toLowerCase().includes(q)||(r.deviceType||"").toLowerCase().includes(q)):filteredAlog;
+  renderAlogTable(filtered);
+}
+
+function sortAlogTable(col){
+  if(alogSortCol===col)alogSortDir*=-1;else{alogSortCol=col;alogSortDir=-1;}
+  const keys=["timestamp","username","role","status","browser","os","deviceType","screenRes"];
+  filteredAlog.sort((a,b)=>String(a[keys[col]]||"").localeCompare(String(b[keys[col]]||""))*alogSortDir);
+  renderAlogTable(filteredAlog);
 }
