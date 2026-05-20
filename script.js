@@ -3,7 +3,7 @@
 /* ✅ Pedoman PDF & Foto Dokumentasi → Google Drive (multi-device)    */
 /* ✅ IndexedDB dihapus — data terpusat di GAS/Drive                  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbzaeYbZypyQ5sC8-OI-Xp0aR8hpsT-Bat3MFz6VgbR_D3F3uC3xwDlRV184u4GNoo7TAg/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzqCyLLFs-rLkahFThbzxIDWCpeoCjv_cvRZqw00_28Q96W6BerasPhmCaV8_Qel2lrPQ/exec";
 
 async function gasPost(payload) {
   const controller = new AbortController();
@@ -38,6 +38,7 @@ function getToken(){return sessionStorage.getItem("ppn_token");}
 function getSession(){const s=sessionStorage.getItem("ppn_user");return s?JSON.parse(s):null;}
 function getRole(){const u=getSession();return u?u.role:"";}
 function isAdmin(){return getRole()==="admin";}
+function isDemo(){return getRole()==="demo";}
 
 /* Mapping nama tampilan — override displayName dari server */
 var NAME_MAP = {
@@ -83,8 +84,7 @@ async function doLogin(){
   btn.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Memverifikasi...';btn.disabled=true;
   try{
     clearSession(); // bersihkan sesi lama sebelum login baru
-    const deviceInfo=getDeviceInfo();
-    const data=await gasPost({action:"login",username,password,deviceInfo});
+    const data=await gasPost({action:"login",username,password,deviceInfo:getDeviceInfo()});
     if(data.status==="ok"){loginAttempts=0;localStorage.removeItem("ppn_locked_until");saveSession(data,data.token);document.getElementById("loginError").style.display="none";document.getElementById("loginOverlay").classList.add("hidden");document.getElementById("sidebarUsername").textContent=getMappedName(data.displayName);applyRoleUI();loadData();}
     else if(data.status==="locked"){setLoginLockedUntil(Date.now()+15*60*1000);showLoginError(data.message||"Akun dikunci sementara.");shakeCard();}
     else{loginAttempts++;if(loginAttempts>=5){setLoginLockedUntil(Date.now()+15*60*1000);loginAttempts=0;}showLoginError(data.message||"Username atau password salah.");shakeCard();}
@@ -92,6 +92,46 @@ async function doLogin(){
   btn.innerHTML='<i class="fas fa-right-to-bracket"></i> Masuk';btn.disabled=false;
 }
 function shakeCard(){const card=document.querySelector(".login-card");card.style.animation="shake .4s ease";setTimeout(()=>{card.style.animation="";},400);}
+
+/* ── Kumpulkan info perangkat untuk access log ── */
+function getDeviceInfo(){
+  var ua=navigator.userAgent||"";
+  var isMob=/Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+  var isTab=/iPad|Android(?!.*Mobile)/i.test(ua);
+  return{
+    userAgent:ua,
+    platform:navigator.platform||"",
+    screenRes:(window.screen?window.screen.width+"x"+window.screen.height:"?"),
+    deviceType:isTab?"Tablet":isMob?"Mobile":"Desktop",
+    lang:navigator.language||""
+  };
+}
+
+/* ── Demo Login ── */
+async function doDemoLogin(){
+  const btn=document.getElementById("btnDemo");
+  if(btn){btn.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Memuat...';btn.disabled=true;}
+  try{
+    clearSession();
+    const data=await gasPost({action:"login",username:"demo",password:"demo1234",deviceInfo:getDeviceInfo()});
+    if(data.status==="ok"){
+      saveSession(data,data.token);
+      const errEl=document.getElementById("loginError");
+      if(errEl)errEl.style.display="none";
+      const overlay=document.getElementById("loginOverlay");
+      if(overlay)overlay.classList.add("hidden");
+      const unEl=document.getElementById("sidebarUsername");
+      if(unEl)unEl.textContent="Demo User";
+      applyRoleUI();
+      loadData();
+    } else {
+      showLoginError(data.message||"Akun demo belum aktif. Pastikan Code.gs sudah diupdate & initPasswordHashes() sudah dijalankan.");
+    }
+  }catch(err){
+    showLoginError("Tidak dapat terhubung ke server: "+err.message);
+  }
+  if(btn){btn.innerHTML='<i class="fas fa-eye"></i> Lihat Tampilan Demo';btn.disabled=false;}
+}
 
 /* LOGOUT */
 async function doLogout(){if(!confirm("Yakin ingin logout?"))return;const token=getToken();if(token)gasPost({action:"logout",token}).catch(()=>{});clearSession();const unEl=document.getElementById("loginUsername");const pwEl=document.getElementById("loginPassword");const errEl=document.getElementById("loginError");const overlay=document.getElementById("loginOverlay");if(unEl)unEl.value="";if(pwEl)pwEl.value="";if(errEl)errEl.style.display="none";if(overlay)overlay.classList.remove("hidden");}
@@ -101,30 +141,23 @@ function togglePassword(){const input=document.getElementById("loginPassword");c
 /* ROLE UI */
 function applyRoleUI(){
   const admin=isAdmin();
-  // Admin-only: sembunyikan jika viewer, tampilkan jika admin
-  document.querySelectorAll(".admin-only").forEach(el=>{
-    if(admin){
-      const tag=el.tagName.toLowerCase();
-      el.style.display=(tag==="label"||tag==="button"||tag==="a")?"inline-flex":"flex";
-    } else {
-      el.style.display="none";
-    }
-  });
-  // Viewer-only: kebalikannya
-  document.querySelectorAll(".viewer-only").forEach(el=>{
-    if(!admin){
-      const tag=el.tagName.toLowerCase();
-      el.style.display=(tag==="label"||tag==="button"||tag==="a")?"inline-flex":"flex";
-    } else {
-      el.style.display="none";
-    }
-  });
-  // Badge role di sidebar
-  // Role badge disembunyikan (display:none), tapi value tetap disimpan untuk logika internal
-  const roleEl=document.querySelector(".user-role");
-  if(roleEl){roleEl.textContent=admin?"Admin":"Viewer";roleEl.style.display="none";}
+  const demo=isDemo();
 
-  // Update avatar inisial berdasarkan nama
+  /* Admin-only elements */
+  document.querySelectorAll(".admin-only").forEach(el=>{
+    const tag=el.tagName.toLowerCase();
+    el.style.display=(admin&&!demo)?(tag==="label"||tag==="button"||tag==="a"?"inline-flex":"flex"):"none";
+  });
+  /* Viewer-only elements */
+  document.querySelectorAll(".viewer-only").forEach(el=>{
+    const tag=el.tagName.toLowerCase();
+    el.style.display=(!admin&&!demo)?(tag==="label"||tag==="button"||tag==="a"?"inline-flex":"flex"):"none";
+  });
+  /* Role badge */
+  const roleEl=document.querySelector(".user-role");
+  if(roleEl){roleEl.textContent=admin?"Admin":demo?"Demo":"Viewer";roleEl.style.display="none";}
+
+  /* Avatar inisial */
   var avatarEl=document.querySelector(".user-avatar");
   if(avatarEl){
     var uname=document.getElementById("sidebarUsername");
@@ -132,6 +165,56 @@ function applyRoleUI(){
     var initials=name.split(" ").map(function(w){return w[0];}).join("").toUpperCase().slice(0,2);
     avatarEl.innerHTML='<span style="font-size:14px;font-weight:800;color:#fff;">'+initials+'</span>';
   }
+
+  /* ── DEMO MODE ── */
+  var existingBanner=document.getElementById("demoBanner");
+  if(demo){
+    if(!existingBanner){
+      var banner=document.createElement("div");
+      banner.id="demoBanner";
+      banner.innerHTML='<i class="fas fa-eye" style="margin-right:7px"></i>'
+        +'<strong>MODE DEMO</strong> &mdash; Data tidak ditampilkan. '
+        +'<a href="#" onclick="doLogout();return false;" '
+        +'style="color:#fff;font-weight:800;text-decoration:underline;margin-left:8px">'
+        +'Login untuk akses penuh &rarr;</a>';
+      banner.style.cssText="position:fixed;top:0;left:0;right:0;z-index:9998;"
+        +"background:linear-gradient(90deg,#d97706,#f59e0b);color:#1a1a1a;"
+        +"text-align:center;padding:11px 16px;font-size:13px;font-weight:600;"
+        +"letter-spacing:.2px;box-shadow:0 2px 12px rgba(0,0,0,.2);";
+      document.body.prepend(banner);
+      var mainEl=document.querySelector(".main");
+      if(mainEl)mainEl.style.paddingTop="44px";
+      var sidebarEl=document.querySelector(".sidebar");
+      if(sidebarEl)sidebarEl.style.top="44px";
+    }
+    setTimeout(applyDemoOverlay,400);
+  } else {
+    if(existingBanner){
+      existingBanner.remove();
+      var mainEl2=document.querySelector(".main");
+      if(mainEl2)mainEl2.style.paddingTop="";
+      var sidebarEl2=document.querySelector(".sidebar");
+      if(sidebarEl2)sidebarEl2.style.top="";
+    }
+    document.querySelectorAll(".demo-overlay").forEach(function(el){el.remove();});
+  }
+}
+
+/* Pasang overlay kunci di setiap card saat mode demo */
+function applyDemoOverlay(){
+  if(!isDemo())return;
+  document.querySelectorAll(".chart-card,.table-card,.kpi-card,.hazard-card").forEach(function(el){
+    if(el.querySelector(".demo-overlay"))return;
+    el.style.position="relative";
+    var ov=document.createElement("div");
+    ov.className="demo-overlay";
+    ov.innerHTML='<div class="demo-overlay-inner">'
+      +'<i class="fas fa-lock"></i>'
+      +'<span>Data Tersembunyi</span>'
+      +'<small>Login untuk melihat data lengkap</small>'
+      +'</div>';
+    el.appendChild(ov);
+  });
 }
 
 /* VIEWER GUARD — blokir action write jika bukan admin */
@@ -2234,29 +2317,18 @@ async function fetchBiomonitoring(){
   }
 }
 
-/* ═══════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════
    ACCESS LOG MODULE
    Rekam & tampilkan riwayat akses dashboard
-═══════════════════════════════════════════════════════ */
-
-/* Kumpulkan info perangkat dari browser */
-function getDeviceInfo(){
-  var ua=navigator.userAgent||"";
-  var platform=navigator.platform||"";
-  var screen_res=(window.screen?window.screen.width+"x"+window.screen.height:"?");
-  var isMobile=/Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-  var isTablet=/iPad|Android(?!.*Mobile)/i.test(ua);
-  var deviceType=isTablet?"Tablet":isMobile?"Mobile":"Desktop";
-  return{userAgent:ua,platform:platform,screenRes:screen_res,deviceType:deviceType,lang:navigator.language||""};
-}
-
-/* State */
+═══════════════════════════════════════════════════════════════ */
 var rawAlog=[],filteredAlog=[],alogSortCol=0,alogSortDir=-1;
 var alogBarChart=null,alogBrowserChart=null;
 
-/* Load access log dari GAS */
+function fmtNum(n){return n===undefined||n===null?"—":Number(n).toLocaleString("id-ID");}
+function esc(s){const d=document.createElement("div");d.textContent=String(s||"");return d.innerHTML;}
+
 async function loadAccessLog(){
-  if(!isAdmin()){return;}
+  if(!isAdmin())return;
   const tbody=document.getElementById("alogTableBody");
   if(tbody)tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted)"><i class="fas fa-circle-notch fa-spin" style="margin-right:8px"></i>Memuat log akses...</td></tr>';
   try{
@@ -2265,7 +2337,7 @@ async function loadAccessLog(){
       rawAlog=data.logs||[];
       filteredAlog=[...rawAlog];
       applyAlogFilters();
-    } else {
+    }else{
       if(tbody)tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:30px;color:#C62828">Gagal memuat log: '+(data.message||"")+'</td></tr>';
     }
   }catch(err){
@@ -2273,15 +2345,14 @@ async function loadAccessLog(){
   }
 }
 
-/* Filter & render */
 function applyAlogFilters(){
-  const userF=document.getElementById("alog-filter-user")?.value||"";
-  const statusF=document.getElementById("alog-filter-status")?.value||"";
-  const daysF=parseInt(document.getElementById("alog-filter-days")?.value||"14");
+  const userF=(document.getElementById("alog-filter-user")||{}).value||"";
+  const statusF=(document.getElementById("alog-filter-status")||{}).value||"";
+  const daysF=parseInt(((document.getElementById("alog-filter-days")||{}).value)||"14");
   const now=Date.now();
   const cutoff=daysF>0?(now-daysF*24*60*60*1000):0;
 
-  filteredAlog=rawAlog.filter(r=>{
+  filteredAlog=rawAlog.filter(function(r){
     const ts=new Date(r.timestamp||0).getTime();
     if(daysF>0&&ts<cutoff)return false;
     if(userF&&r.username!==userF)return false;
@@ -2289,12 +2360,12 @@ function applyAlogFilters(){
     return true;
   });
 
-  /* Populate user filter dropdown */
+  /* Populate user dropdown */
   const userSel=document.getElementById("alog-filter-user");
   if(userSel){
     const curVal=userSel.value;
-    const users=[...new Set(rawAlog.map(r=>r.username).filter(Boolean))].sort();
-    userSel.innerHTML='<option value="">Semua User</option>'+users.map(u=>`<option${u===curVal?" selected":""}>${u}</option>`).join("");
+    const users=[...new Set(rawAlog.map(function(r){return r.username;}).filter(Boolean))].sort();
+    userSel.innerHTML='<option value="">Semua User</option>'+users.map(function(u){return'<option'+(u===curVal?" selected":"")+'>'+esc(u)+'</option>';}).join("");
   }
 
   renderAlogKPI();
@@ -2303,114 +2374,90 @@ function applyAlogFilters(){
   renderAlogTable(filteredAlog);
 }
 
-/* KPI */
 function renderAlogKPI(){
-  const total=filteredAlog.filter(r=>r.status==="LOGIN_OK"||r.status==="LOGIN_FAIL").length;
-  const success=filteredAlog.filter(r=>r.status==="LOGIN_OK").length;
-  const fail=filteredAlog.filter(r=>r.status==="LOGIN_FAIL").length;
-  const mobile=filteredAlog.filter(r=>r.deviceType==="Mobile").length;
-  const desktop=filteredAlog.filter(r=>r.deviceType==="Desktop"||r.deviceType==="Tablet").length;
-  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
-  set("alog-total-login",fmtNum(total));
-  set("alog-success",fmtNum(success));
-  set("alog-fail",fmtNum(fail));
-  set("alog-mobile",fmtNum(mobile));
-  set("alog-desktop",fmtNum(desktop));
+  const total=filteredAlog.filter(function(r){return r.status==="LOGIN_OK"||r.status==="LOGIN_FAIL";}).length;
+  const success=filteredAlog.filter(function(r){return r.status==="LOGIN_OK";}).length;
+  const fail=filteredAlog.filter(function(r){return r.status==="LOGIN_FAIL";}).length;
+  const mobile=filteredAlog.filter(function(r){return r.deviceType==="Mobile";}).length;
+  const desktop=filteredAlog.filter(function(r){return r.deviceType==="Desktop"||r.deviceType==="Tablet";}).length;
+  function set(id,v){const el=document.getElementById(id);if(el)el.textContent=fmtNum(v);}
+  set("alog-total-login",total);set("alog-success",success);set("alog-fail",fail);
+  set("alog-mobile",mobile);set("alog-desktop",desktop);
 }
 
-/* Bar chart — login per hari */
 function renderAlogBarChart(){
   const ctx=document.getElementById("alogBarChart");
   if(!ctx)return;
   if(alogBarChart){alogBarChart.destroy();alogBarChart=null;}
-  /* Buat 14 hari terakhir */
-  const days=14;
   const labels=[],dataOk=[],dataFail=[];
-  for(var i=days-1;i>=0;i--){
+  for(var i=13;i>=0;i--){
     const d=new Date();d.setDate(d.getDate()-i);
     const key=d.toISOString().slice(0,10);
-    labels.push(key.slice(5));// MM-DD
-    dataOk.push(filteredAlog.filter(r=>r.status==="LOGIN_OK"&&(r.timestamp||"").startsWith(key)).length);
-    dataFail.push(filteredAlog.filter(r=>r.status==="LOGIN_FAIL"&&(r.timestamp||"").startsWith(key)).length);
+    labels.push(key.slice(5));
+    dataOk.push(filteredAlog.filter(function(r){return r.status==="LOGIN_OK"&&(r.timestamp||"").startsWith(key);}).length);
+    dataFail.push(filteredAlog.filter(function(r){return r.status==="LOGIN_FAIL"&&(r.timestamp||"").startsWith(key);}).length);
   }
-  alogBarChart=new Chart(ctx,{
-    type:"bar",
-    data:{labels,datasets:[
-      {label:"Login Berhasil",data:dataOk,backgroundColor:"#43A047",borderRadius:5},
-      {label:"Login Gagal",data:dataFail,backgroundColor:"#E53935",borderRadius:5}
-    ]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"top",labels:{font:{size:11}}}},scales:{x:{stacked:false,ticks:{font:{size:10}}},y:{beginAtZero:true,ticks:{stepSize:1,font:{size:10}}}}}
-  });
+  alogBarChart=new Chart(ctx,{type:"bar",data:{labels:labels,datasets:[{label:"Berhasil",data:dataOk,backgroundColor:"#43A047",borderRadius:5},{label:"Gagal",data:dataFail,backgroundColor:"#E53935",borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"top",labels:{font:{size:11}}}},scales:{x:{ticks:{font:{size:10}}},y:{beginAtZero:true,ticks:{stepSize:1,font:{size:10}}}}}});
 }
 
-/* Donut chart — browser */
 function renderAlogBrowserChart(){
   const ctx=document.getElementById("alogBrowserChart");
   if(!ctx)return;
   if(alogBrowserChart){alogBrowserChart.destroy();alogBrowserChart=null;}
   const bmap={};
-  filteredAlog.forEach(r=>{const b=r.browser||"Unknown";bmap[b]=(bmap[b]||0)+1;});
-  const sorted=Object.entries(bmap).sort((a,b)=>b[1]-a[1]);
+  filteredAlog.forEach(function(r){const b=r.browser||"Unknown";bmap[b]=(bmap[b]||0)+1;});
+  const sorted=Object.entries(bmap).sort(function(a,b){return b[1]-a[1];});
   const palette=["#1976D2","#43A047","#FB8C00","#8E24AA","#00838F","#E53935","#F9A825"];
-  alogBrowserChart=new Chart(ctx,{
-    type:"doughnut",
-    data:{labels:sorted.map(([k])=>k),datasets:[{data:sorted.map(([,v])=>v),backgroundColor:palette,borderColor:"#fff",borderWidth:3,hoverOffset:8}]},
-    options:{responsive:true,maintainAspectRatio:false,cutout:"60%",plugins:{legend:{position:"bottom",labels:{font:{size:11},padding:10,boxWidth:12}}}}
-  });
+  alogBrowserChart=new Chart(ctx,{type:"doughnut",data:{labels:sorted.map(function(e){return e[0];}),datasets:[{data:sorted.map(function(e){return e[1];}),backgroundColor:palette,borderColor:"#fff",borderWidth:3,hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:false,cutout:"60%",plugins:{legend:{position:"bottom",labels:{font:{size:11},padding:10,boxWidth:12}}}}});
 }
 
-/* Table */
+function getBrowserIcon(b){
+  if(!b)return"globe";const bl=b.toLowerCase();
+  if(bl.includes("chrome"))return"chrome";if(bl.includes("firefox"))return"firefox-browser";
+  if(bl.includes("safari"))return"safari";if(bl.includes("edge"))return"edge";
+  if(bl.includes("opera"))return"opera";if(bl.includes("samsung"))return"android";
+  return"globe";
+}
+
 function renderAlogTable(data){
   const tbody=document.getElementById("alogTableBody");
   if(!tbody)return;
-  if(!data.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted)">Tidak ada data log pada periode ini</td></tr>';return;}
-
-  const deviceIcon={Mobile:'<i class="fas fa-mobile-screen" style="color:#7B2FBE"></i>',Tablet:'<i class="fas fa-tablet-screen-button" style="color:#0288D1"></i>',Desktop:'<i class="fas fa-desktop" style="color:#388E3C"></i>'};
-  const statusBadgeAlog={
+  if(!data.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted)">Tidak ada data pada periode ini</td></tr>';return;}
+  const devIcon={Mobile:'<i class="fas fa-mobile-screen" style="color:#7B2FBE"></i>',Tablet:'<i class="fas fa-tablet-screen-button" style="color:#0288D1"></i>',Desktop:'<i class="fas fa-desktop" style="color:#388E3C"></i>'};
+  const statusBadge={
     LOGIN_OK:'<span style="background:#E8F5E9;color:#2E7D32;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700"><i class="fas fa-circle-check"></i> Berhasil</span>',
     LOGIN_FAIL:'<span style="background:#FFEBEE;color:#C62828;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700"><i class="fas fa-circle-xmark"></i> Gagal</span>',
     LOGOUT:'<span style="background:#F3F4F6;color:#6B7280;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700"><i class="fas fa-right-from-bracket"></i> Logout</span>'
   };
-
-  tbody.innerHTML=data.map(r=>{
-    const ts=r.timestamp?r.timestamp.replace("T"," ").slice(0,16):"—";
-    const badge=statusBadgeAlog[r.status]||('<span>'+esc(r.status||"—")+'</span>');
-    const devIcon=deviceIcon[r.deviceType]||'<i class="fas fa-question"></i>';
-    const roleColor=r.role==="admin"?"#C62828":r.role==="demo"?"#F59E0B":"#1976D2";
-    return`<tr>
-      <td style="white-space:nowrap;font-weight:600;font-size:12px">${esc(ts)}</td>
-      <td><strong>${esc(r.username||"—")}</strong></td>
-      <td><span style="background:${roleColor}18;color:${roleColor};padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">${esc(r.role||"—")}</span></td>
-      <td>${badge}</td>
-      <td><i class="fab fa-${getBrowserIcon(r.browser)}" style="margin-right:5px"></i>${esc(r.browser||"—")}</td>
-      <td>${esc(r.os||"—")}</td>
-      <td style="text-align:center">${devIcon} ${esc(r.deviceType||"—")}</td>
-      <td style="font-size:11px;color:var(--text-muted)">${esc(r.screenRes||"—")}</td>
-    </tr>`;
+  tbody.innerHTML=data.map(function(r){
+    const ts=r.timestamp?(String(r.timestamp).replace("T"," ").slice(0,16)):"—";
+    const badge=statusBadge[r.status]||('<span>'+esc(r.status||"—")+'</span>');
+    const dicon=(devIcon[r.deviceType]||'<i class="fas fa-question"></i>');
+    const rc=r.role==="admin"?"#C62828":r.role==="demo"?"#F59E0B":"#1976D2";
+    return'<tr>'
+      +'<td style="white-space:nowrap;font-weight:600;font-size:12px">'+esc(ts)+'</td>'
+      +'<td><strong>'+esc(r.username||"—")+'</strong></td>'
+      +'<td><span style="background:'+rc+'18;color:'+rc+';padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">'+esc(r.role||"—")+'</span></td>'
+      +'<td>'+badge+'</td>'
+      +'<td><i class="fab fa-'+getBrowserIcon(r.browser)+'" style="margin-right:5px"></i>'+esc(r.browser||"—")+'</td>'
+      +'<td>'+esc(r.os||"—")+'</td>'
+      +'<td style="text-align:center">'+dicon+' '+esc(r.deviceType||"—")+'</td>'
+      +'<td style="font-size:11px;color:var(--text-muted)">'+esc(r.screenRes||"—")+'</td>'
+      +'</tr>';
   }).join("");
-  document.getElementById("alogTableFooter").textContent=`Menampilkan ${data.length} dari ${rawAlog.length} entri`;
-}
-
-function getBrowserIcon(b){
-  if(!b)return"globe";
-  const bl=b.toLowerCase();
-  if(bl.includes("chrome"))return"chrome";
-  if(bl.includes("firefox"))return"firefox-browser";
-  if(bl.includes("safari"))return"safari";
-  if(bl.includes("edge"))return"edge";
-  if(bl.includes("opera"))return"opera";
-  return"globe";
+  const footer=document.getElementById("alogTableFooter");
+  if(footer)footer.textContent="Menampilkan "+data.length+" dari "+rawAlog.length+" entri";
 }
 
 function searchAlogTable(){
-  const q=(document.getElementById("alog-search")?.value||"").toLowerCase();
-  const filtered=q?filteredAlog.filter(r=>(r.username||"").toLowerCase().includes(q)||(r.browser||"").toLowerCase().includes(q)||(r.os||"").toLowerCase().includes(q)||(r.deviceType||"").toLowerCase().includes(q)):filteredAlog;
-  renderAlogTable(filtered);
+  const q=((document.getElementById("alog-search")||{}).value||"").toLowerCase();
+  const res=q?filteredAlog.filter(function(r){return(r.username||"").toLowerCase().includes(q)||(r.browser||"").toLowerCase().includes(q)||(r.os||"").toLowerCase().includes(q)||(r.deviceType||"").toLowerCase().includes(q);}):filteredAlog;
+  renderAlogTable(res);
 }
 
 function sortAlogTable(col){
   if(alogSortCol===col)alogSortDir*=-1;else{alogSortCol=col;alogSortDir=-1;}
   const keys=["timestamp","username","role","status","browser","os","deviceType","screenRes"];
-  filteredAlog.sort((a,b)=>String(a[keys[col]]||"").localeCompare(String(b[keys[col]]||""))*alogSortDir);
+  filteredAlog.sort(function(a,b){return String(a[keys[col]]||"").localeCompare(String(b[keys[col]]||""))*alogSortDir;});
   renderAlogTable(filteredAlog);
 }
