@@ -3,7 +3,7 @@
 /* ✅ Pedoman PDF & Foto Dokumentasi → Google Drive (multi-device)    */
 /* ✅ IndexedDB dihapus — data terpusat di GAS/Drive                  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbzaeYbZypyQ5sC8-OI-Xp0aR8hpsT-Bat3MFz6VgbR_D3F3uC3xwDlRV184u4GNoo7TAg/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzqCyLLFs-rLkahFThbzxIDWCpeoCjv_cvRZqw00_28Q96W6BerasPhmCaV8_Qel2lrPQ/exec";
 
 async function gasPost(payload) {
   const controller = new AbortController();
@@ -50,7 +50,15 @@ function getMappedName(name) {
 }
 function saveSession(data,token){sessionStorage.setItem("ppn_token",token);sessionStorage.setItem("ppn_user",JSON.stringify({displayName:data.displayName,role:data.role}));sessionStorage.setItem("ppn_login_time",Date.now().toString());}
 function clearSession(){sessionStorage.removeItem("ppn_token");sessionStorage.removeItem("ppn_user");sessionStorage.removeItem("ppn_login_time");}
-function isSessionValid(){const token=getToken();const loginTime=parseInt(sessionStorage.getItem("ppn_login_time")||"0");if(!token)return false;if(Date.now()-loginTime>8*60*60*1000){clearSession();return false;}return true;}
+function isSessionValid(){
+  const token=getToken();
+  const loginTime=parseInt(sessionStorage.getItem("ppn_login_time")||"0");
+  if(!token)return false;
+  /* Token demo lokal — selalu valid selama tab terbuka */
+  if(token==="DEMO_LOCAL_TOKEN")return true;
+  if(Date.now()-loginTime>8*60*60*1000){clearSession();return false;}
+  return true;
+}
 function checkAuth(){
   const overlay=document.getElementById("loginOverlay");
   const usernameEl=document.getElementById("sidebarUsername");
@@ -107,30 +115,35 @@ function getDeviceInfo(){
   };
 }
 
-/* ── Demo Login ── */
-async function doDemoLogin(){
+/* ── Demo Login — LANGSUNG jalan di browser, tidak perlu GAS ── */
+function doDemoLogin(){
   const btn=document.getElementById("btnDemo");
   if(btn){btn.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Memuat...';btn.disabled=true;}
-  try{
-    clearSession();
-    const data=await gasPost({action:"login",username:"demo",password:"demo1234",deviceInfo:getDeviceInfo()});
-    if(data.status==="ok"){
-      saveSession(data,data.token);
-      const errEl=document.getElementById("loginError");
-      if(errEl)errEl.style.display="none";
-      const overlay=document.getElementById("loginOverlay");
-      if(overlay)overlay.classList.add("hidden");
-      const unEl=document.getElementById("sidebarUsername");
-      if(unEl)unEl.textContent="Demo User";
-      applyRoleUI();
-      loadData();
-    } else {
-      showLoginError(data.message||"Akun demo belum aktif. Pastikan Code.gs sudah diupdate & initPasswordHashes() sudah dijalankan.");
-    }
-  }catch(err){
-    showLoginError("Tidak dapat terhubung ke server: "+err.message);
-  }
-  if(btn){btn.innerHTML='<i class="fas fa-eye"></i> Lihat Tampilan Demo';btn.disabled=false;}
+
+  /* Buat sesi demo lokal tanpa server call */
+  clearSession();
+  /* Token dummy agar isSessionValid() lolos */
+  sessionStorage.setItem("ppn_token","DEMO_LOCAL_TOKEN");
+  sessionStorage.setItem("ppn_user",JSON.stringify({displayName:"Demo User",role:"demo"}));
+  sessionStorage.setItem("ppn_login_time",Date.now().toString());
+
+  /* Sembunyikan overlay login */
+  const errEl=document.getElementById("loginError");
+  if(errEl)errEl.style.display="none";
+  const overlay=document.getElementById("loginOverlay");
+  if(overlay)overlay.classList.add("hidden");
+
+  /* Set nama di sidebar */
+  const unEl=document.getElementById("sidebarUsername");
+  if(unEl)unEl.textContent="Demo User";
+
+  /* Terapkan UI demo & tampilkan dashboard kosong */
+  applyRoleUI();
+
+  /* Tidak perlu loadData() — demo cukup tampilkan halaman kosong dengan overlay */
+  setTimeout(function(){
+    if(btn){btn.innerHTML='<i class="fas fa-eye"></i> Lihat Tampilan Demo';btn.disabled=false;}
+  },300);
 }
 
 /* LOGOUT */
@@ -462,7 +475,21 @@ async function loadData(){
     if(overlay)overlay.classList.remove("hidden");
     return;
   }
-  showLoading(true);hideError();
+
+  /* ── MODE DEMO: tidak ada data, langsung render kosong ── */
+  if(isDemo()){
+    rawHRA=[];rawDAT=[];rawPest=[];
+    rawFisika=[];rawKimia=[];rawBiologi=[];rawErgonomi=[];rawPsikososial=[];
+    filteredHRA=[];filteredDAT=[];filteredPest=[];
+    filteredFisika=[];filteredKimia=[];filteredBiologi=[];filteredErgonomi=[];filteredPsikososial=[];
+    rawCloseout25=[...RAW_CLOSEOUT_2025];filteredCO25=[...RAW_CLOSEOUT_2025];
+    const lastEl=document.getElementById("lastUpdated");
+    if(lastEl)lastEl.textContent="Mode Demo";
+    renderHRAPage();renderDATPage();renderPestPage();
+    renderFisikaPage();renderKimiaPage();renderBiologiPage();renderErgonomiPage();renderPsikoPage();
+    setTimeout(applyDemoOverlay,500);
+    return;
+  }
   try{
     const data=await gasPost({action:"getData",sheet:"all",token:getToken()});
     if(data.status==="unauthorized"){
