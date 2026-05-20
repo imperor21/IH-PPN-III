@@ -122,7 +122,6 @@ function doDemoLogin(){
 
   /* Buat sesi demo lokal tanpa server call */
   clearSession();
-  /* Token dummy agar isSessionValid() lolos */
   sessionStorage.setItem("ppn_token","DEMO_LOCAL_TOKEN");
   sessionStorage.setItem("ppn_user",JSON.stringify({displayName:"Demo User",role:"demo"}));
   sessionStorage.setItem("ppn_login_time",Date.now().toString());
@@ -137,10 +136,12 @@ function doDemoLogin(){
   const unEl=document.getElementById("sidebarUsername");
   if(unEl)unEl.textContent="Demo User";
 
-  /* Terapkan UI demo & tampilkan dashboard kosong */
+  /* Terapkan UI role demo (banner, sembunyikan admin elements) */
   applyRoleUI();
 
-  /* Tidak perlu loadData() — demo cukup tampilkan halaman kosong dengan overlay */
+  /* Render halaman dengan data kosong + overlay kunci */
+  loadData();
+
   setTimeout(function(){
     if(btn){btn.innerHTML='<i class="fas fa-eye"></i> Lihat Tampilan Demo';btn.disabled=false;}
   },300);
