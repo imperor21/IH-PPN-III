@@ -3,7 +3,7 @@
 /* ✅ Pedoman PDF & Foto Dokumentasi → Google Drive (multi-device)    */
 /* ✅ IndexedDB dihapus — data terpusat di GAS/Drive                  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbzaeYbZypyQ5sC8-OI-Xp0aR8hpsT-Bat3MFz6VgbR_D3F3uC3xwDlRV184u4GNoo7TAg/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzqCyLLFs-rLkahFThbzxIDWCpeoCjv_cvRZqw00_28Q96W6BerasPhmCaV8_Qel2lrPQ/exec";
 
 async function gasPost(payload) {
   const controller = new AbortController();
@@ -1057,6 +1057,136 @@ function renderKimiaTable(data){
     <td style="font-size:11px">${esc(r["Nama Laboratorium"]||"—")}</td>
   </tr>`).join("");
   const f=document.getElementById("kimiaTableFooter");if(f)f.textContent=`Menampilkan ${data.length} dari ${rawKimia.length} entri`;
+  /* Render biomarker section di bawah tabel kimia */
+  renderBioKimiaSection();
+}
+/* ── Render Biomarker section di halaman Faktor Kimia ── */
+var filteredBioKimia=[];
+var bioKapalChart=null,bioStatusChart=null;
+var bioKimiaSortCol=0,bioKimiaSortDir=-1;
+
+function renderBioKimiaSection(){
+  /* Gabungkan rawBiomarker + rawPersonal jadi satu list */
+  var tipeF=(document.getElementById("bio-filter-tipe")||{}).value||"all";
+  var tahunF=(document.getElementById("bio-filter-tahun")||{}).value||"";
+  var kapalF=(document.getElementById("bio-filter-kapal")||{}).value||"";
+
+  /* Populate dropdown tahun & kapal */
+  var allData=[];
+  if(tipeF==="all"||tipeF==="biomarker") rawBiomarker.forEach(function(r){allData.push(Object.assign({},r,{tipe:"Biomarker",lokasi:r.lokasi||"Urin",nilai:r.kreatinin,batas:r.rujukan,satuan:"00b5g/g kreat."}));});
+  if(tipeF==="all"||tipeF==="personal")  rawPersonal.forEach(function(r){allData.push(Object.assign({},r,{tipe:"Personal",lokasi:r.lokasi||"Udara",nilai:r.hasil,batas:r.nab,satuan:"ppm"}));});
+
+  /* Populate tahun dropdown */
+  var tahunSel=document.getElementById("bio-filter-tahun");
+  if(tahunSel){
+    var curT=tahunSel.value;
+    var tahuns=[...new Set(allData.map(function(r){return r.tahun;}).filter(Boolean))].sort();
+    tahunSel.innerHTML='<option value="">Semua Tahun</option>'+tahuns.map(function(t){return'<option'+(t===curT?' selected':'')+'>'+esc(t)+'</option>';}).join("");
+  }
+  /* Populate kapal dropdown */
+  var kapalSel=document.getElementById("bio-filter-kapal");
+  if(kapalSel){
+    var curK=kapalSel.value;
+    var kapals=[...new Set(allData.map(function(r){return r.kapal;}).filter(Boolean))].sort();
+    kapalSel.innerHTML='<option value="">Semua Kapal</option>'+kapals.map(function(k){return'<option'+(k===curK?' selected':'')+'>'+esc(k)+'</option>';}).join("");
+  }
+
+  /* Filter */
+  filteredBioKimia=allData.filter(function(r){
+    if(tahunF&&r.tahun!==tahunF)return false;
+    if(kapalF&&r.kapal!==kapalF)return false;
+    return true;
+  });
+
+  /* KPI */
+  var total=filteredBioKimia.length;
+  var melebihi=filteredBioKimia.filter(function(r){return r.nilai>r.batas;}).length;
+  var normal=total-melebihi;
+  var kapalSet=new Set(filteredBioKimia.map(function(r){return r.kapal;}).filter(Boolean));
+  var setEl=function(id,v){var el=document.getElementById(id);if(el)el.textContent=v;};
+  setEl("bio-kpi-total",fmtNum(total));
+  setEl("bio-kpi-melebihi",fmtNum(melebihi));
+  setEl("bio-kpi-normal",fmtNum(normal));
+  setEl("bio-kpi-kapal",fmtNum(kapalSet.size));
+
+  renderBioKapalChart(filteredBioKimia);
+  renderBioStatusChart(filteredBioKimia,melebihi,normal);
+  renderBioTable(filteredBioKimia);
+}
+
+function renderBioKapalChart(data){
+  var ctx=document.getElementById("bioKapalChart");
+  if(!ctx)return;
+  if(bioKapalChart){bioKapalChart.destroy();bioKapalChart=null;}
+  if(!data.length){emptyChart("bioKapalChart","Belum ada data");return;}
+  clearEmptyChart("bioKapalChart");
+  var kapalMap={};
+  data.forEach(function(r){kapalMap[r.kapal]=(kapalMap[r.kapal]||[]);kapalMap[r.kapal].push(r.nilai);});
+  var labels=Object.keys(kapalMap).slice(0,12);
+  var avgs=labels.map(function(k){var arr=kapalMap[k];return+(arr.reduce(function(s,v){return s+v;},0)/arr.length).toFixed(2);});
+  var refs=data.filter(function(r){return labels.indexOf(r.kapal)!==-1;}).map(function(r){return r.batas;})[0]||25;
+  bioKapalChart=new Chart(ctx.getContext("2d"),{
+    type:"bar",
+    data:{labels:labels,datasets:[
+      {label:"Rata-rata Nilai",data:avgs,backgroundColor:avgs.map(function(v){return v>refs?"#E53935":"#8E24AA";}),borderRadius:5},
+      {label:"BEI/NAB",data:labels.map(function(){return refs;}),type:"line",borderColor:"#F59E0B",borderWidth:2,borderDash:[6,3],pointRadius:0,fill:false}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"top",labels:{font:{size:11}}}},scales:{x:{ticks:{font:{size:9},maxRotation:35}},y:{beginAtZero:true,ticks:{font:{size:10}}}}}
+  });
+}
+
+function renderBioStatusChart(data,melebihi,normal){
+  var ctx=document.getElementById("bioStatusChart");
+  if(!ctx)return;
+  if(bioStatusChart){bioStatusChart.destroy();bioStatusChart=null;}
+  if(!data.length){emptyChart("bioStatusChart","Belum ada data");return;}
+  clearEmptyChart("bioStatusChart");
+  bioStatusChart=new Chart(ctx.getContext("2d"),{
+    type:"doughnut",
+    data:{labels:["Normal","Melebihi BEI/NAB"],datasets:[{data:[normal,melebihi],backgroundColor:["#43A047","#E53935"],borderColor:"#fff",borderWidth:3,hoverOffset:8}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:"62%",plugins:{legend:{position:"bottom",labels:{font:{size:11},padding:12,boxWidth:12}}}}
+  });
+}
+
+function renderBioTable(data){
+  var tbody=document.getElementById("bioTableBody");
+  if(!tbody)return;
+  if(!data.length){tbody.innerHTML=emptyState("Belum ada data biomonitoring","fa-flask-vial");document.getElementById("bioTableFooter").textContent="Tidak ada data";return;}
+  tbody.innerHTML=data.map(function(r){
+    var over=r.nilai>r.batas;
+    var badge=over?'<span style="background:#FFEBEE;color:#C62828;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700"><i class="fas fa-circle-xmark"></i> Melebihi</span>':'<span style="background:#E8F5E9;color:#2E7D32;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700"><i class="fas fa-circle-check"></i> Normal</span>';
+    var tipeBadge=r.tipe==="Biomarker"?'<span style="background:#F3E5F5;color:#6A1B9A;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700">Biomarker</span>':'<span style="background:#E3F2FD;color:#1565C0;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700">Personal</span>';
+    return'<tr>'
+      +'<td><strong>'+esc(r.tahun||"—")+'</strong></td>'
+      +'<td>'+esc(r.kapal||"—")+'</td>'
+      +'<td><span style="background:#E8F5E9;color:#2E7D32;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700">'+esc(r.fleet||"—")+'</span></td>'
+      +'<td>'+esc(r.pekerja||"—")+'</td>'
+      +'<td>'+tipeBadge+'</td>'
+      +'<td style="font-size:11px;color:var(--text-muted)">'+esc(r.lokasi||"—")+'</td>'
+      +'<td style="font-weight:700;color:'+(over?"#C62828":"#2E7D32")+'">'+r.nilai+' <small style="font-weight:400;color:var(--text-muted)">'+esc(r.satuan)+'</small></td>'
+      +'<td style="color:var(--text-muted)">'+r.batas+' '+esc(r.satuan)+'</td>'
+      +'<td>'+badge+'</td>'
+      +'</tr>';
+  }).join("");
+  var ft=document.getElementById("bioTableFooter");
+  if(ft)ft.textContent="Menampilkan "+data.length+" entri";
+}
+
+function applyBioKimiaFilters(){renderBioKimiaSection();}
+function clearBioKimiaFilters(){
+  ["bio-filter-tahun","bio-filter-kapal","bio-filter-tipe"].forEach(function(id){var el=document.getElementById(id);if(el)el.value=id==="bio-filter-tipe"?"all":"";});
+  renderBioKimiaSection();
+}
+function searchBioTable(){
+  var q=((document.getElementById("bio-search")||{}).value||"").toLowerCase();
+  var res=q?filteredBioKimia.filter(function(r){return(r.pekerja||"").toLowerCase().includes(q)||(r.kapal||"").toLowerCase().includes(q)||(r.tipe||"").toLowerCase().includes(q);}):filteredBioKimia;
+  renderBioTable(res);
+}
+function sortBioTable(col){
+  if(bioKimiaSortCol===col)bioKimiaSortDir*=-1;else{bioKimiaSortCol=col;bioKimiaSortDir=-1;}
+  var keys=["tahun","kapal","fleet","pekerja","tipe","lokasi","nilai","batas"];
+  filteredBioKimia.sort(function(a,b){return String(a[keys[col]]||"").localeCompare(String(b[keys[col]]||""),undefined,{numeric:true})*bioKimiaSortDir;});
+  renderBioTable(filteredBioKimia);
 }
 function applyKimiaFilters(){
   const b=document.getElementById("kimia-filter-bulan").value;
@@ -2428,6 +2558,9 @@ async function fetchBiomonitoring(){
     bioPopulateKapalFilter();
     var pgBio=document.getElementById("page-biomonitoring");
     if(pgBio&&pgBio.classList.contains("active")) renderBioPage();
+    /* Juga update section biomarker di Faktor Kimia jika sedang aktif */
+    var pgKimia=document.getElementById("page-kimia");
+    if(pgKimia&&pgKimia.classList.contains("active")) renderBioKimiaSection();
 
   }catch(err){
     /* Koneksi gagal: pakai data dummy, tidak crash */
@@ -2579,4 +2712,235 @@ function sortAlogTable(col){
   const keys=["timestamp","username","role","status","browser","os","deviceType","screenRes"];
   filteredAlog.sort(function(a,b){return String(a[keys[col]]||"").localeCompare(String(b[keys[col]]||""))*alogSortDir;});
   renderAlogTable(filteredAlog);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   AI ANALISA BENZENE — Menggunakan Claude API
+   Standar: ACGIH BEI 2024 · Permenaker 05/2018 · IARC · ILO Maritime
+═══════════════════════════════════════════════════════════════ */
+
+async function runBioAIAnalysis(){
+  /* Cek ada data */
+  var allBio=[];
+  rawBiomarker.forEach(function(r){allBio.push({tipe:"Biomarker (Urin/Kreatinin)",kapal:r.kapal,fleet:r.fleet,pekerja:r.pekerja,tahun:r.tahun,nilai:r.kreatinin,satuan:"µg/g kreatinin",bei_nab:r.rujukan,status:r.kreatinin>r.rujukan?"MELEBIHI BEI":"NORMAL"});});
+  rawPersonal.forEach(function(r){allBio.push({tipe:"Personal Air Sampling",kapal:r.kapal,fleet:r.fleet,pekerja:r.pekerja,tahun:r.tahun,lokasi:r.lokasi,nilai:r.hasil,satuan:"ppm",bei_nab:r.nab,status:r.hasil>r.nab?"MELEBIHI NAB":"NORMAL"});});
+
+  if(!allBio.length){
+    showToast("Tidak ada data biomonitoring untuk dianalisa.","warning");
+    return;
+  }
+
+  /* Tampilkan loading */
+  document.getElementById("bioAIPlaceholder").style.display="none";
+  document.getElementById("bioAIError").style.display="none";
+  document.getElementById("bioAIResult").style.display="none";
+  document.getElementById("bioAILoading").style.display="block";
+  var btn=document.getElementById("btnBioAI");
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Menganalisa...';}
+
+  var msgs=[
+    "Memproses data biomonitoring Anda...",
+    "Membandingkan dengan standar ACGIH BEI 2024...",
+    "Menelaah dampak kesehatan jangka panjang...",
+    "Menyusun rekomendasi berbasis Permenaker 05/2018...",
+    "Finalisasi analisa untuk lingkungan maritim..."
+  ];
+  var mi=0;
+  var msgInterval=setInterval(function(){
+    mi=(mi+1)%msgs.length;
+    var el=document.getElementById("bioAILoadingMsg");
+    if(el)el.textContent=msgs[mi];
+  },2000);
+
+  /* Susun ringkasan data untuk prompt */
+  var total=allBio.length;
+  var melebihi=allBio.filter(function(r){return r.status==="MELEBIHI BEI"||r.status==="MELEBIHI NAB";}).length;
+  var kapalSet=[...new Set(allBio.map(function(r){return r.kapal;}).filter(Boolean))];
+  var tahunSet=[...new Set(allBio.map(function(r){return r.tahun;}).filter(Boolean))].sort();
+
+  /* Sampel data max 30 baris untuk prompt */
+  var sample=allBio.slice(0,30);
+  var dataStr=JSON.stringify(sample,null,0);
+
+  var biomarkerStats={
+    total:rawBiomarker.length,
+    melebihi:rawBiomarker.filter(function(r){return r.kreatinin>r.rujukan;}).length,
+    rataRata:rawBiomarker.length?+(rawBiomarker.reduce(function(s,r){return s+r.kreatinin;},0)/rawBiomarker.length).toFixed(2):0,
+    max:rawBiomarker.length?Math.max.apply(null,rawBiomarker.map(function(r){return r.kreatinin;})):0,
+    bei:rawBiomarker.length?rawBiomarker[0].rujukan:25
+  };
+  var personalStats={
+    total:rawPersonal.length,
+    melebihi:rawPersonal.filter(function(r){return r.hasil>r.nab;}).length,
+    rataRata:rawPersonal.length?+(rawPersonal.reduce(function(s,r){return s+r.hasil;},0)/rawPersonal.length).toFixed(3):0,
+    max:rawPersonal.length?Math.max.apply(null,rawPersonal.map(function(r){return r.hasil;})):0,
+    nab:rawPersonal.length?rawPersonal[0].nab:0.5
+  };
+
+  var prompt=`Kamu adalah Industrial Hygienist (IH) senior yang ahli di bidang kesehatan kerja maritim dan toksikologi benzene. Analisa data biomonitoring benzene berikut dari armada kapal tanker Pertamina Patra Niaga dan berikan rekomendasi komprehensif.
+
+## DATA BIOMONITORING
+
+**Ringkasan:**
+- Total data: ${total} entri (${tahunSet.join(", ")})
+- Kapal terlibat: ${kapalSet.length} kapal (${kapalSet.slice(0,5).join(", ")}${kapalSet.length>5?"...":""})
+- Total melebihi standar: ${melebihi} dari ${total} (${total>0?Math.round(melebihi/total*100):0}%)
+
+**Biomarker Benzene (Urin - Muconic Acid/Kreatinin):**
+- Total sampel: ${biomarkerStats.total}
+- Melebihi BEI: ${biomarkerStats.melebihi}
+- Rata-rata: ${biomarkerStats.rataRata} µg/g kreatinin
+- Nilai tertinggi: ${biomarkerStats.max} µg/g kreatinin
+- BEI ACGIH: ${biomarkerStats.bei} µg/g kreatinin
+
+**Personal Air Sampling (Benzene Udara):**
+- Total sampel: ${personalStats.total}
+- Melebihi NAB: ${personalStats.melebihi}
+- Rata-rata: ${personalStats.rataRata} ppm
+- Nilai tertinggi: ${personalStats.max} ppm
+- NAB Permenaker 05/2018: ${personalStats.nab} ppm
+
+**Sampel data detail:**
+${dataStr}
+
+## INSTRUKSI ANALISA
+
+Berikan analisa lengkap dalam format HTML yang terstruktur dengan bagian berikut. Gunakan bahasa Indonesia yang profesional dan mudah dipahami oleh tenaga IH di lapangan.
+
+Format output WAJIB menggunakan HTML berikut:
+
+<div class="ai-section ai-risk">
+<div class="ai-section-title"><i class="fas fa-triangle-exclamation"></i> Penilaian Risiko & Level Bahaya</div>
+<div class="ai-content">
+[Tuliskan level risiko keseluruhan: RENDAH/SEDANG/TINGGI/KRITIS, dengan penjelasan berdasarkan persentase yang melebihi standar, nilai tertinggi vs BEI/NAB, dan tren data. Sertakan risk rating dalam badge warna.]
+</div>
+</div>
+
+<div class="ai-section ai-health">
+<div class="ai-section-title"><i class="fas fa-heart-pulse"></i> Dampak Kesehatan Berdasarkan Bukti Ilmiah Terkini</div>
+<div class="ai-content">
+[Jelaskan dampak kesehatan spesifik berdasarkan level paparan yang ditemukan: efek akut (pusing, mual, iritasi), efek kronis (mielotoksisitas, leukemia - IARC Group 1), gangguan hematologi. Sebutkan studi terkini 2020-2024 jika relevan. Berikan konteks untuk nilai yang ditemukan.]
+</div>
+</div>
+
+<div class="ai-section ai-standard">
+<div class="ai-section-title"><i class="fas fa-scale-balanced"></i> Perbandingan Standar Internasional & Nasional</div>
+<div class="ai-content">
+[Bandingkan nilai yang ditemukan dengan: ACGIH TLV-TWA (0.5 ppm), ACGIH BEI (25 µg/g kreatinin), OSHA PEL (1 ppm), NIOSH REL (0.1 ppm), Permenaker 05/2018 (0.5 ppm), ILO MLC 2006 Maritime. Buat tabel perbandingan dalam HTML.]
+</div>
+</div>
+
+<div class="ai-section ai-recommend">
+<div class="ai-section-title"><i class="fas fa-shield-halved"></i> Rekomendasi Tindak Lanjut Prioritas</div>
+<div class="ai-content">
+[Berikan 5-8 rekomendasi konkret dan actionable dengan prioritas SEGERA/JANGKA PENDEK/JANGKA PANJANG. Spesifik untuk lingkungan kapal tanker: engineering control, APD (respirator benzene cartridge), medical surveillance, frekuensi monitoring, rotasi kerja. Gunakan list bernomor dengan badge prioritas.]
+</div>
+</div>
+
+<div class="ai-section ai-surveillance">
+<div class="ai-section-title"><i class="fas fa-calendar-check"></i> Program Medical Surveillance</div>
+<div class="ai-content">
+[Rekomendasikan program pemantauan kesehatan: frekuensi biomonitoring (berapa bulan sekali), parameter laboratorium yang perlu diperiksa (CBC, diff count, liver function), kriteria fitness to work, kapan perlu konsultasi dokter spesialis OH. Sertakan tabel jadwal surveillance jika ada yang melebihi standar.]
+</div>
+</div>
+
+<div class="ai-section ai-kapal">
+<div class="ai-section-title"><i class="fas fa-ship"></i> Analisa Per Kapal Prioritas</div>
+<div class="ai-content">
+[Identifikasi kapal dengan risiko tertinggi berdasarkan data. Berikan analisa mengapa kapal tersebut memiliki paparan lebih tinggi (jenis muatan, usia kapal, kondisi ventilasi pump room/cargo tank) dan rekomendasi spesifik per kapal.]
+</div>
+</div>
+
+Gunakan badge HTML inline untuk level/prioritas:
+- KRITIS: <span style="background:#B71C1C;color:#fff;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">KRITIS</span>
+- TINGGI: <span style="background:#E53935;color:#fff;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">TINGGI</span>  
+- SEDANG: <span style="background:#F59E0B;color:#fff;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">SEDANG</span>
+- RENDAH: <span style="background:#43A047;color:#fff;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">RENDAH</span>
+- SEGERA: <span style="background:#C62828;color:#fff;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">SEGERA</span>
+- JANGKA PENDEK: <span style="background:#1976D2;color:#fff;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">JANGKA PENDEK</span>
+- JANGKA PANJANG: <span style="background:#388E3C;color:#fff;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">JANGKA PANJANG</span>
+
+PENTING: Hanya output HTML murni, tanpa markdown, tanpa backtick, tanpa preamble.`;
+
+  try{
+    var response=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        model:"claude-sonnet-4-20250514",
+        max_tokens:4000,
+        system:"Kamu adalah Industrial Hygienist senior ahli toksikologi benzene di industri maritim. Berikan analisa berdasarkan bukti ilmiah terkini dan standar internasional. Selalu gunakan data numerik yang diberikan dalam analisa. Output HANYA HTML murni.",
+        messages:[{role:"user",content:prompt}]
+      })
+    });
+
+    clearInterval(msgInterval);
+
+    if(!response.ok){
+      throw new Error("HTTP "+response.status);
+    }
+
+    var result=await response.json();
+    var aiText=(result.content&&result.content[0]&&result.content[0].text)||"";
+
+    if(!aiText){throw new Error("Response kosong dari AI");}
+
+    /* Tampilkan hasil */
+    document.getElementById("bioAILoading").style.display="none";
+    var resultEl=document.getElementById("bioAIResult");
+    resultEl.style.display="block";
+
+    /* Tambahkan wrapper style + timestamp */
+    var now=new Date();
+    var ts=now.toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"})+" "+now.toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"});
+
+    resultEl.innerHTML=`
+      <style>
+        .ai-section{background:var(--bg,#F8FAFC);border:1px solid var(--border-soft,#E2E8F0);border-radius:12px;padding:16px 18px;margin-bottom:12px}
+        .ai-section.ai-risk{border-left:4px solid #E53935}
+        .ai-section.ai-health{border-left:4px solid #8E24AA}
+        .ai-section.ai-standard{border-left:4px solid #1976D2}
+        .ai-section.ai-recommend{border-left:4px solid #2E7D32}
+        .ai-section.ai-surveillance{border-left:4px solid #0288D1}
+        .ai-section.ai-kapal{border-left:4px solid #F59E0B}
+        .ai-section-title{font-size:13px;font-weight:800;color:var(--text,#1E293B);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+        .ai-section-title i{font-size:15px}
+        .ai-content{font-size:12.5px;color:var(--text,#334155);line-height:1.75}
+        .ai-content ul,.ai-content ol{padding-left:18px;margin:6px 0}
+        .ai-content li{margin-bottom:5px}
+        .ai-content table{width:100%;border-collapse:collapse;font-size:11.5px;margin:8px 0}
+        .ai-content th{background:var(--mc,#0F2A4A);color:#fff;padding:6px 10px;text-align:left;font-size:11px}
+        .ai-content td{padding:6px 10px;border-bottom:1px solid var(--border-soft,#E2E8F0)}
+        .ai-content tr:nth-child(even) td{background:rgba(0,0,0,.02)}
+        .ai-content strong{color:var(--text,#1E293B);font-weight:700}
+        .ai-content p{margin:6px 0}
+      </style>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <i class="fas fa-robot" style="color:#1976D2;font-size:18px"></i>
+          <span style="font-size:13px;font-weight:700;color:var(--text)">Analisa AI — Industrial Hygiene Benzene</span>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted)">
+          <i class="fas fa-clock" style="margin-right:4px"></i>${ts}
+          &nbsp;·&nbsp;<i class="fas fa-database" style="margin-right:4px"></i>${total} data
+        </div>
+      </div>
+      ${aiText}
+      <div style="margin-top:14px;padding:10px 14px;background:var(--blue-soft,#EBF5FF);border-radius:10px;font-size:11px;color:var(--blue,#1565C0)">
+        <i class="fas fa-circle-info" style="margin-right:6px"></i>
+        <strong>Disclaimer:</strong> Analisa ini dihasilkan oleh AI berdasarkan data yang diinput dan standar yang berlaku. Keputusan medis dan tindakan lanjut tetap harus dikonsultasikan dengan dokter spesialis Occupational Health dan Industrial Hygienist bersertifikat.
+      </div>`;
+
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-rotate-right"></i> Perbarui Analisa';}
+    showToast("Analisa AI selesai!","success");
+
+  }catch(err){
+    clearInterval(msgInterval);
+    document.getElementById("bioAILoading").style.display="none";
+    document.getElementById("bioAIError").style.display="block";
+    document.getElementById("bioAIErrorMsg").textContent="Gagal: "+err.message+". Pastikan koneksi internet aktif.";
+    document.getElementById("bioAIPlaceholder").style.display="block";
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-sparkles"></i> Coba Lagi';}
+    console.error("Bio AI error:",err);
+  }
 }
