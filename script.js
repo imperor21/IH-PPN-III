@@ -486,9 +486,18 @@ async function loadData(){
     rawCloseout25=[...RAW_CLOSEOUT_2025];filteredCO25=[...RAW_CLOSEOUT_2025];
     const lastEl=document.getElementById("lastUpdated");
     if(lastEl)lastEl.textContent="Mode Demo";
-    renderHRAPage();renderDATPage();renderPestPage();
-    renderFisikaPage();renderKimiaPage();renderBiologiPage();renderErgonomiPage();renderPsikoPage();
-    setTimeout(applyDemoOverlay,500);
+    try{renderHRAPage();}catch(e){}
+    try{renderDATPage();}catch(e){}
+    try{renderPestPage();}catch(e){}
+    try{renderFisikaPage();}catch(e){}
+    try{renderKimiaPage();}catch(e){}
+    try{renderBiologiPage();}catch(e){}
+    try{renderErgonomiPage();}catch(e){}
+    try{renderPsikoPage();}catch(e){}
+    /* Matikan loading spinner */
+    showLoading(false);
+    hideError();
+    setTimeout(applyDemoOverlay,400);
     return;
   }
   try{
