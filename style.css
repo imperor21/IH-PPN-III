@@ -1261,3 +1261,28 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 .demo-overlay-inner i{font-size:24px;color:#f59e0b;margin-bottom:2px;}
 .demo-overlay-inner span{font-size:13px;font-weight:800;color:var(--text,#1e293b);letter-spacing:.2px;}
 .demo-overlay-inner small{font-size:11px;color:var(--text-muted,#64748b);}
+
+/* ═══════════════════════════════════════════════════════
+   PERBAIKAN — empty state, mobile demo btn, misc
+═══════════════════════════════════════════════════════ */
+
+/* Tombol Demo — tampil di mobile juga */
+@media(max-width:768px){
+  .login-divider{margin:12px 0 6px;}
+  .btn-demo{padding:13px;font-size:13px;}
+}
+
+/* Empty state chart placeholder */
+.chart-empty-ph{
+  pointer-events:none;
+}
+
+/* Perbaikan teks footer login */
+.login-footer{
+  text-align:center;
+  font-size:12px;
+  color:var(--text-muted,rgba(255,255,255,.4));
+  padding-top:12px;
+  border-top:1px solid rgba(255,255,255,.08);
+  margin-top:16px;
+}
