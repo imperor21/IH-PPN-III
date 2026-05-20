@@ -663,6 +663,149 @@
 </div>
 <div class="table-footer" id="kimiaTableFooter">Memuat data...</div>
 </div></div>
+
+<!-- ── SECTION BIOMARKER BENZENE ── -->
+<div class="section-divider" style="margin:18px 0 14px;display:flex;align-items:center;gap:10px">
+  <div style="flex:1;height:1px;background:var(--border-soft)"></div>
+  <span style="font-size:12px;font-weight:700;color:var(--text-muted);letter-spacing:.5px;white-space:nowrap"><i class="fas fa-dna" style="margin-right:6px;color:#8E24AA"></i>BIOMONITORING BENZENE</span>
+  <div style="flex:1;height:1px;background:var(--border-soft)"></div>
+</div>
+
+<!-- Filter tahun biomarker -->
+<div class="filter-bar" id="bioFilterBar" style="margin-bottom:12px">
+  <div class="filter-group">
+    <label>Tahun</label>
+    <select id="bio-filter-tahun" onchange="applyBioKimiaFilters()">
+      <option value="">Semua Tahun</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>Kapal</label>
+    <select id="bio-filter-kapal" onchange="applyBioKimiaFilters()">
+      <option value="">Semua Kapal</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>Tipe Data</label>
+    <select id="bio-filter-tipe" onchange="applyBioKimiaFilters()">
+      <option value="all">Semua</option>
+      <option value="biomarker">Biomarker (Urin)</option>
+      <option value="personal">Personal Sampling (Udara)</option>
+    </select>
+  </div>
+  <button class="btn-clear" onclick="clearBioKimiaFilters()"><i class="fas fa-xmark"></i> Reset</button>
+</div>
+
+<!-- KPI Biomarker -->
+<div class="kpi-grid" style="margin-bottom:14px">
+  <div class="kpi-card purple"><div class="kpi-icon"><i class="fas fa-flask-vial"></i></div><div class="kpi-body"><div class="kpi-value" id="bio-kpi-total">—</div><div class="kpi-label">Total Biomarker</div></div></div>
+  <div class="kpi-card red"><div class="kpi-icon"><i class="fas fa-circle-xmark"></i></div><div class="kpi-body"><div class="kpi-value" id="bio-kpi-melebihi">—</div><div class="kpi-label">Melebihi BEI/NAB</div></div></div>
+  <div class="kpi-card green"><div class="kpi-icon"><i class="fas fa-circle-check"></i></div><div class="kpi-body"><div class="kpi-value" id="bio-kpi-normal">—</div><div class="kpi-label">Normal</div></div></div>
+  <div class="kpi-card blue"><div class="kpi-icon"><i class="fas fa-ship"></i></div><div class="kpi-body"><div class="kpi-value" id="bio-kpi-kapal">—</div><div class="kpi-label">Jumlah Kapal</div></div></div>
+</div>
+
+<!-- Chart Biomarker -->
+<div class="chart-row" style="margin-bottom:14px">
+  <div class="chart-card">
+    <div class="chart-header">
+      <span class="chart-title"><i class="fas fa-chart-column"></i> Biomarker per Kapal (Kreatinin µg/g)</span>
+    </div>
+    <div class="chart-body"><canvas id="bioKapalChart"></canvas></div>
+  </div>
+  <div class="chart-card" style="max-width:320px">
+    <div class="chart-header">
+      <span class="chart-title"><i class="fas fa-chart-pie"></i> Status vs BEI/NAB</span>
+    </div>
+    <div class="chart-body"><canvas id="bioStatusChart"></canvas></div>
+  </div>
+</div>
+
+<!-- Tabel Biomarker -->
+<div class="table-card" style="margin-top:0">
+  <div class="chart-header" style="flex-wrap:wrap;gap:10px">
+    <span class="chart-title"><i class="fas fa-table-list"></i> Detail Data Biomonitoring Benzene</span>
+    <input type="text" id="bio-search" placeholder="Cari pekerja, kapal..." oninput="searchBioTable()" class="search-input">
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr>
+        <th onclick="sortBioTable(0)">Tahun <i class="fas fa-sort fa-xs"></i></th>
+        <th onclick="sortBioTable(1)">Kapal <i class="fas fa-sort fa-xs"></i></th>
+        <th onclick="sortBioTable(2)">Fleet <i class="fas fa-sort fa-xs"></i></th>
+        <th onclick="sortBioTable(3)">Nama Pekerja <i class="fas fa-sort fa-xs"></i></th>
+        <th onclick="sortBioTable(4)">Tipe <i class="fas fa-sort fa-xs"></i></th>
+        <th onclick="sortBioTable(5)">Lokasi/Media <i class="fas fa-sort fa-xs"></i></th>
+        <th onclick="sortBioTable(6)">Nilai <i class="fas fa-sort fa-xs"></i></th>
+        <th onclick="sortBioTable(7)">BEI/NAB <i class="fas fa-sort fa-xs"></i></th>
+        <th onclick="sortBioTable(8)">Status <i class="fas fa-sort fa-xs"></i></th>
+      </tr></thead>
+      <tbody id="bioTableBody">
+        <tr><td colspan="9" style="text-align:center;padding:32px;color:var(--text-muted)">Memuat data...</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="table-footer" id="bioTableFooter">—</div>
+</div>
+
+<!-- ── AI ANALISA BENZENE ── -->
+<div class="section-divider" style="margin:20px 0 14px;display:flex;align-items:center;gap:10px">
+  <div style="flex:1;height:1px;background:var(--border-soft)"></div>
+  <span style="font-size:12px;font-weight:700;color:var(--text-muted);letter-spacing:.5px;white-space:nowrap">
+    <i class="fas fa-robot" style="margin-right:6px;color:#1976D2"></i>ANALISA AI — DAMPAK KESEHATAN BENZENE
+  </span>
+  <div style="flex:1;height:1px;background:var(--border-soft)"></div>
+</div>
+
+<div class="table-card" id="bioAICard" style="margin-top:0">
+  <div class="chart-header" style="flex-wrap:wrap;gap:10px;align-items:center">
+    <div>
+      <span class="chart-title"><i class="fas fa-brain" style="color:#1976D2"></i> Rekomendasi & Analisa Kesehatan</span>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:3px">
+        Berdasarkan data aktual · Standar ACGIH BEI 2024 · Permenaker No.05/2018
+      </div>
+    </div>
+    <button id="btnBioAI" onclick="runBioAIAnalysis()" style="
+      display:inline-flex;align-items:center;gap:8px;
+      background:linear-gradient(135deg,#1565C0,#1976D2);
+      color:#fff;border:none;border-radius:10px;
+      padding:10px 18px;font-size:13px;font-weight:700;
+      cursor:pointer;transition:all .2s;font-family:var(--font);
+    ">
+      <i class="fas fa-sparkles"></i> Analisa dengan AI
+    </button>
+  </div>
+
+  <!-- Placeholder sebelum analisa dijalankan -->
+  <div id="bioAIPlaceholder" style="padding:32px;text-align:center;color:var(--text-muted)">
+    <i class="fas fa-robot" style="font-size:36px;opacity:.15;display:block;margin-bottom:12px"></i>
+    <div style="font-size:13px;font-weight:600;margin-bottom:6px">Analisa AI Belum Dijalankan</div>
+    <div style="font-size:12px;opacity:.7">Klik tombol <strong>Analisa dengan AI</strong> untuk mendapatkan rekomendasi kesehatan berbasis data biomonitoring Anda</div>
+    <div style="margin-top:12px;display:flex;justify-content:center;gap:8px;flex-wrap:wrap">
+      <span style="background:var(--blue-soft,#EBF5FF);color:var(--blue,#1976D2);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600"><i class="fas fa-check" style="margin-right:4px"></i>ACGIH BEI 2024</span>
+      <span style="background:var(--blue-soft,#EBF5FF);color:var(--blue,#1976D2);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600"><i class="fas fa-check" style="margin-right:4px"></i>Permenaker 05/2018</span>
+      <span style="background:var(--blue-soft,#EBF5FF);color:var(--blue,#1976D2);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600"><i class="fas fa-check" style="margin-right:4px"></i>IARC Classification</span>
+      <span style="background:var(--blue-soft,#EBF5FF);color:var(--blue,#1976D2);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600"><i class="fas fa-check" style="margin-right:4px"></i>ILO Maritime Health</span>
+    </div>
+  </div>
+
+  <!-- Loading state -->
+  <div id="bioAILoading" style="display:none;padding:40px;text-align:center;color:var(--text-muted)">
+    <i class="fas fa-circle-notch fa-spin" style="font-size:28px;color:#1976D2;display:block;margin-bottom:14px"></i>
+    <div style="font-size:13px;font-weight:600;margin-bottom:4px">AI sedang menganalisa data...</div>
+    <div style="font-size:12px;opacity:.7" id="bioAILoadingMsg">Memproses data biomonitoring Anda</div>
+  </div>
+
+  <!-- Error state -->
+  <div id="bioAIError" style="display:none;padding:24px;background:#FFEBEE;border-radius:12px;margin:0 16px 16px">
+    <div style="display:flex;align-items:center;gap:10px;color:#C62828;font-size:13px;font-weight:700">
+      <i class="fas fa-circle-xmark"></i>
+      <span id="bioAIErrorMsg">Gagal menghubungi AI</span>
+    </div>
+  </div>
+
+  <!-- Hasil analisa -->
+  <div id="bioAIResult" style="display:none;padding:6px 16px 16px"></div>
+</div>
 </section>
 
 <!-- ===== PAGE FAKTOR BIOLOGI ===== -->
@@ -1045,6 +1188,32 @@
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 <div class="toast-container" id="toastContainer"></div>
 <div class="drive-progress" id="driveProgress"><i class="fas fa-circle-notch fa-spin"></i><span id="driveProgressMsg">Mengupload...</span></div>
+
+<!-- ═══════════ MOBILE BOTTOM NAV ═══════════ -->
+<nav class="m-bottom-nav" id="mBottomNav" aria-label="Navigasi bawah mobile">
+  <div id="mNavPill" class="m-nav-pill"></div>
+  <button class="m-nav-btn active" data-menu="hra" data-title="HRA & IH" data-group="monitoring" onclick="mNavClick(this)" aria-label="HRA & IH">
+    <div class="m-nav-icon"><i class="fas fa-lungs"></i></div>
+    <span class="m-nav-lbl">HRA</span>
+  </button>
+  <button class="m-nav-btn" data-menu="dat" data-title="Drugs & Alcohol Test" data-group="monitoring" onclick="mNavClick(this)" aria-label="DAT">
+    <div class="m-nav-icon"><i class="fas fa-vial"></i></div>
+    <span class="m-nav-lbl">DAT</span>
+  </button>
+  <button class="m-nav-btn" data-menu="pest" data-title="Pest & Rodent Control" data-group="monitoring" onclick="mNavClick(this)" aria-label="Pest">
+    <div class="m-nav-icon"><i class="fas fa-bug"></i></div>
+    <span class="m-nav-lbl">Pest</span>
+  </button>
+  <button class="m-nav-btn" data-menu="fisika" data-title="Faktor Fisika" data-group="hazard" onclick="mNavClick(this)" aria-label="Hazard">
+    <div class="m-nav-icon"><i class="fas fa-triangle-exclamation"></i></div>
+    <span class="m-nav-lbl">Hazard</span>
+  </button>
+  <button class="m-nav-btn" id="mMenuBtn" onclick="mOpenSidebar()" aria-label="Menu lengkap">
+    <div class="m-nav-icon"><i class="fas fa-bars"></i></div>
+    <span class="m-nav-lbl">Menu</span>
+  </button>
+</nav>
+
 <script src="script.js"></script>
 <script src="ppt_export.js"></script>
 </body>
