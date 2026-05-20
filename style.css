@@ -1245,93 +1245,46 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 }
 .btn-export-ppt i{font-size:14px}
 
-/* ═══════════════════════════════════════
-   DEMO MODE STYLES
-═══════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════
+   DEMO MODE & ACCESS LOG STYLES
+═══════════════════════════════════════════════════════ */
 
 /* Divider "atau" di login */
 .login-divider{
-  text-align:center;
-  color:var(--text-muted);
-  font-size:12px;
-  margin:14px 0 8px;
-  position:relative;
-  display:flex;
-  align-items:center;
-  gap:10px;
+  display:flex;align-items:center;gap:10px;
+  text-align:center;color:var(--text-muted,#94a3b8);
+  font-size:12px;margin:14px 0 8px;
 }
 .login-divider::before,.login-divider::after{
-  content:"";
-  flex:1;
-  height:1px;
-  background:var(--border);
+  content:"";flex:1;height:1px;background:rgba(255,255,255,.15);
 }
 
 /* Tombol Demo */
 .btn-demo{
-  width:100%;
-  padding:14px;
-  border:2px solid #f59e0b;
-  background:transparent;
-  color:#b45309;
-  font-family:var(--font);
-  font-size:14px;
-  font-weight:700;
-  border-radius:var(--radius-sm);
-  cursor:pointer;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:9px;
-  transition:all .22s;
-  letter-spacing:.2px;
+  width:100%;padding:14px;
+  border:2px solid #f59e0b;background:transparent;
+  color:#f59e0b;
+  font-family:var(--font,"Plus Jakarta Sans",sans-serif);
+  font-size:14px;font-weight:700;
+  border-radius:12px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:9px;
+  transition:all .22s;letter-spacing:.2px;margin-top:2px;
 }
-.btn-demo:hover{
-  background:#f59e0b;
-  color:#fff;
-  box-shadow:0 6px 20px rgba(245,158,11,.35);
-  transform:translateY(-1px);
-}
-.btn-demo:disabled{
-  opacity:.5;
-  cursor:not-allowed;
-  transform:none;
-  box-shadow:none;
-}
+.btn-demo:hover{background:#f59e0b;color:#fff;box-shadow:0 6px 20px rgba(245,158,11,.35);transform:translateY(-1px);}
+.btn-demo:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none;}
 
-/* Overlay "Data Tersembunyi" pada setiap card */
+/* Demo overlay pada setiap card */
 .demo-overlay{
-  position:absolute;
-  inset:0;
-  z-index:10;
+  position:absolute;inset:0;z-index:10;
   background:rgba(255,255,255,.82);
-  backdrop-filter:blur(3px);
+  backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
   border-radius:inherit;
-  display:flex;
-  align-items:center;
-  justify-content:center;
+  display:flex;align-items:center;justify-content:center;
 }
 .demo-overlay-inner{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:6px;
-  color:var(--text-muted);
-  text-align:center;
-  padding:16px;
+  display:flex;flex-direction:column;align-items:center;
+  gap:6px;color:var(--text-muted,#64748b);text-align:center;padding:16px;
 }
-.demo-overlay-inner i{
-  font-size:22px;
-  color:#f59e0b;
-  margin-bottom:2px;
-}
-.demo-overlay-inner span{
-  font-size:13px;
-  font-weight:800;
-  color:var(--text);
-  letter-spacing:.2px;
-}
-.demo-overlay-inner small{
-  font-size:11px;
-  color:var(--text-muted);
-}
+.demo-overlay-inner i{font-size:24px;color:#f59e0b;margin-bottom:2px;}
+.demo-overlay-inner span{font-size:13px;font-weight:800;color:var(--text,#1e293b);letter-spacing:.2px;}
+.demo-overlay-inner small{font-size:11px;color:var(--text-muted,#64748b);}
