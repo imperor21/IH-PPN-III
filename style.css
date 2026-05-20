@@ -1286,3 +1286,86 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
   border-top:1px solid rgba(255,255,255,.08);
   margin-top:16px;
 }
+
+/* ═══════════════════════════════════════════════════════
+   MOBILE UX — perbaikan bottom nav & responsif
+═══════════════════════════════════════════════════════ */
+
+/* Bottom nav tampil di mobile */
+@media(max-width:768px){
+  .m-bottom-nav{display:flex}
+
+  /* Konten tidak tertutup bottom nav */
+  .page-content{padding-bottom:calc(var(--mobile-nav,68px) + 16px)}
+
+  /* KPI 2x2 grid di mobile — lebih padat */
+  .kpi-row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+  }
+
+  /* Topbar sticky — tidak ketutup demo banner */
+  .topbar{
+    position:sticky;
+    top:0;
+    z-index:50;
+  }
+
+  /* Tabel horizontal scroll di mobile */
+  .table-wrap{
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+  .data-table{
+    min-width:520px;
+  }
+
+  /* Page header row stack di mobile */
+  .page-header-row{
+    flex-direction:column;
+    align-items:flex-start;
+    gap:10px;
+  }
+  .page-header-row > div:last-child{
+    width:100%;
+    flex-wrap:wrap;
+  }
+  .page-header-row .filter-select{
+    flex:1;
+    min-width:100px;
+  }
+
+  /* Search input full width di mobile */
+  .search-input{
+    width:100%;
+    max-width:100%;
+  }
+
+  /* Chart card full width */
+  .chart-card{
+    width:100%;
+  }
+
+  /* Access log table mobile — kolom ringkas */
+  #alogTable{min-width:480px}
+
+  /* Demo banner font lebih kecil di mobile */
+  #demoBanner{
+    font-size:11px !important;
+    padding:9px 12px !important;
+  }
+}
+
+@media(max-width:480px){
+  /* KPI tetap 2 kolom di layar kecil */
+  .kpi-row{grid-template-columns:1fr 1fr;gap:6px}
+  .kpi-card .kpi-value{font-size:20px}
+  .kpi-card .kpi-label{font-size:9px}
+
+  /* Bottom nav label lebih kecil */
+  .m-nav-lbl{font-size:8.5px}
+
+  /* Chart lebih pendek di HP kecil */
+  .chart-body{height:170px}
+}
