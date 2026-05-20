@@ -3,7 +3,7 @@
 /* ✅ Pedoman PDF & Foto Dokumentasi → Google Drive (multi-device)    */
 /* ✅ IndexedDB dihapus — data terpusat di GAS/Drive                  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbzaeYbZypyQ5sC8-OI-Xp0aR8hpsT-Bat3MFz6VgbR_D3F3uC3xwDlRV184u4GNoo7TAg/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzqCyLLFs-rLkahFThbzxIDWCpeoCjv_cvRZqw00_28Q96W6BerasPhmCaV8_Qel2lrPQ/exec";
 
 async function gasPost(payload) {
   const controller = new AbortController();
@@ -2863,27 +2863,22 @@ Gunakan badge HTML inline untuk level/prioritas:
 PENTING: Hanya output HTML murni, tanpa markdown, tanpa backtick, tanpa preamble.`;
 
   try{
-    var response=await fetch("https://api.anthropic.com/v1/messages",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({
-        model:"claude-sonnet-4-20250514",
-        max_tokens:4000,
-        system:"Kamu adalah Industrial Hygienist senior ahli toksikologi benzene di industri maritim. Berikan analisa berdasarkan bukti ilmiah terkini dan standar internasional. Selalu gunakan data numerik yang diberikan dalam analisa. Output HANYA HTML murni.",
-        messages:[{role:"user",content:prompt}]
-      })
+    var response=await gasPost({
+      action:    "aiAnalysis",
+      token:     getToken(),
+      systemMsg: "Kamu adalah Industrial Hygienist senior ahli toksikologi benzene di industri maritim. Berikan analisa berdasarkan bukti ilmiah terkini dan standar internasional. Selalu gunakan data numerik yang diberikan dalam analisa. Output HANYA HTML murni tanpa markdown.",
+      prompt:    prompt,
+      maxTokens: 3500
     });
 
     clearInterval(msgInterval);
 
-    if(!response.ok){
-      throw new Error("HTTP "+response.status);
+    if(!response||response.status==="error"||response.status==="forbidden"){
+      throw new Error(response.message||"GAS error");
     }
 
-    var result=await response.json();
-    var aiText=(result.content&&result.content[0]&&result.content[0].text)||"";
-
-    if(!aiText){throw new Error("Response kosong dari AI");}
+    var aiText=response.result||"";
+    if(!aiText){throw new Error("Response AI kosong");}
 
     /* Tampilkan hasil */
     document.getElementById("bioAILoading").style.display="none";
@@ -2938,7 +2933,11 @@ PENTING: Hanya output HTML murni, tanpa markdown, tanpa backtick, tanpa preamble
     clearInterval(msgInterval);
     document.getElementById("bioAILoading").style.display="none";
     document.getElementById("bioAIError").style.display="block";
-    document.getElementById("bioAIErrorMsg").textContent="Gagal: "+err.message+". Pastikan koneksi internet aktif.";
+    var errMsg=err.message||"Gagal menghubungi AI";
+    if(errMsg.includes("API key")||errMsg.includes("belum diset")){
+      errMsg="API key Anthropic belum diset di GAS. Jalankan setupAnthropicKey() di Apps Script Editor, lalu deploy ulang.";
+    }
+    document.getElementById("bioAIErrorMsg").textContent=errMsg;
     document.getElementById("bioAIPlaceholder").style.display="block";
     if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-sparkles"></i> Coba Lagi';}
     console.error("Bio AI error:",err);
