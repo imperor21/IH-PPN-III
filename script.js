@@ -148,7 +148,7 @@ function doDemoLogin(){
 }
 
 /* LOGOUT */
-async function doLogout(){if(!confirm("Yakin ingin logout?"))return;const token=getToken();if(token&&!isDemo())gasPost({action:"logout",token}).catch(()=>{});/* Bersihkan demo banner jika ada */var banner=document.getElementById("demoBanner");if(banner)banner.remove();var mainEl=document.querySelector(".main");if(mainEl)mainEl.style.paddingTop="";var sidebarEl=document.querySelector(".sidebar");if(sidebarEl)sidebarEl.style.top="";document.querySelectorAll(".demo-overlay").forEach(function(el){el.remove();});clearSession();const unEl=document.getElementById("loginUsername");const pwEl=document.getElementById("loginPassword");const errEl=document.getElementById("loginError");const overlay=document.getElementById("loginOverlay");if(unEl)unEl.value="";if(pwEl)pwEl.value="";if(errEl)errEl.style.display="none";if(overlay)overlay.classList.remove("hidden");}
+async function doLogout(){if(!confirm("Yakin ingin logout?"))return;const token=getToken();if(token&&!isDemo())gasPost({action:"logout",token}).catch(()=>{});var banner=document.getElementById("demoBanner");if(banner)banner.remove();var mainEl=document.querySelector(".main");if(mainEl)mainEl.style.paddingTop="";var sidebarEl=document.querySelector(".sidebar");if(sidebarEl)sidebarEl.style.top="";var topbarEl=document.querySelector(".topbar");if(topbarEl)topbarEl.style.top="";document.querySelectorAll(".demo-overlay").forEach(function(el){el.remove();});clearSession();const unEl=document.getElementById("loginUsername");const pwEl=document.getElementById("loginPassword");const errEl=document.getElementById("loginError");const overlay=document.getElementById("loginOverlay");if(unEl)unEl.value="";if(pwEl)pwEl.value="";if(errEl)errEl.style.display="none";if(overlay)overlay.classList.remove("hidden");}
 function showLoginError(msg){document.getElementById("loginErrorMsg").textContent=msg;document.getElementById("loginError").style.display="flex";}
 function togglePassword(){const input=document.getElementById("loginPassword");const icon=document.getElementById("togglePwIcon");if(input.type==="password"){input.type="text";icon.className="fas fa-eye-slash";}else{input.type="password";icon.className="fas fa-eye";}}
 
@@ -200,6 +200,9 @@ function applyRoleUI(){
       if(mainEl)mainEl.style.paddingTop="44px";
       var sidebarEl=document.querySelector(".sidebar");
       if(sidebarEl)sidebarEl.style.top="44px";
+      /* Mobile: topbar is sticky, geser ke bawah banner */
+      var topbarEl=document.querySelector(".topbar");
+      if(topbarEl)topbarEl.style.top="44px";
     }
     setTimeout(applyDemoOverlay,400);
   } else {
@@ -2359,21 +2362,31 @@ async function fetchBiomonitoring(){
     /* ── BIOMARKER BENZENE ── */
     if(data.data&&data.data.biomarker&&data.data.biomarker.length>0){
       rawBiomarker=data.data.biomarker.map(function(r){
-        var val=parseFloat(r["kreatinin_ugpg"]||r["Kreatinin (µg/g kreat.)"]||r["kreatinin"]||0);
-        var ref=parseFloat(r["nilai_rujukan_bei"]||r["Nilai Rujukan BEI"]||r["rujukan"]||25);
+        /* Cari nilai tahun dari berbagai kemungkinan nama kolom */
+        var thn=r["Tahun"]||r["tahun"]||r["TAHUN"]||r["Year"]||r["year"]||"";
+        var kpl=r["Nama Kapal"]||r["nama_kapal"]||r["Kapal"]||r["kapal"]||"";
+        var flt=r["Fleet"]||r["fleet"]||r["Jenis Fleet"]||r["jenis_fleet"]||"";
+        var pkj=r["Nama Pekerja"]||r["nama_pekerja"]||r["Pekerja"]||r["pekerja"]||"";
+        var val=parseFloat(
+          r["Kreatinin (µg/g kreat.)"]||r["kreatinin_ugpg"]||r["Kreatinin"]||
+          r["kreatinin"]||r["Nilai"]||r["nilai"]||r["Hasil"]||r["hasil"]||0
+        );
+        var ref=parseFloat(
+          r["Nilai Rujukan BEI"]||r["nilai_rujukan_bei"]||r["Rujukan BEI"]||
+          r["rujukan"]||r["BEI"]||r["bei"]||25
+        );
         return {
-          tahun:  String(r["tahun"]||r["Tahun"]||"").trim(),
-          kapal:  (r["nama_kapal"]||r["Nama Kapal"]||"").trim(),
-          fleet:  (r["fleet"]||r["Fleet"]||"").trim(),
-          pekerja:(r["nama_pekerja"]||r["Nama Pekerja"]||"").trim(),
-          kreatinin: isNaN(val)?0:val,
-          rujukan:   isNaN(ref)?25:ref
+          tahun:    String(thn).trim(),
+          kapal:    String(kpl).trim(),
+          fleet:    String(flt).trim(),
+          pekerja:  String(pkj).trim(),
+          kreatinin:isNaN(val)?0:val,
+          rujukan:  isNaN(ref)?25:ref
         };
-      }).filter(function(r){return r.kapal&&r.pekerja;});
+      }).filter(function(r){return r.kapal||r.pekerja;});
       filteredBiomarker=[...rawBiomarker];
       console.log("Biomarker: "+rawBiomarker.length+" data dari GAS ✅");
     } else {
-      /* Fallback ke dummy data */
       rawBiomarker=[...RAW_BIOMARKER];
       filteredBiomarker=[...rawBiomarker];
     }
@@ -2381,18 +2394,29 @@ async function fetchBiomonitoring(){
     /* ── BENZENE PERSONAL ── */
     if(data.data&&data.data.personal&&data.data.personal.length>0){
       rawPersonal=data.data.personal.map(function(r){
-        var val=parseFloat(r["hasil_ppm"]||r["Hasil (ppm)"]||r["hasil"]||0);
-        var nab=parseFloat(r["nab_ppm"]||r["NAB (ppm)"]||r["nab"]||0.5);
+        var thn=r["Tahun"]||r["tahun"]||r["TAHUN"]||r["Year"]||r["year"]||"";
+        var kpl=r["Nama Kapal"]||r["nama_kapal"]||r["Kapal"]||r["kapal"]||"";
+        var flt=r["Fleet"]||r["fleet"]||r["Jenis Fleet"]||r["jenis_fleet"]||"";
+        var pkj=r["Nama Pekerja"]||r["nama_pekerja"]||r["Pekerja"]||r["pekerja"]||"";
+        var lok=r["Lokasi Pengukuran"]||r["lokasi_pengukuran"]||r["Lokasi"]||r["lokasi"]||"";
+        var val=parseFloat(
+          r["Hasil (ppm)"]||r["hasil_ppm"]||r["Hasil"]||r["hasil"]||
+          r["Nilai"]||r["nilai"]||r["Result"]||0
+        );
+        var nab=parseFloat(
+          r["NAB (ppm)"]||r["nab_ppm"]||r["NAB"]||r["nab"]||
+          r["TLV"]||r["tlv"]||0.5
+        );
         return {
-          tahun:  String(r["tahun"]||r["Tahun"]||"").trim(),
-          kapal:  (r["nama_kapal"]||r["Nama Kapal"]||"").trim(),
-          fleet:  (r["fleet"]||r["Fleet"]||"").trim(),
-          pekerja:(r["nama_pekerja"]||r["Nama Pekerja"]||"").trim(),
-          lokasi: (r["lokasi_pengukuran"]||r["Lokasi Pengukuran"]||r["lokasi"]||"").trim(),
+          tahun:  String(thn).trim(),
+          kapal:  String(kpl).trim(),
+          fleet:  String(flt).trim(),
+          pekerja:String(pkj).trim(),
+          lokasi: String(lok).trim(),
           hasil:  isNaN(val)?0:val,
           nab:    isNaN(nab)?0.5:nab
         };
-      }).filter(function(r){return r.kapal&&r.pekerja;});
+      }).filter(function(r){return r.kapal||r.pekerja;});
       filteredPersonal=[...rawPersonal];
       console.log("Benzene Personal: "+rawPersonal.length+" data dari GAS ✅");
     } else {
