@@ -3481,7 +3481,7 @@ function renderSummaryPage(){
   };
 
   el.innerHTML=`
-  <div id="summaryPrintArea" style="font-family:'Plus Jakarta Sans',sans-serif;color:#1E293B;max-width:1100px;margin:0 auto">
+  <div id="summaryPrintArea" style="font-family:'Plus Jakarta Sans',sans-serif;color:#1E293B;width:100%">
 
     <!-- KOVER LAPORAN -->
     <div style="background:linear-gradient(135deg,#0F2A4A 0%,#1565C0 100%);border-radius:16px;padding:40px 48px;margin-bottom:20px;position:relative;overflow:hidden">
@@ -3716,41 +3716,80 @@ async function exportSummaryPDF(){
   if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Membuat PDF...';}
   try{
     var area=document.getElementById("summaryPrintArea");
-    if(!area){showToast("Render halaman summary dulu sebelum export.","warning");return;}
+    if(!area){showToast("Render halaman summary dulu sebelum export.","warning");if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-file-pdf"></i> Export PDF';}return;}
     var now=new Date();
     var fleet=(document.getElementById("summary-filter-fleet")||{}).value||"Seluruh Armada";
-    /* html2canvas tangkap area */
+
+    /* Paksa lebar konten penuh A4 saat di-render */
+    var origMaxW=area.style.maxWidth;
+    var origMargin=area.style.margin;
+    area.style.maxWidth="none";
+    area.style.margin="0";
+    area.style.width="794px"; /* A4 lebar dalam px pada 96dpi */
+
+    /* Tunggu reflow */
+    await new Promise(function(resolve){setTimeout(resolve,200);});
+
     var canvas=await html2canvas(area,{
-      scale:2,useCORS:true,logging:false,
+      scale:2,
+      useCORS:true,
+      logging:false,
       backgroundColor:"#ffffff",
-      width:area.scrollWidth,
-      windowWidth:area.scrollWidth+40
+      width:area.offsetWidth,
+      height:area.scrollHeight,
+      windowWidth:area.offsetWidth,
+      scrollX:0,
+      scrollY:0
     });
-    var imgData=canvas.toDataURL("image/jpeg",0.95);
+
+    /* Kembalikan style asli */
+    area.style.maxWidth=origMaxW;
+    area.style.margin=origMargin;
+    area.style.width="";
+
     var {jsPDF}=window.jspdf;
-    var pdf=new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
-    var pageW=pdf.internal.pageSize.getWidth();
-    var pageH=pdf.internal.pageSize.getHeight();
-    var margin=8;
+    var pdf=new jsPDF({orientation:"portrait",unit:"pt",format:"a4"});
+    var pageW=pdf.internal.pageSize.getWidth();   /* 595.28 pt */
+    var pageH=pdf.internal.pageSize.getHeight();  /* 841.89 pt */
+    var margin=18; /* pt — ~6.3mm */
+
+    /* Skala gambar agar lebar = pageW - 2*margin */
     var contentW=pageW-margin*2;
-    var imgH=(canvas.height/canvas.width)*contentW;
-    var posY=margin;
-    var remaining=imgH;
-    var srcY=0;
-    /* Multi halaman */
-    while(remaining>0){
-      var sliceH=Math.min(remaining,pageH-margin*2);
-      var tmpCanvas=document.createElement("canvas");
-      tmpCanvas.width=canvas.width;
-      tmpCanvas.height=Math.floor((sliceH/contentW)*canvas.width);
-      var ctx=tmpCanvas.getContext("2d");
-      ctx.drawImage(canvas,0,Math.floor(srcY/contentW*canvas.width),canvas.width,tmpCanvas.height,0,0,canvas.width,tmpCanvas.height);
-      var sliceData=tmpCanvas.toDataURL("image/jpeg",0.95);
-      pdf.addImage(sliceData,"JPEG",margin,posY,contentW,sliceH);
-      remaining-=sliceH;
-      srcY+=sliceH;
-      if(remaining>0){pdf.addPage();posY=margin;}
+    var scale=contentW/canvas.width;
+    var imgTotalH=canvas.height*scale;
+
+    /* Tinggi konten per halaman (tanpa margin atas bawah) */
+    var pageContentH=pageH-margin*2;
+
+    var pageNum=0;
+    var drawnH=0;
+
+    while(drawnH<imgTotalH){
+      if(pageNum>0)pdf.addPage();
+
+      /* Berapa tinggi gambar yang muat di halaman ini */
+      var thisH=Math.min(pageContentH,imgTotalH-drawnH);
+
+      /* Baris piksel di canvas yang sesuai */
+      var srcY_px=Math.round(drawnH/scale);
+      var srcH_px=Math.round(thisH/scale);
+
+      /* Buat canvas potongan */
+      var slice=document.createElement("canvas");
+      slice.width=canvas.width;
+      slice.height=srcH_px;
+      var ctx=slice.getContext("2d");
+      ctx.fillStyle="#ffffff";
+      ctx.fillRect(0,0,slice.width,slice.height);
+      ctx.drawImage(canvas,0,srcY_px,canvas.width,srcH_px,0,0,canvas.width,srcH_px);
+
+      /* Tambahkan ke PDF — tepat di margin */
+      pdf.addImage(slice.toDataURL("image/jpeg",0.97),"JPEG",margin,margin,contentW,thisH);
+
+      drawnH+=thisH;
+      pageNum++;
     }
+
     var fname="IH_Summary_"+fleet.replace(/\s+/g,"_")+"_"+now.toISOString().slice(0,10)+".pdf";
     pdf.save(fname);
     showToast("PDF berhasil didownload!","success");
