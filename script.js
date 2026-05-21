@@ -3769,8 +3769,11 @@ async function exportSummaryPDF(){
 
 
 /* ═══════════════════════════════════════════════════════════
-   EXPORT PPT — BIOMONITORING BENZENE (v3 — tested zero error)
-   Bug fixes: semua warna harus 6-digit hex (tidak boleh 8-digit)
+   EXPORT PPT — BIOMONITORING BENZENE (v4 — no PowerPoint repair)
+   Fix 1: colW harus sum = w (sebelumnya mismatch 1 inch → korup)
+   Fix 2: ellipse y tidak boleh negatif (sebelumnya y:-1.5)
+   Fix 3: ellipse line:{type:"none"} bukan line:{color:X}
+   Fix 4: semua warna 6-digit hex
 ═══════════════════════════════════════════════════════════ */
 function exportBiomarkerPPT(){
   var btn=document.getElementById("btnBioPPT");
@@ -3778,7 +3781,6 @@ function exportBiomarkerPPT(){
     if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-file-powerpoint"></i> Download PPT';}
   }
   try{
-    /* Filter */
     var tipeF=((document.getElementById("bio-filter-tipe")||{}).value)||"all";
     var tahunF=((document.getElementById("bio-filter-tahun")||{}).value)||"";
     var kapalF=((document.getElementById("bio-filter-kapal")||{}).value)||"";
@@ -3795,7 +3797,7 @@ function exportBiomarkerPPT(){
     if(tipeF==="biomarker")perData=[];
     if(tipeF==="personal")bioData=[];
     if(!bioData.length&&!perData.length){
-      showToast("Tidak ada data biomonitoring. Pastikan sheet Biomarker_Benzene dan Benzene_Personal sudah terisi dan data sudah dimuat dari server.","warning");
+      showToast("Tidak ada data biomonitoring. Pastikan data sudah dimuat dari server.","warning");
       resetBtn();return;
     }
     if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Membuat PPT...';}
@@ -3817,7 +3819,7 @@ function exportBiomarkerPPT(){
     var tgl=now.toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"});
     var filterLabel=(tahunF?"Tahun "+tahunF:"Semua Tahun")+(kapalF?" | "+kapalF:"");
 
-    /* Warna — SEMUA harus 6-digit hex */
+    /* Warna — HANYA 6-digit hex */
     var MC="0F2A4A",PU="7B1FA2",BL="1565C0";
     var WH="FFFFFF",GR="F4F6FA",TX="1E293B",MU="64748B";
     var RED="C62828",GRN="2E7D32",NAV="1C3A5A";
@@ -3825,21 +3827,24 @@ function exportBiomarkerPPT(){
     var pres=new PptxGenJS();
     pres.layout="LAYOUT_WIDE";
     pres.author="IH Dashboard — Pertamina Patra Niaga III";
-    pres.title="Biomonitoring Benzene — Faktor Kimia";
+    pres.title="Biomonitoring Benzene";
 
-    /* Helper buat header row (warna cell langsung, bukan thead) */
+    /* colW HARUS jumlahnya = w tabel persis */
+    /* Biomarker 8 col, w=12.9: sum=12.9 */
+    var bioColW=[0.4,0.7,2.6,0.9,3.2,1.8,0.8,2.5];
+    /* Personal 9 col, w=12.9: sum=12.9 */
+    var perColW=[0.35,0.7,2.1,0.85,2.4,2.1,1.05,0.75,2.6];
+
     function mkHead(cols){
       return cols.map(function(c){
         return{text:c,options:{bold:true,color:WH,fill:{color:MC}}};
       });
     }
-    /* Helper footer */
     function addFtr(sl,ref){
       sl.addShape(pres.ShapeType.rect,{x:0,y:7.15,w:13.3,h:0.35,fill:{color:GR}});
       sl.addText(ref,{x:0.2,y:7.18,w:9.5,h:0.28,fontSize:7.5,color:MU,fontFace:"Calibri"});
       sl.addText("IH Dashboard | Pertamina Patra Niaga III",{x:9.8,y:7.18,w:3.3,h:0.28,fontSize:7.5,color:MU,align:"right",fontFace:"Calibri"});
     }
-    /* Helper header bar */
     function addHdr(sl,accent,sup,main){
       sl.background={color:WH};
       sl.addShape(pres.ShapeType.rect,{x:0,y:0,w:13.3,h:1.05,fill:{color:MC}});
@@ -3852,14 +3857,15 @@ function exportBiomarkerPPT(){
     var s1=pres.addSlide();
     s1.background={color:MC};
     s1.addShape(pres.ShapeType.rect,{x:0,y:0,w:0.1,h:7.5,fill:{color:PU}});
-    s1.addShape(pres.ShapeType.ellipse,{x:10.5,y:-1.5,w:5,h:5,fill:{color:NAV},line:{color:NAV}});
-    s1.addShape(pres.ShapeType.ellipse,{x:11.5,y:4.5,w:3.5,h:3.5,fill:{color:"162E42"},line:{color:"162E42"}});
-    s1.addText("LAPORAN BIOMONITORING BENZENE",{x:0.4,y:0.8,w:10,h:0.65,fontSize:24,bold:true,color:WH,fontFace:"Calibri",charSpacing:2});
-    s1.addText("Faktor Kimia  |  Industrial Hygiene Maritime",{x:0.4,y:1.52,w:10,h:0.42,fontSize:15,bold:true,color:"AD7CE0",fontFace:"Calibri"});
+    /* FIX: ellipse y>=0, line:{type:"none"} bukan line:{color:X} */
+    s1.addShape(pres.ShapeType.ellipse,{x:9.5,y:0,w:4.5,h:4.5,fill:{color:NAV},line:{type:"none"}});
+    s1.addShape(pres.ShapeType.ellipse,{x:10.8,y:4.0,w:3.2,h:3.2,fill:{color:"162E42"},line:{type:"none"}});
+    s1.addText("LAPORAN BIOMONITORING BENZENE",{x:0.4,y:0.8,w:9,h:0.65,fontSize:24,bold:true,color:WH,fontFace:"Calibri",charSpacing:2});
+    s1.addText("Faktor Kimia  |  Industrial Hygiene Maritime",{x:0.4,y:1.52,w:9,h:0.42,fontSize:15,bold:true,color:"AD7CE0",fontFace:"Calibri"});
     s1.addShape(pres.ShapeType.rect,{x:0.4,y:2.08,w:4,h:0.05,fill:{color:PU}});
-    s1.addText("Filter: "+filterLabel+"     |     Dihasilkan: "+tgl,{x:0.4,y:2.28,w:11,h:0.38,fontSize:10.5,color:"CADCFC",fontFace:"Calibri"});
+    s1.addText("Filter: "+filterLabel+"    |    "+tgl,{x:0.4,y:2.28,w:9,h:0.38,fontSize:10.5,color:"CADCFC",fontFace:"Calibri"});
 
-    /* KPI boxes pada cover */
+    /* KPI boxes */
     var boxes=[
       {label:"Total Sampel",val:String(totalAll),col:PU},
       {label:"Melebihi BEI/NAB",val:String(totalMel),col:totalMel>0?RED:GRN},
@@ -3875,9 +3881,8 @@ function exportBiomarkerPPT(){
 
     /* Referensi standar */
     var refs=["ACGIH BEI 2024","Permenaker 05/2018","NIOSH REL 0.1 ppm","IARC Grup 1","ILO MLC 2006","OSHA 1910.1028"];
-    s1.addText("Referensi Standar:",{x:0.4,y:4.95,w:12.5,h:0.28,fontSize:9.5,bold:true,color:"CADCFC",fontFace:"Calibri"});
+    s1.addText("Referensi Standar:",{x:0.4,y:4.95,w:9,h:0.28,fontSize:9.5,bold:true,color:"CADCFC",fontFace:"Calibri"});
     refs.forEach(function(r,i){
-      /* Warna 6-digit saja */
       s1.addShape(pres.ShapeType.roundRect,{x:0.4+i*2.17,y:5.3,w:2.05,h:0.42,fill:{color:"1C3060"},rectRadius:0.06});
       s1.addText(r,{x:0.44+i*2.17,y:5.33,w:1.97,h:0.36,fontSize:8.5,color:"CADCFC",align:"center",fontFace:"Calibri",valign:"middle"});
     });
@@ -3885,12 +3890,11 @@ function exportBiomarkerPPT(){
       x:0,y:7.1,w:13.3,h:0.32,fontSize:8.5,color:"8899AA",align:"center",fontFace:"Calibri"
     });
 
-    /* ══ SLIDE 2 — BIOMARKER BENZENE URIN ══ */
+    /* ══ SLIDE 2 — BIOMARKER URIN ══ */
     if(bioData.length>0){
       var s2=pres.addSlide();
-      addHdr(s2,PU,"BIOMONITORING BENZENE — FAKTOR KIMIA","A. Data Biomarker Benzene (Pemantauan Biologis — Urin/Kreatinin)");
-
-      /* KPI bar */
+      addHdr(s2,PU,"BIOMONITORING BENZENE — FAKTOR KIMIA",
+        "A. Data Biomarker Benzene (Pemantauan Biologis — Urin/Kreatinin)");
       var kpiB=[
         {label:"Total Sampel",val:String(bioData.length),col:PU},
         {label:"Melebihi BEI ("+bioBEI+" ug/g)",val:String(bioMel),col:bioMel>0?RED:GRN},
@@ -3903,35 +3907,31 @@ function exportBiomarkerPPT(){
         s2.addText(k.val,{x:bx,y:1.18,w:3.05,h:0.55,fontSize:22,bold:true,color:k.col,align:"center",fontFace:"Calibri"});
         s2.addText(k.label,{x:bx,y:1.74,w:3.05,h:0.44,fontSize:9,color:MU,align:"center",fontFace:"Calibri",wrap:true});
       });
-
-      /* Info BEI */
       s2.addShape(pres.ShapeType.roundRect,{x:0.2,y:2.36,w:12.9,h:0.42,fill:{color:"F3E5F5"},rectRadius:0.06});
-      s2.addText("BEI ACGIH 2024: Muconic Acid 25 ug/g kreat.  |  Permenaker 05/2018: NAB benzene udara 0.5 ppm  |  IARC: Karsinogen Grup 1",{
+      s2.addText("BEI ACGIH 2024: Muconic Acid 25 ug/g kreat.  |  Permenaker 05/2018: NAB benzene 0.5 ppm  |  IARC: Karsinogen Grup 1",{
         x:0.3,y:2.38,w:12.7,h:0.38,fontSize:9,color:PU,fontFace:"Calibri",valign:"middle"
       });
-
       s2.addText("Detail Data Biomarker Benzene",{x:0.2,y:2.92,w:12.9,h:0.28,fontSize:10,bold:true,color:PU,fontFace:"Calibri"});
-
-      /* Tabel */
       var bRows=[mkHead(["No","Tahun","Nama Kapal","Fleet","Nama Pekerja","Kreatinin (ug/g)","BEI","Status"])];
       bioData.forEach(function(r,i){
         var over=Number(r.kreatinin||0)>Number(r.rujukan||25);
         bRows.push([
           {text:String(i+1)},
-          {text:String(r.tahun||"—")},
-          {text:String(r.kapal||"—")},
-          {text:String(r.fleet||"—")},
-          {text:String(r.pekerja||"—")},
+          {text:String(r.tahun||"-")},
+          {text:String(r.kapal||"-")},
+          {text:String(r.fleet||"-")},
+          {text:String(r.pekerja||"-")},
           {text:String(r.kreatinin||0),options:{bold:true,color:over?RED:GRN}},
           {text:String(r.rujukan||25)},
           {text:over?"MELEBIHI BEI":"Normal",options:{bold:true,color:over?RED:GRN}}
         ]);
       });
+      /* FIX: colW sum = w = 12.9 */
       s2.addTable(bRows,{
         x:0.2,y:3.24,w:12.9,
         fontSize:9,fontFace:"Calibri",color:TX,
         border:{pt:0.5,color:"E2E8F0"},rowH:0.32,
-        colW:[0.35,0.65,2.2,0.8,2.5,1.4,0.75,1.7]
+        colW:bioColW
       });
       addFtr(s2,"Ref: ACGIH BEI 2024 | Permenaker No.05/2018 | IARC Monograph Vol.120 | ILO MLC 2006");
     }
@@ -3939,8 +3939,8 @@ function exportBiomarkerPPT(){
     /* ══ SLIDE 3 — PERSONAL AIR SAMPLING ══ */
     if(perData.length>0){
       var s3=pres.addSlide();
-      addHdr(s3,BL,"BIOMONITORING BENZENE — FAKTOR KIMIA","B. Benzene Personal Air Sampling (Paparan Udara Tempat Kerja — ppm)");
-
+      addHdr(s3,BL,"BIOMONITORING BENZENE — FAKTOR KIMIA",
+        "B. Benzene Personal Air Sampling (Paparan Udara Tempat Kerja — ppm)");
       var kpiP=[
         {label:"Total Sampel",val:String(perData.length),col:BL},
         {label:"Melebihi NAB ("+perNAB+" ppm)",val:String(perMel),col:perMel>0?RED:GRN},
@@ -3953,48 +3953,46 @@ function exportBiomarkerPPT(){
         s3.addText(k.val,{x:bx,y:1.18,w:3.05,h:0.55,fontSize:22,bold:true,color:k.col,align:"center",fontFace:"Calibri"});
         s3.addText(k.label,{x:bx,y:1.74,w:3.05,h:0.44,fontSize:9,color:MU,align:"center",fontFace:"Calibri",wrap:true});
       });
-
       s3.addShape(pres.ShapeType.roundRect,{x:0.2,y:2.36,w:12.9,h:0.42,fill:{color:"E3F2FD"},rectRadius:0.06});
-      s3.addText("Permenaker 05/2018 & ACGIH TLV-TWA 2024: 0.5 ppm  |  NIOSH REL: 0.1 ppm (paling ketat)  |  OSHA PEL: 1 ppm  |  IARC: Karsinogen Grup 1",{
+      s3.addText("Permenaker 05/2018 & ACGIH TLV-TWA 2024: 0.5 ppm  |  NIOSH REL: 0.1 ppm  |  OSHA PEL: 1 ppm  |  IARC: Karsinogen Grup 1",{
         x:0.3,y:2.38,w:12.7,h:0.38,fontSize:9,color:BL,fontFace:"Calibri",valign:"middle"
       });
-
       s3.addText("Detail Data Personal Air Sampling Benzene",{x:0.2,y:2.92,w:12.9,h:0.28,fontSize:10,bold:true,color:BL,fontFace:"Calibri"});
-
       var pRows=[mkHead(["No","Tahun","Nama Kapal","Fleet","Nama Pekerja","Lokasi","Hasil (ppm)","NAB","Status"])];
       perData.forEach(function(r,i){
         var over=Number(r.hasil||0)>Number(r.nab||0.5);
         pRows.push([
           {text:String(i+1)},
-          {text:String(r.tahun||"—")},
-          {text:String(r.kapal||"—")},
-          {text:String(r.fleet||"—")},
-          {text:String(r.pekerja||"—")},
-          {text:String(r.lokasi||"—")},
+          {text:String(r.tahun||"-")},
+          {text:String(r.kapal||"-")},
+          {text:String(r.fleet||"-")},
+          {text:String(r.pekerja||"-")},
+          {text:String(r.lokasi||"-")},
           {text:String(r.hasil||0),options:{bold:true,color:over?RED:GRN}},
           {text:String(r.nab||0.5)},
           {text:over?"MELEBIHI NAB":"Normal",options:{bold:true,color:over?RED:GRN}}
         ]);
       });
+      /* FIX: colW sum = w = 12.9 */
       s3.addTable(pRows,{
         x:0.2,y:3.24,w:12.9,
         fontSize:8.5,fontFace:"Calibri",color:TX,
         border:{pt:0.5,color:"E2E8F0"},rowH:0.28,
-        colW:[0.32,0.62,1.85,0.72,1.95,1.82,1.0,0.72,1.5]
+        colW:perColW
       });
       addFtr(s3,"Ref: ACGIH TLV-TWA 2024 | Permenaker 05/2018 | NIOSH REL 0.1 ppm | OSHA 29 CFR 1910.1028");
     }
 
     /* ══ SLIDE 4 — 5 HIRARKI PENGENDALIAN ══ */
     var s4=pres.addSlide();
-    addHdr(s4,PU,"BIOMONITORING BENZENE — FAKTOR KIMIA","C. Strategi 5 Hirarki Pengendalian Paparan Benzene (Industri Maritim)");
-
+    addHdr(s4,PU,"BIOMONITORING BENZENE — FAKTOR KIMIA",
+      "C. Strategi 5 Hirarki Pengendalian Paparan Benzene (Industri Maritim)");
     var hB=(HIRARKI_DB&&HIRARKI_DB.kimia&&HIRARKI_DB.kimia.benzene)||{
-      E:"Eliminasi sumber benzene: ganti atau hilangkan mesin/proses penghasil uap benzene dari area kerja kapal.",
-      S:"Substitusi: gunakan bahan bakar ultra-low benzene (<0.1%). Ganti solvent benzene dengan cyclohexane atau heptane.",
-      R:"Rekayasa Teknik: pasang vapor recovery system pada manifold cargo, LEV di pump room, enclosed loading system, gas detector permanen.",
-      A:"Administratif: permit-to-work untuk confined space, biomonitoring urin 6 bulan sekali, rotasi kerja maks 2 jam tanpa break di area >0.1 ppm.",
-      P:"APD: full-face respirator dengan cartridge organic vapor (NIOSH-approved) untuk >0.5 ppm, chemical-resistant gloves, coverall anti-static."
+      E:"Eliminasi sumber benzene dari area kerja kapal. Ganti proses yang menghasilkan uap benzene jika memungkinkan secara teknis.",
+      S:"Substitusi: gunakan bahan bakar ultra-low benzene (<0.1%). Ganti solvent benzene dengan cyclohexane, heptane, atau produk aqueous.",
+      R:"Rekayasa Teknik: pasang vapor recovery system pada manifold cargo, LEV (Local Exhaust Ventilation) di pump room, enclosed loading system, gas detector permanen.",
+      A:"Administratif: permit-to-work untuk confined space, biomonitoring urin 6 bulan sekali, rotasi kerja maks 2 jam tanpa break di area >0.1 ppm, JSA sebelum masuk cargo tank.",
+      P:"APD: full-face respirator organic vapor cartridge (NIOSH-approved) untuk paparan >0.5 ppm, chemical-resistant gloves (nitrile), coverall anti-static, emergency SCBA."
     };
     var h5=[
       {no:"1",judul:"ELIMINASI",warna:"C62828",isi:hB.E},
@@ -4018,11 +4016,11 @@ function exportBiomarkerPPT(){
     var fname="IH_Biomonitoring_Benzene"+suffix+"_"+now.toISOString().slice(0,10)+".pptx";
     pres.writeFile({fileName:fname})
       .then(function(){showToast("PPT Biomonitoring Benzene berhasil didownload!","success");resetBtn();})
-      .catch(function(err){showToast("Gagal simpan PPT: "+err.message,"error");console.error(err);resetBtn();});
+      .catch(function(err){showToast("Gagal simpan: "+err.message,"error");console.error(err);resetBtn();});
 
   }catch(err){
     showToast("Error: "+err.message,"error");
-    console.error("exportBiomarkerPPT error:",err.stack||err);
+    console.error("exportBiomarkerPPT:",err.stack||err);
     resetBtn();
   }
 }
