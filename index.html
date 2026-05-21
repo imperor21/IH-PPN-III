@@ -746,66 +746,6 @@
   </div>
   <div class="table-footer" id="bioTableFooter">—</div>
 </div>
-
-<!-- ── AI ANALISA BENZENE ── -->
-<div class="section-divider" style="margin:20px 0 14px;display:flex;align-items:center;gap:10px">
-  <div style="flex:1;height:1px;background:var(--border-soft)"></div>
-  <span style="font-size:12px;font-weight:700;color:var(--text-muted);letter-spacing:.5px;white-space:nowrap">
-    <i class="fas fa-robot" style="margin-right:6px;color:#1976D2"></i>ANALISA AI — DAMPAK KESEHATAN BENZENE
-  </span>
-  <div style="flex:1;height:1px;background:var(--border-soft)"></div>
-</div>
-
-<div class="table-card" id="bioAICard" style="margin-top:0">
-  <div class="chart-header" style="flex-wrap:wrap;gap:10px;align-items:center">
-    <div>
-      <span class="chart-title"><i class="fas fa-brain" style="color:#1976D2"></i> Rekomendasi & Analisa Kesehatan</span>
-      <div style="font-size:11px;color:var(--text-muted);margin-top:3px">
-        Berdasarkan data aktual · Standar ACGIH BEI 2024 · Permenaker No.05/2018
-      </div>
-    </div>
-    <button id="btnBioAI" onclick="runBioAIAnalysis()" style="
-      display:inline-flex;align-items:center;gap:8px;
-      background:linear-gradient(135deg,#1565C0,#1976D2);
-      color:#fff;border:none;border-radius:10px;
-      padding:10px 18px;font-size:13px;font-weight:700;
-      cursor:pointer;transition:all .2s;font-family:var(--font);
-    ">
-      <i class="fas fa-sparkles"></i> Analisa dengan AI
-    </button>
-  </div>
-
-  <!-- Placeholder sebelum analisa dijalankan -->
-  <div id="bioAIPlaceholder" style="padding:32px;text-align:center;color:var(--text-muted)">
-    <i class="fas fa-robot" style="font-size:36px;opacity:.15;display:block;margin-bottom:12px"></i>
-    <div style="font-size:13px;font-weight:600;margin-bottom:6px">Analisa AI Belum Dijalankan</div>
-    <div style="font-size:12px;opacity:.7">Klik tombol <strong>Analisa dengan AI</strong> untuk mendapatkan rekomendasi kesehatan berbasis data biomonitoring Anda</div>
-    <div style="margin-top:12px;display:flex;justify-content:center;gap:8px;flex-wrap:wrap">
-      <span style="background:var(--blue-soft,#EBF5FF);color:var(--blue,#1976D2);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600"><i class="fas fa-check" style="margin-right:4px"></i>ACGIH BEI 2024</span>
-      <span style="background:var(--blue-soft,#EBF5FF);color:var(--blue,#1976D2);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600"><i class="fas fa-check" style="margin-right:4px"></i>Permenaker 05/2018</span>
-      <span style="background:var(--blue-soft,#EBF5FF);color:var(--blue,#1976D2);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600"><i class="fas fa-check" style="margin-right:4px"></i>IARC Classification</span>
-      <span style="background:var(--blue-soft,#EBF5FF);color:var(--blue,#1976D2);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600"><i class="fas fa-check" style="margin-right:4px"></i>ILO Maritime Health</span>
-    </div>
-  </div>
-
-  <!-- Loading state -->
-  <div id="bioAILoading" style="display:none;padding:40px;text-align:center;color:var(--text-muted)">
-    <i class="fas fa-circle-notch fa-spin" style="font-size:28px;color:#1976D2;display:block;margin-bottom:14px"></i>
-    <div style="font-size:13px;font-weight:600;margin-bottom:4px">AI sedang menganalisa data...</div>
-    <div style="font-size:12px;opacity:.7" id="bioAILoadingMsg">Memproses data biomonitoring Anda</div>
-  </div>
-
-  <!-- Error state -->
-  <div id="bioAIError" style="display:none;padding:24px;background:#FFEBEE;border-radius:12px;margin:0 16px 16px">
-    <div style="display:flex;align-items:center;gap:10px;color:#C62828;font-size:13px;font-weight:700">
-      <i class="fas fa-circle-xmark"></i>
-      <span id="bioAIErrorMsg">Gagal menghubungi AI</span>
-    </div>
-  </div>
-
-  <!-- Hasil analisa -->
-  <div id="bioAIResult" style="display:none;padding:6px 16px 16px"></div>
-</div>
 </section>
 
 <!-- ===== PAGE FAKTOR BIOLOGI ===== -->
