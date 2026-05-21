@@ -3,7 +3,7 @@
 /* ✅ Pedoman PDF & Foto Dokumentasi → Google Drive (multi-device)    */
 /* ✅ IndexedDB dihapus — data terpusat di GAS/Drive                  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbzqC6Gb4AWMQu6p9CvvICd-e4QUFggBRcOzCRadEIaH3XFQICYlrbxiZv2vzDg2R7PUNA/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzqCyLLFs-rLkahFThbzxIDWCpeoCjv_cvRZqw00_28Q96W6BerasPhmCaV8_Qel2lrPQ/exec";
 
 async function gasPost(payload) {
   const controller = new AbortController();
@@ -2712,4 +2712,442 @@ function sortAlogTable(col){
   const keys=["timestamp","username","role","status","browser","os","deviceType","screenRes"];
   filteredAlog.sort(function(a,b){return String(a[keys[col]]||"").localeCompare(String(b[keys[col]]||""))*alogSortDir;});
   renderAlogTable(filteredAlog);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   EXPORT PPT — 5 HAZARD UTAMA
+   5 Hirarki Pengendalian Risiko (Permenaker 05/2018 + IMO MSC)
+   Eliminasi → Substitusi → Rekayasa Teknik → Administratif → APD
+═══════════════════════════════════════════════════════════════ */
+
+/* ── Konfigurasi warna per hazard ── */
+var HAZARD_CONFIG={
+  fisika:{
+    label:"Faktor Fisika",
+    icon:"🔊",
+    color:"1565C0",
+    colorLight:"EBF5FF",
+    data:function(){return filteredFisika;},
+    temuanKey:"Jenis Parameter",
+    lokasiKey:"Area / Titik Ukur",
+    kapalKey:"Nama Kapal",
+    fleetKey:"Fleet",
+    hasilKey:"Hasil Pengukuran",
+    satuanKey:"Satuan",
+    nabKey:"NAB / TLV",
+    statusKey:"Status",
+    tindakKey:"Status TL",
+    pctKey:"% terhadap NAB"
+  },
+  kimia:{
+    label:"Faktor Kimia",
+    icon:"⚗",
+    color:"7B1FA2",
+    colorLight:"F3E5F5",
+    data:function(){return filteredKimia;},
+    temuanKey:"Nama Bahan Kimia",
+    lokasiKey:"Nama Laboratorium",
+    kapalKey:"Nama Kapal",
+    fleetKey:"Fleet",
+    hasilKey:"Hasil Pengukuran",
+    satuanKey:"Satuan",
+    nabKey:"TLV-TWA ACGIH",
+    statusKey:"Status",
+    tindakKey:"Nama Laboratorium",
+    pctKey:"% terhadap TLV/BEI"
+  },
+  biologi:{
+    label:"Faktor Biologi",
+    icon:"🦠",
+    color:"2E7D32",
+    colorLight:"E8F5E9",
+    data:function(){return filteredBiologi;},
+    temuanKey:"Nama Agen / Spesies",
+    lokasiKey:"Area / Lokasi",
+    kapalKey:"Nama Kapal",
+    fleetKey:"Fleet",
+    hasilKey:"Hasil Pengukuran",
+    satuanKey:"Satuan",
+    nabKey:"Baku Mutu / Referensi",
+    statusKey:"Status",
+    tindakKey:"Nama Laboratorium",
+    pctKey:""
+  },
+  ergonomi:{
+    label:"Faktor Ergonomi",
+    icon:"🏋",
+    color:"E65100",
+    colorLight:"FFF3E0",
+    data:function(){return filteredErgonomi;},
+    temuanKey:"Jenis Pekerjaan / Tugas",
+    lokasiKey:"Area / Unit Kerja",
+    kapalKey:"Nama Kapal",
+    fleetKey:"Fleet",
+    hasilKey:"Skor",
+    satuanKey:"Level Risiko (1–4)",
+    nabKey:"",
+    statusKey:"Level Risiko (1–4)",
+    tindakKey:"Rekomendasi Teknis",
+    pctKey:""
+  },
+  psikososial:{
+    label:"Faktor Psikososial",
+    icon:"🧠",
+    color:"AD1457",
+    colorLight:"FCE4EC",
+    data:function(){return filteredPsikososial;},
+    temuanKey:"Instrumen",
+    lokasiKey:"Departemen / Jabatan",
+    kapalKey:"Nama Kapal",
+    fleetKey:"Fleet",
+    hasilKey:"Total Skor",
+    satuanKey:"",
+    nabKey:"",
+    statusKey:"Level Risiko",
+    tindakKey:"Program Intervensi",
+    pctKey:""
+  }
+};
+
+/* ── 5 Hirarki Pengendalian per hazard ── */
+var HIRARKI_DB={
+  fisika:{
+    kebisingan:{
+      E:"Eliminasi sumber bising: ganti atau hilangkan mesin/pompa penyebab kebisingan jika secara teknis memungkinkan. Pertimbangkan redesign layout engine room untuk menjauhkan sumber bising dari area kerja.",
+      S:"Substitusi: ganti mesin diesel dengan motor listrik yang lebih senyap. Gunakan coupling anti-vibrasi dan mounting isolator pada pompa cargo.",
+      R:"Rekayasa Teknik: pasang akustik enclosure pada mesin utama, panel peredam di bulkhead engine room, double-glazed window pada control room. Pasang vibration damper pada fondasi mesin.",
+      A:"Administratif: rotasi kerja maksimal 4 jam di area >85 dB. Jadwal maintenance berkala. Posting tanda wajib APD. Audiometric test tahunan. Job Hazard Analysis (JHA) sebelum masuk engine room.",
+      P:"APD: earplug (NRR ≥25 dB) wajib >85 dB, earmuff (NRR ≥30 dB) wajib >95 dB. Double protection >105 dB. Sesuai IMO MSC/Circ.1351 dan SNI ISO 4869."
+    },
+    getaran:{
+      E:"Eliminasi: hilangkan operasi yang menyebabkan getaran berlebih. Redesign alur kerja untuk menghindari hand-arm vibration saat berlayar.",
+      S:"Substitusi: ganti peralatan hand tool bergetar tinggi dengan versi low-vibration. Gunakan material anti-vibration pada mounting mesin.",
+      R:"Rekayasa Teknik: pasang vibration isolator pada pondasi mesin, anti-vibration mounting, flexible coupling. Pasang peredam getaran pada hull.",
+      A:"Administratif: batasi waktu paparan sesuai HAV Action Value 2.5 m/s² (4 jam) atau WBV 0.5 m/s². Rotasi kerja, istirahat wajib setiap 1 jam. Medical surveillance tangan dan tulang belakang.",
+      P:"APD: sarung tangan anti-vibrasi (ISO 10819), sepatu anti-vibrasi untuk WBV. Pakaian hangat untuk mencegah Raynaud's phenomenon."
+    },
+    default:{
+      E:"Eliminasi sumber faktor fisika berbahaya dari area kerja kapal jika memungkinkan secara teknis dan operasional.",
+      S:"Substitusi: ganti peralatan/proses yang menghasilkan paparan fisika berbahaya dengan alternatif yang lebih aman.",
+      R:"Rekayasa Teknik: pasang barrier fisik, shielding, isolasi atau ventilasi mekanis untuk mengurangi paparan di titik sumber.",
+      A:"Administratif: SOP paparan fisika, rotasi kerja, jadwal monitoring berkala, safety sign, training crew tentang bahaya faktor fisika di kapal. Sesuai Permenaker 05/2018.",
+      P:"APD sesuai jenis paparan fisika: earplug/earmuff, kacamata UV, pakaian tahan panas, sepatu isolasi. Wajib sesuai SOLAS Ch. II-1 dan ILO Maritime Labour Convention 2006."
+    }
+  },
+  kimia:{
+    benzene:{
+      E:"Eliminasi: hentikan penggunaan benzene murni. Ganti bahan bakar / solvent yang mengandung benzene tinggi dengan alternatif bebas benzene.",
+      S:"Substitusi: gunakan bahan bakar ultra-low benzene (<0.1%). Ganti solvent benzene dengan cyclohexane, heptane, atau produk berbasis aqueous.",
+      R:"Rekayasa Teknik: pasang vapor recovery system pada manifold cargo, LEV (Local Exhaust Ventilation) di pump room dan cargo tank. Enclosed loading system. Continuous gas detector terpasang permanen.",
+      A:"Administratif: permit-to-work untuk entry cargo tank dan pump room. Monitoring udara sebelum dan selama kerja di confined space. Biomonitoring urin (muconic acid) setiap 6 bulan untuk ABK terpapar. Rotasi kerja maks 2 jam tanpa break di area >0.1 ppm.",
+      P:"APD: full-face respirator dengan cartridge organic vapor (NIOSH-approved) untuk >0.5 ppm. Chemical-resistant gloves (nitrile). Coverall anti-static. Emergency escape SCBA. Sesuai ACGIH TLV 0.5 ppm."
+    },
+    default:{
+      E:"Eliminasi: hentikan penggunaan bahan kimia berbahaya jika ada alternatif proses yang tidak membutuhkannya.",
+      S:"Substitusi: ganti bahan kimia berbahaya dengan versi lebih aman, konsentrasi lebih rendah, atau bentuk fisik lebih aman (granul vs. serbuk).",
+      R:"Rekayasa Teknik: pasang LEV (Local Exhaust Ventilation), enclosed handling system, scrubber gas, dan continuous gas detector di area cargo dan pump room.",
+      A:"Administratif: SDS (Safety Data Sheet) tersedia di kapal dalam Bahasa Indonesia. Permit-to-work untuk pekerjaan melibatkan bahan kimia. Training HAZMAT. Monitoring udara rutin. Sesuai IMDG Code dan Permenaker 05/2018.",
+      P:"APD: respirator sesuai TLV bahan kimia, chemical-resistant gloves dan boots, face shield, coverall. Emergency SCBA tersedia di kapal sesuai SOLAS."
+    }
+  },
+  biologi:{
+    default:{
+      E:"Eliminasi: desinfeksi dan sterilisasi total area yang terkontaminasi agen biologis. Buang media yang terkontaminasi sesuai prosedur limbah medis.",
+      S:"Substitusi: ganti metode kerja yang berisiko kontak dengan agen biologi dengan metode tertutup atau remote handling.",
+      R:"Rekayasa Teknik: pasang sistem ventilasi bertekanan positif di area medis kapal, HEPA filter, UV-C sterilizer di ruang isolasi, shower dekontaminasi. Fasilitas cuci tangan memadai di seluruh kapal.",
+      A:"Administratif: SOP dekontaminasi dan isolasi kasus penyakit menular di kapal. Vaksinasi wajib: hepatitis A&B, typhoid, yellow fever sesuai rute pelayaran. Pemeriksaan kesehatan pra-embarkasiasi. Pelaporan Ship Sanitation sesuai IHR 2005. Rodent & pest control berkala.",
+      P:"APD: sarung tangan nitril sekali pakai, masker N95 untuk penyakit airborne, gown/apron, eye protection saat penanganan specimen. Sesuai WHO International Health Regulations 2005."
+    }
+  },
+  ergonomi:{
+    default:{
+      E:"Eliminasi tugas dengan risiko ergonomi tinggi: redesign pekerjaan untuk menghilangkan postur janggal, angkat manual berulang, dan gerakan repetitif di lingkungan kapal yang bergerak.",
+      S:"Substitusi: ganti pekerjaan manual berisiko tinggi dengan peralatan mekanis (crane, forklift, conveyor). Gunakan alat bantu angkat untuk beban >23 kg.",
+      R:"Rekayasa Teknik: redesign workstation di engine room, bridge, galley sesuai prinsip ergonomi. Pasang anti-slip flooring, pegangan (handrail) di seluruh deck. Kursi bridge dengan lumbar support. Peralatan dengan grip ergonomis.",
+      A:"Administratif: SOP manual handling untuk ABK. Batas berat angkat maksimal 23 kg (sendirian) sesuai ILO C185. Rotasi tugas untuk mengurangi repetisi. Stretching/warm-up sebelum tugas berat. REBA/RULA assessment tahunan. Training ergonomi untuk perwira.",
+      P:"APD: sabuk angkat untuk pekerjaan manual handling berat. Knee pad untuk pekerjaan berlutut. Back support belt untuk ABK bagian deck dan mesin. Anti-vibration gloves."
+    }
+  },
+  psikososial:{
+    default:{
+      E:"Eliminasi stressor psikososial struktural: kurangi jam kerja berlebih, sesuaikan workload dengan jumlah ABK yang cukup. Hapus kebijakan yang menciptakan konflik peran.",
+      S:"Substitusi: ganti sistem shift yang tidak manusiawi dengan pola rotasi yang memperhatikan recovery time. Rotasi jabatan untuk menghindari kelelahan peran.",
+      R:"Rekayasa Teknik (Lingkungan): perbaiki akomodasi ABK (ruang istirahat nyaman, pencahayaan kamar yang baik, koneksi internet untuk komunikasi keluarga). Pasang ruang relaksasi. Fasilitas olahraga di kapal. Sesuai MLC 2006 Reg. 3.1.",
+      A:"Administratif: program Employee Assistance Program (EAP) untuk ABK. Buddy system dan peer support. Pelatihan stress management dan resiliensi untuk perwira. Survei iklim keselamatan berkala. SOP anti-bullying dan harassment. Pemeriksaan psikologi pra-embarkasi. Akses layanan telemedis psikologi.",
+      P:"APD (Perlindungan Psikologis): sistem pelaporan anonim untuk pelanggaran HAM di kapal. Jaminan perlindungan whistleblower. Kunjungan seafarer welfare di pelabuhan."
+    }
+  }
+};
+
+/* ── Dapatkan hirarki berdasarkan jenis hazard dan temuan ── */
+function getHirarki(hazardType,tipe){
+  var db=HIRARKI_DB[hazardType]||{};
+  var t=(tipe||"").toLowerCase();
+  /* Match spesifik */
+  if(hazardType==="fisika"){
+    if(t.includes("bising")||t.includes("noise"))return db.kebisingan||db.default;
+    if(t.includes("getaran")||t.includes("vibr"))return db.getaran||db.default;
+    return db.default||{};
+  }
+  if(hazardType==="kimia"){
+    if(t.includes("benzene")||t.includes("benzen"))return db.benzene||db.default;
+    return db.default||{};
+  }
+  return db.default||{};
+}
+
+/* ── MAIN EXPORT FUNCTION ── */
+function exportHazardPPT(hazardType){
+  var cfg=HAZARD_CONFIG[hazardType];
+  if(!cfg){showToast("Konfigurasi hazard tidak ditemukan.","error");return;}
+  var data=cfg.data();
+  if(!data||!data.length){showToast("Tidak ada data "+cfg.label+" untuk diexport.","warning");return;}
+
+  showToast("Membuat PPT "+cfg.label+"...","info");
+
+  var pres=new PptxGenJS();
+  pres.layout="LAYOUT_WIDE";
+  pres.author="IH Dashboard — Pertamina Patra Niaga III";
+  pres.title="5 Hirarki Pengendalian — "+cfg.label;
+  pres.subject="Industrial Hygiene Maritime Report";
+
+  var MC="0F2A4A";   /* Main color dark navy */
+  var AC=cfg.color;  /* Accent color per hazard */
+  var WH="FFFFFF";
+  var GR="F4F6FA";
+  var TX="1E293B";
+  var MU="64748B";
+  var RED="C62828";
+  var GRN="2E7D32";
+  var YEL="F59E0B";
+
+  /* ══════════════════════════════════════════
+     SLIDE 1 — Cover
+  ══════════════════════════════════════════ */
+  var s1=pres.addSlide();
+  s1.background={color:MC};
+  /* Gradient strip kiri */
+  s1.addShape(pres.ShapeType.rect,{x:0,y:0,w:0.06,h:7.5,fill:{color:AC}});
+  /* Judul besar */
+  s1.addText("5 HIRARKI PENGENDALIAN RISIKO",{
+    x:0.3,y:0.7,w:12.7,h:0.8,
+    fontSize:28,bold:true,color:WH,fontFace:"Calibri",charSpacing:3
+  });
+  s1.addText(cfg.icon+" "+cfg.label.toUpperCase(),{
+    x:0.3,y:1.55,w:12.7,h:0.7,
+    fontSize:22,bold:true,color:AC,fontFace:"Calibri"
+  });
+  /* Garis pemisah */
+  s1.addShape(pres.ShapeType.rect,{x:0.3,y:2.4,w:5,h:0.04,fill:{color:AC}});
+  /* Info deck */
+  var now=new Date();
+  var tgl=now.toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"});
+  var totalData=data.length;
+  var melebihi=data.filter(function(r){var s=(r[cfg.statusKey]||"").toLowerCase();return s.includes("melebihi")||s.includes("tinggi")||s.includes("kritis");}).length;
+  s1.addText([
+    {text:"Total Pengukuran / Temuan : ",options:{bold:false,color:"CADCFC"}},
+    {text:String(totalData),options:{bold:true,color:WH}},
+    {text:"    |    Melebihi Standar : ",options:{bold:false,color:"CADCFC"}},
+    {text:String(melebihi)+" temuan",options:{bold:true,color:melebihi>0?"FF6B6B":WH}}
+  ],{x:0.3,y:2.6,w:12,h:0.45,fontSize:13,fontFace:"Calibri"});
+  /* Pilar 5 hirarki */
+  var pilars=[
+    {no:"1",label:"ELIMINASI",sub:"Hilangkan sumber bahaya",col:"C62828"},
+    {no:"2",label:"SUBSTITUSI",sub:"Ganti dengan lebih aman",col:"E65100"},
+    {no:"3",label:"REC. TEKNIK",sub:"Kontrol teknik & engineering",col:"1565C0"},
+    {no:"4",label:"ADMINISTRATIF",sub:"SOP & prosedur kerja",col:"2E7D32"},
+    {no:"5",label:"APD",sub:"Alat Pelindung Diri",col:"6A1B9A"}
+  ];
+  pilars.forEach(function(p,i){
+    var bx=0.3+i*2.56;
+    s1.addShape(pres.ShapeType.roundRect,{x:bx,y:3.4,w:2.4,h:3.0,fill:{color:p.col},line:{color:WH,width:1},rectRadius:0.08});
+    s1.addText(p.no,{x:bx,y:3.45,w:2.4,h:0.55,fontSize:28,bold:true,color:"FFFFFF99",align:"center",fontFace:"Calibri"});
+    s1.addText(p.label,{x:bx+0.08,y:4.05,w:2.24,h:0.55,fontSize:11,bold:true,color:WH,align:"center",fontFace:"Calibri"});
+    s1.addText(p.sub,{x:bx+0.08,y:4.65,w:2.24,h:0.8,fontSize:9,color:"FFFFFFCC",align:"center",fontFace:"Calibri",wrap:true});
+  });
+  /* Footer */
+  s1.addText("IH Dashboard v5.0  |  Pertamina Patra Niaga III  |  "+tgl,{
+    x:0,y:7.1,w:13.3,h:0.35,
+    fontSize:9,color:"CADCFC",align:"center",fontFace:"Calibri"
+  });
+
+  /* ══════════════════════════════════════════
+     SLIDE 2 — Ringkasan KPI & Data Summary
+  ══════════════════════════════════════════ */
+  var s2=pres.addSlide();
+  s2.background={color:GR};
+  /* Header */
+  s2.addShape(pres.ShapeType.rect,{x:0,y:0,w:13.3,h:1.0,fill:{color:MC}});
+  s2.addText(cfg.icon+" RINGKASAN DATA — "+cfg.label.toUpperCase(),{
+    x:0.4,y:0.15,w:11,h:0.7,fontSize:18,bold:true,color:WH,fontFace:"Calibri"
+  });
+  s2.addText("Dasar: Permenaker No.05/2018 | ACGIH TLV 2024 | ILO MLC 2006",{
+    x:0.4,y:6.9,w:12,h:0.35,fontSize:9,color:MU,fontFace:"Calibri"
+  });
+  /* KPI cards */
+  var aman=totalData-melebihi;
+  var kpiData=[
+    {label:"Total Data",val:String(totalData),col:"1565C0",icon:"📊"},
+    {label:"Melebihi Standar",val:String(melebihi),col:RED,icon:"⚠"},
+    {label:"Dalam Batas",val:String(aman),col:GRN,icon:"✅"},
+    {label:"Kapal Terdampak",val:String(new Set(data.map(function(r){return r[cfg.kapalKey]||"";}).filter(Boolean)).size),col:"7B1FA2",icon:"🚢"}
+  ];
+  kpiData.forEach(function(k,i){
+    var bx=0.3+i*3.2;
+    s2.addShape(pres.ShapeType.roundRect,{x:bx,y:1.15,w:3.0,h:1.5,fill:{color:WH},line:{color:k.col,width:2},rectRadius:0.1});
+    s2.addText(k.icon,{x:bx,y:1.2,w:3.0,h:0.5,fontSize:20,align:"center"});
+    s2.addText(k.val,{x:bx,y:1.7,w:3.0,h:0.55,fontSize:28,bold:true,color:k.col,align:"center",fontFace:"Calibri"});
+    s2.addText(k.label,{x:bx,y:2.25,w:3.0,h:0.35,fontSize:10,color:MU,align:"center",fontFace:"Calibri"});
+  });
+  /* Tabel top temuan melebihi */
+  var overList=data.filter(function(r){var s=(r[cfg.statusKey]||"").toLowerCase();return s.includes("melebihi")||s.includes("tinggi")||s.includes("kritis");}).slice(0,8);
+  if(overList.length){
+    s2.addText("⚠  TEMUAN MELEBIHI STANDAR / RISIKO TINGGI",{
+      x:0.3,y:2.85,w:12.7,h:0.4,fontSize:12,bold:true,color:RED,fontFace:"Calibri"
+    });
+    var rows=[
+      [{text:"No",options:{bold:true,color:WH}},{text:"Kapal",options:{bold:true,color:WH}},{text:"Fleet",options:{bold:true,color:WH}},{text:"Temuan",options:{bold:true,color:WH}},{text:"Nilai",options:{bold:true,color:WH}},{text:"Status",options:{bold:true,color:WH}}]
+    ];
+    overList.forEach(function(r,i){
+      rows.push([
+        {text:String(i+1)},{text:String(r[cfg.kapalKey]||"—")},{text:String(r[cfg.fleetKey]||"—")},
+        {text:String(r[cfg.temuanKey]||"—")},
+        {text:String(r[cfg.hasilKey]||"—")+(r[cfg.satuanKey]?" "+r[cfg.satuanKey]:"")},
+        {text:String(r[cfg.statusKey]||"—")}
+      ]);
+    });
+    s2.addTable(rows,{
+      x:0.3,y:3.3,w:12.7,h:Math.min(overList.length*0.42+0.42,3.2),
+      fontSize:10,fontFace:"Calibri",
+      align:"left",valign:"middle",
+      fill:{color:WH},
+      border:{pt:0.5,color:"E2E8F0"},
+      colW:[0.4,2.4,1.0,3.2,1.5,1.5],
+      rowH:0.38,
+      autoPage:false,
+      color:TX,
+      thead:{fill:{color:MC},color:WH}
+    });
+  }
+
+  /* ══════════════════════════════════════════
+     SLIDE 3–N — Per temuan unik: 5 Hirarki
+  ══════════════════════════════════════════ */
+  /* Grup temuan unik */
+  var grupMap={};
+  data.forEach(function(r){
+    var key=(r[cfg.temuanKey]||"Tidak Diketahui").trim();
+    if(!grupMap[key])grupMap[key]=[];
+    grupMap[key].push(r);
+  });
+  var temuan=Object.keys(grupMap);
+
+  temuan.forEach(function(tipe){
+    var rows=grupMap[tipe];
+    var melebihiRows=rows.filter(function(r){var s=(r[cfg.statusKey]||"").toLowerCase();return s.includes("melebihi")||s.includes("tinggi")||s.includes("kritis");});
+    var hirarki=getHirarki(hazardType,tipe);
+    var kapalList=[...new Set(rows.map(function(r){return r[cfg.kapalKey]||"";}).filter(Boolean))];
+    var statusLabel=melebihiRows.length>0?"MELEBIHI STANDAR":"DALAM BATAS";
+    var statusColor=melebihiRows.length>0?RED:GRN;
+
+    var s=pres.addSlide();
+    s.background={color:WH};
+
+    /* Header strip */
+    s.addShape(pres.ShapeType.rect,{x:0,y:0,w:13.3,h:0.95,fill:{color:MC}});
+    s.addShape(pres.ShapeType.rect,{x:0,y:0,w:0.08,h:7.5,fill:{color:"#"+AC}});
+    s.addText(cfg.icon+" "+cfg.label.toUpperCase()+" — HIRARKI PENGENDALIAN",{
+      x:0.25,y:0.05,w:9,h:0.45,fontSize:11,bold:true,color:"CADCFC",fontFace:"Calibri"
+    });
+    s.addText(tipe.toUpperCase(),{
+      x:0.25,y:0.5,w:9,h:0.4,fontSize:14,bold:true,color:WH,fontFace:"Calibri"
+    });
+    /* Badge status */
+    s.addShape(pres.ShapeType.roundRect,{x:10.0,y:0.15,w:3.1,h:0.65,fill:{color:statusColor},rectRadius:0.08});
+    s.addText(statusLabel,{x:10.0,y:0.15,w:3.1,h:0.65,fontSize:11,bold:true,color:WH,align:"center",fontFace:"Calibri"});
+
+    /* Info baris — kapal & data */
+    s.addShape(pres.ShapeType.rect,{x:0.15,y:1.0,w:13.0,h:0.5,fill:{color:GR},line:{color:"E2E8F0",width:0.5}});
+    s.addText([
+      {text:"🚢 Kapal: ",options:{bold:true,color:TX}},
+      {text:kapalList.slice(0,5).join(", ")+(kapalList.length>5?" + "+(kapalList.length-5)+" lainnya":""),options:{color:TX}},
+      {text:"    |    📊 Total Data: ",options:{bold:true,color:TX}},
+      {text:String(rows.length),options:{color:TX}},
+      {text:"    |    ⚠ Melebihi: ",options:{bold:true,color:TX}},
+      {text:String(melebihiRows.length),options:{color:melebihiRows.length>0?RED:GRN,bold:true}}
+    ],{x:0.2,y:1.02,w:12.9,h:0.45,fontSize:10,fontFace:"Calibri"});
+
+    /* 5 Hirarki Pengendalian */
+    var hierData=[
+      {no:"1",judul:"ELIMINASI",warna:RED,icon:"🚫",isi:hirarki.E||"Identifikasi dan eliminasi sumber bahaya dari lingkungan kerja kapal jika secara teknis dan operasional memungkinkan."},
+      {no:"2",judul:"SUBSTITUSI",warna:"E65100",icon:"🔄",isi:hirarki.S||"Ganti material, proses, atau peralatan yang berbahaya dengan alternatif yang lebih aman dan memenuhi standar maritim."},
+      {no:"3",judul:"REKAYASA TEKNIK",warna:"1565C0",icon:"⚙",isi:hirarki.R||"Terapkan kontrol teknis: ventilasi, enclosure, isolasi, dan modifikasi teknis peralatan dan fasilitas kapal."},
+      {no:"4",judul:"ADMINISTRATIF",warna:GRN,icon:"📋",isi:hirarki.A||"Terapkan SOP, permit-to-work, rotasi kerja, training, dan program pengawasan sesuai regulasi Permenaker 05/2018 dan ILO MLC 2006."},
+      {no:"5",judul:"APD",warna:"6A1B9A",icon:"🦺",isi:hirarki.P||"Sediakan APD yang sesuai dengan jenis hazard, terstandarisasi SNI/ISO, dan pastikan penggunaan konsisten oleh seluruh ABK."}
+    ];
+
+    hierData.forEach(function(h,i){
+      var bx=0.15;
+      var by=1.62+i*1.12;
+      /* Label nomor & judul */
+      s.addShape(pres.ShapeType.roundRect,{x:bx,y:by,w:2.5,h:1.0,fill:{color:h.warna},rectRadius:0.06});
+      s.addText(h.icon+" "+h.no,{x:bx,y:by+0.05,w:2.5,h:0.42,fontSize:18,bold:true,color:WH,align:"center",fontFace:"Calibri"});
+      s.addText(h.judul,{x:bx,y:by+0.52,w:2.5,h:0.42,fontSize:9,bold:true,color:WH,align:"center",fontFace:"Calibri",charSpacing:1});
+      /* Isi rekomendasi */
+      s.addShape(pres.ShapeType.rect,{x:2.7,y:by,w:10.4,h:1.0,fill:{color:i%2===0?WH:GR},line:{color:"E2E8F0",width:0.5}});
+      s.addText(h.isi,{
+        x:2.8,y:by+0.04,w:10.2,h:0.92,
+        fontSize:9.5,color:TX,fontFace:"Calibri",wrap:true,valign:"middle"
+      });
+    });
+
+    /* Footer slide */
+    s.addShape(pres.ShapeType.rect,{x:0,y:7.15,w:13.3,h:0.35,fill:{color:GR}});
+    s.addText("Ref: Permenaker No.05/2018 | ACGIH TLV 2024 | IMO MSC/Circ.1351 | ILO MLC 2006 | OSHA 29 CFR 1910",{
+      x:0.2,y:7.18,w:10,h:0.28,fontSize:7.5,color:MU,fontFace:"Calibri"
+    });
+    s.addText("IH Dashboard  |  Pertamina Patra Niaga III",{
+      x:10.2,y:7.18,w:3.0,h:0.28,fontSize:7.5,color:MU,align:"right",fontFace:"Calibri"
+    });
+  });
+
+  /* ══════════════════════════════════════════
+     SLIDE PENUTUP — Rekomendasi Prioritas
+  ══════════════════════════════════════════ */
+  var sEnd=pres.addSlide();
+  sEnd.background={color:MC};
+  sEnd.addShape(pres.ShapeType.rect,{x:0,y:0,w:0.08,h:7.5,fill:{color:"#"+AC}});
+  sEnd.addText("REKOMENDASI PRIORITAS TINDAK LANJUT",{
+    x:0.3,y:0.4,w:12.5,h:0.7,fontSize:22,bold:true,color:WH,fontFace:"Calibri",charSpacing:2
+  });
+  sEnd.addText(cfg.icon+" "+cfg.label,{
+    x:0.3,y:1.1,w:12.5,h:0.45,fontSize:14,color:AC,fontFace:"Calibri",bold:true
+  });
+  sEnd.addShape(pres.ShapeType.rect,{x:0.3,y:1.65,w:12.5,h:0.04,fill:{color:AC}});
+
+  /* Prioritas berdasarkan melebihi */
+  var prioData=[
+    {label:"SEGERA (0–1 Bulan)",color:"C62828",items:["Hentikan pekerjaan di area dengan temuan KRITIS sampai kontrol teknis terpasang","Distribusi APD darurat untuk seluruh ABK di area terdampak","Laporkan temuan kepada HSE Officer dan Nakhoda segera","Pasang safety barrier dan warning sign di area berbahaya"]},
+    {label:"JANGKA PENDEK (1–3 Bulan)",color:"E65100",items:["Pasang rekayasa teknik: ventilasi, enclosure, atau monitoring kontinu","Revisi JSA (Job Safety Analysis) untuk semua pekerjaan berisiko tinggi","Laksanakan training ulang ABK tentang hazard "+cfg.label,"Lakukan medical check-up untuk ABK yang terpapar melebihi standar"]},
+    {label:"JANGKA PANJANG (3–12 Bulan)",color:"1565C0",items:["Review dan update program IH monitoring tahunan","Evaluasi efektivitas semua kontrol yang telah diterapkan","Integrasikan temuan ke dalam Ship Safety Management System (SMS)","Susun laporan tahunan untuk manajemen dan klas"]}
+  ];
+  prioData.forEach(function(p,i){
+    var by=2.0+i*1.7;
+    sEnd.addShape(pres.ShapeType.roundRect,{x:0.3,y:by,w:12.5,h:1.55,fill:{color:"1C3A5A"},line:{color:p.color,width:2},rectRadius:0.1});
+    sEnd.addShape(pres.ShapeType.roundRect,{x:0.3,y:by,w:3.2,h:0.45,fill:{color:p.color},rectRadius:0.06});
+    sEnd.addText(p.label,{x:0.35,y:by+0.02,w:3.1,h:0.4,fontSize:9,bold:true,color:WH,fontFace:"Calibri",align:"center"});
+    var bullets=p.items.map(function(txt,j){return{text:txt,options:{bullet:true,color:"CADCFC",fontSize:9,fontFace:"Calibri",breakLine:j<p.items.length-1}};});
+    sEnd.addText(bullets,{x:0.45,y:by+0.5,w:12.2,h:1.0});
+  });
+  /* Footer */
+  sEnd.addText("Dokumen ini dibuat otomatis oleh IH Dashboard v5.0 — "+new Date().toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"}),{
+    x:0,y:7.1,w:13.3,h:0.35,fontSize:9,color:"CADCFC",align:"center",fontFace:"Calibri"
+  });
+
+  /* ── Save ── */
+  var filename="IH_5Hirarki_"+cfg.label.replace(/\s+/g,"_")+"_"+new Date().toISOString().slice(0,10)+".pptx";
+  pres.writeFile({fileName:filename})
+    .then(function(){showToast("PPT "+cfg.label+" berhasil didownload!","success");})
+    .catch(function(err){showToast("Gagal export PPT: "+err.message,"error");console.error(err);});
 }
