@@ -585,6 +585,7 @@
 <div class="filter-group"><label>Metode</label><select id="fisika-filter-metode" onchange="applyFisikaFilters()"><option value="">Area & Personal</option><option>Area</option><option>Personal</option></select></div>
 <div class="filter-group"><label>Nama Kapal</label><input type="text" id="fisika-filter-kapal" placeholder="Cari kapal..." oninput="applyFisikaFilters()"></div>
 <button class="btn-clear" onclick="clearFisikaFilters()"><i class="fas fa-xmark"></i> Reset</button>
+<button class="btn-export-ppt" onclick="exportHazardPPT('fisika')" title="Export PPT 5 Hirarki Pengendalian"><i class="fas fa-file-powerpoint"></i> Export PPT</button>
 </div>
 <div id="fisika-alert-bar" style="display:none" class="nab-alert-bar"><i class="fas fa-triangle-exclamation"></i><span id="fisika-alert-msg"></span></div>
 <div class="kpi-grid">
@@ -629,6 +630,7 @@
 <div class="filter-group"><label>Metode</label><select id="kimia-filter-metode" onchange="applyKimiaFilters()"><option value="">Semua Metode</option><option>Area Stasioner</option><option>Personal Air Sampling</option><option>Biological Monitoring</option></select></div>
 <div class="filter-group"><label>Bahan Kimia</label><input type="text" id="kimia-filter-bahan" placeholder="Cari bahan..." oninput="applyKimiaFilters()"></div>
 <button class="btn-clear" onclick="clearKimiaFilters()"><i class="fas fa-xmark"></i> Reset</button>
+<button class="btn-export-ppt" onclick="exportHazardPPT('kimia')" title="Export PPT 5 Hirarki Pengendalian"><i class="fas fa-file-powerpoint"></i> Export PPT</button>
 </div>
 <div id="kimia-alert-bar" style="display:none" class="nab-alert-bar"><i class="fas fa-triangle-exclamation"></i><span id="kimia-alert-msg"></span></div>
 <div class="kpi-grid">
@@ -756,6 +758,7 @@
 <div class="filter-group"><label>Jenis Agen</label><select id="biologi-filter-agen" onchange="applyBiologiFilters()"><option value="">Semua Agen</option><option>Bakteri</option><option>Virus</option><option>Jamur</option><option>Parasit</option><option>Bioaerosol</option></select></div>
 <div class="filter-group"><label>Nama Kapal</label><input type="text" id="biologi-filter-kapal" placeholder="Cari kapal..." oninput="applyBiologiFilters()"></div>
 <button class="btn-clear" onclick="clearBiologiFilters()"><i class="fas fa-xmark"></i> Reset</button>
+<button class="btn-export-ppt" onclick="exportHazardPPT('biologi')" title="Export PPT 5 Hirarki Pengendalian"><i class="fas fa-file-powerpoint"></i> Export PPT</button>
 </div>
 <div class="kpi-grid">
 <div class="kpi-card blue"><div class="kpi-icon"><i class="fas fa-virus"></i></div><div class="kpi-body"><div class="kpi-value" id="biologi-total">—</div><div class="kpi-label">Total Sampling</div></div></div>
@@ -799,6 +802,7 @@
 <div class="filter-group"><label>Level Risiko</label><select id="ergonomi-filter-level" onchange="applyErgonomiFilters()"><option value="">Semua Level</option><option>1</option><option>2</option><option>3</option><option>4</option></select></div>
 <div class="filter-group"><label>Nama Kapal</label><input type="text" id="ergonomi-filter-kapal" placeholder="Cari kapal..." oninput="applyErgonomiFilters()"></div>
 <button class="btn-clear" onclick="clearErgonomiFilters()"><i class="fas fa-xmark"></i> Reset</button>
+<button class="btn-export-ppt" onclick="exportHazardPPT('ergonomi')" title="Export PPT 5 Hirarki Pengendalian"><i class="fas fa-file-powerpoint"></i> Export PPT</button>
 </div>
 <div class="kpi-grid">
 <div class="kpi-card blue"><div class="kpi-icon"><i class="fas fa-person-rays"></i></div><div class="kpi-body"><div class="kpi-value" id="ergonomi-total">—</div><div class="kpi-label">Total Assessment</div></div></div>
@@ -841,6 +845,7 @@
 <div class="filter-group"><label>Level Risiko</label><select id="psiko-filter-level" onchange="applyPsikoFilters()"><option value="">Semua Level</option><option>Rendah</option><option>Sedang</option><option>Tinggi</option></select></div>
 <div class="filter-group"><label>Nama Kapal</label><input type="text" id="psiko-filter-kapal" placeholder="Cari kapal..." oninput="applyPsikoFilters()"></div>
 <button class="btn-clear" onclick="clearPsikoFilters()"><i class="fas fa-xmark"></i> Reset</button>
+<button class="btn-export-ppt" onclick="exportHazardPPT('psikososial')" title="Export PPT 5 Hirarki Pengendalian"><i class="fas fa-file-powerpoint"></i> Export PPT</button>
 </div>
 <div class="kpi-grid">
 <div class="kpi-card blue"><div class="kpi-icon"><i class="fas fa-brain"></i></div><div class="kpi-body"><div class="kpi-value" id="psiko-total">—</div><div class="kpi-label">Total Assessment</div></div></div>
