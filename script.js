@@ -294,6 +294,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   document.querySelectorAll('.nav-item[data-menu="dokumentasi"]').forEach(item=>{item.addEventListener("click",()=>{currentDokFolder="hra_ih";setTimeout(renderDokGallery,80);});});
   document.querySelectorAll('.nav-item[data-menu="biomonitoring"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(initBiomonitoring,80));});
   document.querySelectorAll('.nav-item[data-menu="closeout25"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(renderCO25Page,80));});
+  document.querySelectorAll('.nav-item[data-menu="summary"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(renderSummaryPage,80));});
   document.querySelectorAll('.nav-item[data-menu="accesslog"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(loadAccessLog,80));});
   /* Re-apply demo overlay saat pindah halaman */
   document.querySelectorAll(".nav-item").forEach(item=>{
@@ -3150,4 +3151,386 @@ function exportHazardPPT(hazardType){
   pres.writeFile({fileName:filename})
     .then(function(){showToast("PPT "+cfg.label+" berhasil didownload!","success");})
     .catch(function(err){showToast("Gagal export PPT: "+err.message,"error");console.error(err);});
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SUMMARY DASHBOARD — Laporan Komprehensif Industrial Hygiene
+   Bahasa akademis untuk manajemen & direksi
+   Output: tampilan dashboard + export PDF
+═══════════════════════════════════════════════════════════════ */
+
+function getSummaryData(){
+  var fleet=(document.getElementById("summary-filter-fleet")||{}).value||"";
+  var filterFleet=function(arr){return fleet?arr.filter(function(r){return(r["Fleet"]||r["Jenis Fleet"]||"")=== fleet;}):arr;};
+
+  /* HRA */
+  var hraData=filterFleet(rawHRA);
+  var hraDone=new Set(hraData.filter(function(r){return(r["Status"]||"").toLowerCase()==="done";}).map(function(r){return r["Nama Kapal"];})).size;
+  var hraTotal=fleet?new Set(hraData.map(function(r){return r["Nama Kapal"];})).size:TOTAL_KAPAL;
+  var hraBudget=hraData.reduce(function(s,r){return s+parseFloat(r["Est Budget"]||0);},0);
+  var hraCoverage=hraTotal>0?((hraDone/hraTotal)*100).toFixed(1):0;
+
+  /* DAT */
+  var datData=filterFleet(rawDAT);
+  var datKapal=new Set(datData.map(function(r){return r["Nama Kapal"];})).size;
+  var datCrew=datData.reduce(function(s,r){return s+parseInt(r["Total Crew Diperiksa"]||0);},0);
+  var datPos=datData.reduce(function(s,r){return s+parseInt(r["Jumlah Crew Positif"]||0);},0);
+  var datBiaya=datData.reduce(function(s,r){return s+parseFloat(r["Est Biaya"]||0);},0);
+  var datPositifRate=datCrew>0?((datPos/datCrew)*100).toFixed(2):0;
+
+  /* Pest */
+  var pestData=filterFleet(rawPest);
+  var pestCount=pestData.length;
+  var pestBiaya=pestData.reduce(function(s,r){return s+parseFloat(r["Est Biaya"]||0);},0);
+
+  /* 5 Hazard */
+  var fisikaData=filterFleet(rawFisika);
+  var fisikaMelebihi=fisikaData.filter(function(r){return(r["Status"]||"").toLowerCase().includes("melebihi");}).length;
+  var kimiaData=filterFleet(rawKimia);
+  var kimiaMelebihi=kimiaData.filter(function(r){return(r["Status"]||"").toLowerCase().includes("melebihi");}).length;
+  var biologiData=filterFleet(rawBiologi);
+  var biologiMelebihi=biologiData.filter(function(r){return(r["Status"]||"").toLowerCase().includes("melebihi");}).length;
+  var ergonomiData=filterFleet(rawErgonomi);
+  var ergonomiTinggi=ergonomiData.filter(function(r){var l=(r["Level Risiko (1–4)"]||r["Level Risiko"]||"");return parseInt(l)>=3||String(l).toLowerCase().includes("tinggi");}).length;
+  var psikoData=filterFleet(rawPsikososial);
+  var psikoTinggi=psikoData.filter(function(r){return(r["Level Risiko"]||"").toLowerCase().includes("tinggi")||parseInt(r["Level Risiko (1–4)"]||r["Level Risiko"]||0)>=3;}).length;
+  var hazardTotal=fisikaData.length+kimiaData.length+biologiData.length+ergonomiData.length+psikoData.length;
+  var hazardMelebihi=fisikaMelebihi+kimiaMelebihi+biologiMelebihi+ergonomiTinggi+psikoTinggi;
+
+  /* Biomarker */
+  var bioData=filterFleet(rawBiomarker);
+  var bioMelebihi=bioData.filter(function(r){return r.kreatinin>r.rujukan;}).length;
+
+  return{
+    fleet:fleet,
+    hra:{done:hraDone,total:hraTotal,budget:hraBudget,coverage:hraCoverage,data:hraData},
+    dat:{kapal:datKapal,crew:datCrew,positif:datPos,biaya:datBiaya,rate:datPositifRate,data:datData},
+    pest:{count:pestCount,biaya:pestBiaya,data:pestData},
+    hazard:{total:hazardTotal,melebihi:hazardMelebihi,
+      fisika:{total:fisikaData.length,melebihi:fisikaMelebihi},
+      kimia:{total:kimiaData.length,melebihi:kimiaMelebihi},
+      biologi:{total:biologiData.length,melebihi:biologiMelebihi},
+      ergonomi:{total:ergonomiData.length,tinggi:ergonomiTinggi},
+      psiko:{total:psikoData.length,tinggi:psikoTinggi}
+    },
+    bio:{total:bioData.length,melebihi:bioMelebihi}
+  };
+}
+
+function trafficLight(pct){
+  if(pct>=80)return{color:"#2E7D32",bg:"#E8F5E9",label:"BAIK",icon:"fa-circle-check"};
+  if(pct>=50)return{color:"#E65100",bg:"#FFF3E0",label:"PERHATIAN",icon:"fa-circle-exclamation"};
+  return{color:"#C62828",bg:"#FFEBEE",label:"KRITIS",icon:"fa-circle-xmark"};
+}
+
+function renderSummaryPage(){
+  var el=document.getElementById("summaryReport");
+  if(!el)return;
+  var d=getSummaryData();
+  var now=new Date();
+  var tgl=now.toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"});
+  var fleetLabel=d.fleet||"Seluruh Armada";
+  var hraTL=trafficLight(parseFloat(d.hra.coverage));
+  var datTL=trafficLight(d.dat.crew>0?((1-(d.dat.positif/d.dat.crew))*100):100);
+  var hazardPct=d.hazard.total>0?(((d.hazard.total-d.hazard.melebihi)/d.hazard.total)*100):100;
+  var hazardTL=trafficLight(hazardPct);
+
+  var topHazardRows=function(){
+    var rows=[
+      {label:"Faktor Fisika",total:d.hazard.fisika.total,over:d.hazard.fisika.melebihi,pct:d.hazard.fisika.total>0?Math.round(d.hazard.fisika.melebihi/d.hazard.fisika.total*100):0,color:"#1565C0"},
+      {label:"Faktor Kimia",total:d.hazard.kimia.total,over:d.hazard.kimia.melebihi,pct:d.hazard.kimia.total>0?Math.round(d.hazard.kimia.melebihi/d.hazard.kimia.total*100):0,color:"#7B1FA2"},
+      {label:"Faktor Biologi",total:d.hazard.biologi.total,over:d.hazard.biologi.melebihi,pct:d.hazard.biologi.total>0?Math.round(d.hazard.biologi.melebihi/d.hazard.biologi.total*100):0,color:"#2E7D32"},
+      {label:"Faktor Ergonomi",total:d.hazard.ergonomi.total,over:d.hazard.ergonomi.tinggi,pct:d.hazard.ergonomi.total>0?Math.round(d.hazard.ergonomi.tinggi/d.hazard.ergonomi.total*100):0,color:"#E65100"},
+      {label:"Faktor Psikososial",total:d.hazard.psiko.total,over:d.hazard.psiko.tinggi,pct:d.hazard.psiko.total>0?Math.round(d.hazard.psiko.tinggi/d.hazard.psiko.total*100):0,color:"#AD1457"}
+    ];
+    return rows.map(function(r){
+      var barColor=r.pct>50?"#C62828":r.pct>20?"#E65100":"#2E7D32";
+      return'<tr style="border-bottom:1px solid #E8EDF2">'
+        +'<td style="padding:9px 12px;font-size:12px;font-weight:600;color:#1E293B">'+r.label+'</td>'
+        +'<td style="padding:9px 12px;text-align:center;font-size:12px;color:#64748B">'+r.total+'</td>'
+        +'<td style="padding:9px 12px;text-align:center;font-size:12px;font-weight:700;color:'+(r.over>0?"#C62828":"#2E7D32")+'">'+r.over+'</td>'
+        +'<td style="padding:9px 12px"><div style="background:#F1F5F9;border-radius:4px;height:8px;overflow:hidden"><div style="width:'+Math.min(r.pct,100)+'%;background:'+barColor+';height:100%;border-radius:4px"></div></div><span style="font-size:10px;color:'+barColor+'">'+r.pct+'%</span></td>'
+        +'</tr>';
+    }).join("");
+  };
+
+  el.innerHTML=`
+  <div id="summaryPrintArea" style="font-family:'Plus Jakarta Sans',sans-serif;color:#1E293B;max-width:1100px;margin:0 auto">
+
+    <!-- KOVER LAPORAN -->
+    <div style="background:linear-gradient(135deg,#0F2A4A 0%,#1565C0 100%);border-radius:16px;padding:40px 48px;margin-bottom:20px;position:relative;overflow:hidden">
+      <div style="position:absolute;right:-40px;top:-40px;width:220px;height:220px;background:rgba(255,255,255,.04);border-radius:50%"></div>
+      <div style="position:absolute;right:40px;bottom:-60px;width:160px;height:160px;background:rgba(255,255,255,.03);border-radius:50%"></div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;position:relative">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.5);letter-spacing:2px;margin-bottom:6px">LAPORAN KOMPREHENSIF</div>
+          <div style="font-size:26px;font-weight:800;color:#fff;line-height:1.2;margin-bottom:4px">Industrial Hygiene</div>
+          <div style="font-size:26px;font-weight:800;color:#5BB8F5;line-height:1.2;margin-bottom:16px">Monitoring &amp; Assessment</div>
+          <div style="font-size:13px;color:rgba(255,255,255,.7);line-height:1.6">
+            PT Pertamina Patra Niaga &mdash; Regional III<br>
+            Armada: <strong style="color:#fff">${fleetLabel}</strong> &nbsp;|&nbsp; Dihasilkan: <strong style="color:#fff">${tgl}</strong>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;min-width:180px">
+          <div style="background:rgba(255,255,255,.12);border-radius:10px;padding:12px 16px;text-align:center">
+            <div style="font-size:28px;font-weight:800;color:#fff">${d.hra.coverage}%</div>
+            <div style="font-size:10px;color:rgba(255,255,255,.6);margin-top:2px">Coverage HRA</div>
+          </div>
+          <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:10px 16px;text-align:center">
+            <div style="font-size:13px;font-weight:700;color:${d.hazard.melebihi>0?"#FF8A65":"#69F0AE"}">${d.hazard.melebihi} Temuan Melebihi NAB</div>
+            <div style="font-size:10px;color:rgba(255,255,255,.5)">dari ${d.hazard.total} pengukuran</div>
+          </div>
+        </div>
+      </div>
+      <!-- Dasar hukum -->
+      <div style="margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,.12);display:flex;gap:8px;flex-wrap:wrap">
+        ${["Permenaker No.05/2018","ACGIH TLV 2024","ILO MLC 2006","IMO MSC/Circ.1351","IARC Monograph"].map(function(s){return'<span style="background:rgba(255,255,255,.12);color:rgba(255,255,255,.75);padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600">'+s+'</span>';}).join("")}
+      </div>
+    </div>
+
+    <!-- TRAFFIC LIGHT STATUS -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+      ${[
+        {judul:"Hazard Recognition & Assessment",sub:"Pelaksanaan HRA Armada",pct:parseFloat(d.hra.coverage),icon:"fa-lungs",detail:"Coverage: "+d.hra.done+"/"+d.hra.total+" kapal"},
+        {judul:"Drugs &amp; Alcohol Testing",sub:"Tingkat Kepatuhan Crew",pct:d.dat.crew>0?(1-(d.dat.positif/d.dat.crew))*100:100,icon:"fa-vial",detail:"Positif: "+d.dat.positif+" dari "+fmtNum(d.dat.crew)+" crew"},
+        {judul:"5 Hazard Utama",sub:"Kepatuhan Nilai Ambang Batas",pct:hazardPct,icon:"fa-triangle-exclamation",detail:d.hazard.melebihi+" temuan melebihi standar"}
+      ].map(function(c){
+        var tl=trafficLight(c.pct);
+        return'<div style="background:'+tl.bg+';border:1.5px solid '+tl.color+'40;border-radius:12px;padding:16px 18px">'
+          +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+          +'<i class="fas '+tl.icon+'" style="color:'+tl.color+';font-size:16px"></i>'
+          +'<span style="font-size:10px;font-weight:800;color:'+tl.color+';letter-spacing:.5px">'+tl.label+'</span></div>'
+          +'<div style="font-size:13px;font-weight:700;color:#1E293B;margin-bottom:2px">'+c.judul+'</div>'
+          +'<div style="font-size:11px;color:#64748B;margin-bottom:10px">'+c.sub+'</div>'
+          +'<div style="font-size:22px;font-weight:800;color:'+tl.color+'">'+Math.round(c.pct)+'%</div>'
+          +'<div style="font-size:10px;color:#64748B;margin-top:4px">'+c.detail+'</div>'
+          +'</div>';
+      }).join("")}
+    </div>
+
+    <!-- BAGIAN I: HRA -->
+    <div style="background:#fff;border:1px solid #E2E8F0;border-radius:14px;padding:24px 28px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <div style="width:4px;height:28px;background:#1565C0;border-radius:2px"></div>
+        <div>
+          <div style="font-size:15px;font-weight:800;color:#1E293B">I. Hazard Recognition &amp; Assessment (HRA)</div>
+          <div style="font-size:11px;color:#64748B">Analisis komprehensif pelaksanaan identifikasi dan penilaian bahaya di seluruh unit armada</div>
+        </div>
+      </div>
+      <div style="height:1px;background:#E8EDF2;margin:14px 0"></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+        ${[
+          {label:"Kapal Telah Dilaksanakan HRA",val:d.hra.done,unit:"unit",color:"#1565C0"},
+          {label:"Kapal Belum Melaksanakan HRA",val:d.hra.total-d.hra.done,unit:"unit",color:d.hra.total-d.hra.done>0?"#C62828":"#2E7D32"},
+          {label:"Coverage Pelaksanaan",val:d.hra.coverage+"%",unit:"dari total armada",color:"#0F2A4A"},
+          {label:"Estimasi Anggaran Program",val:formatRupiah(d.hra.budget),unit:"total alokasi",color:"#6A1B9A"}
+        ].map(function(k){return'<div style="background:#F8FAFC;border-radius:10px;padding:12px 14px;border-left:3px solid '+k.color+'">'
+          +'<div style="font-size:11px;color:#64748B;line-height:1.4;margin-bottom:6px">'+k.label+'</div>'
+          +'<div style="font-size:20px;font-weight:800;color:'+k.color+'">'+k.val+'</div>'
+          +'<div style="font-size:10px;color:#94A3B8;margin-top:2px">'+k.unit+'</div></div>';}).join("")}
+      </div>
+      <div style="background:#EBF5FF;border-radius:10px;padding:12px 16px;font-size:12px;color:#1565C0;line-height:1.7">
+        <strong>Analisis:</strong> Berdasarkan data yang terhimpun, tingkat coverage pelaksanaan HRA sebesar <strong>${d.hra.coverage}%</strong> menunjukkan
+        ${parseFloat(d.hra.coverage)>=80?"capaian yang berada dalam kategori <strong>baik</strong> dan sesuai dengan target program IH tahunan":"capaian yang <strong>memerlukan akselerasi</strong> agar target pelaksanaan HRA seluruh armada dapat terpenuhi sesuai tenggat waktu yang ditetapkan"}. 
+        Sebanyak <strong>${d.hra.total-d.hra.done} unit kapal</strong> ${d.hra.total-d.hra.done>0?"masih memerlukan pelaksanaan HRA dalam periode berjalan":"telah menyelesaikan seluruh kewajiban HRA"}.
+        Total estimasi anggaran program HRA sebesar <strong>${formatRupiah(d.hra.budget)}</strong> mengacu pada ketentuan Peraturan Menteri Ketenagakerjaan Nomor 05 Tahun 2018.
+      </div>
+    </div>
+
+    <!-- BAGIAN II: DAT -->
+    <div style="background:#fff;border:1px solid #E2E8F0;border-radius:14px;padding:24px 28px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <div style="width:4px;height:28px;background:#2E7D32;border-radius:2px"></div>
+        <div>
+          <div style="font-size:15px;font-weight:800;color:#1E293B">II. Pengujian Narkotika, Psikotropika, &amp; Stimulan (Drugs &amp; Alcohol Test)</div>
+          <div style="font-size:11px;color:#64748B">Evaluasi pelaksanaan program pemeriksaan zat adiktif pada awak kapal sesuai ketentuan regulasi maritim</div>
+        </div>
+      </div>
+      <div style="height:1px;background:#E8EDF2;margin:14px 0"></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+        ${[
+          {label:"Jumlah Kapal Terperiksa",val:d.dat.kapal,unit:"unit armada",color:"#2E7D32"},
+          {label:"Total Crew Diperiksa",val:fmtNum(d.dat.crew),unit:"awak kapal",color:"#0F2A4A"},
+          {label:"Crew Hasil Positif",val:d.dat.positif,unit:d.dat.positif>0?"perlu tindak lanjut":"tidak ada temuan",color:d.dat.positif>0?"#C62828":"#2E7D32"},
+          {label:"Tingkat Prevalensi",val:d.dat.rate+"%",unit:"dari total terperiksa",color:parseFloat(d.dat.rate)>0?"#E65100":"#2E7D32"}
+        ].map(function(k){return'<div style="background:#F8FAFC;border-radius:10px;padding:12px 14px;border-left:3px solid '+k.color+'">'
+          +'<div style="font-size:11px;color:#64748B;line-height:1.4;margin-bottom:6px">'+k.label+'</div>'
+          +'<div style="font-size:20px;font-weight:800;color:'+k.color+'">'+k.val+'</div>'
+          +'<div style="font-size:10px;color:#94A3B8;margin-top:2px">'+k.unit+'</div></div>';}).join("")}
+      </div>
+      <div style="background:#E8F5E9;border-radius:10px;padding:12px 16px;font-size:12px;color:#2E7D32;line-height:1.7">
+        <strong>Analisis:</strong> Program Drugs &amp; Alcohol Testing (DAT) telah dilaksanakan terhadap <strong>${fmtNum(d.dat.crew)} awak kapal</strong> dari <strong>${d.dat.kapal} unit armada</strong>. 
+        ${d.dat.positif>0?"Ditemukan <strong>"+d.dat.positif+" awak kapal</strong> dengan hasil reaktif ("+d.dat.rate+"%), yang seluruhnya wajib mendapatkan penanganan tindak lanjut sesuai prosedur operasional standar perusahaan.":"Tidak ditemukan awak kapal dengan hasil positif, mencerminkan <strong>kepatuhan penuh</strong> terhadap regulasi Maritime Labour Convention (MLC) 2006 Rule 4.3 terkait bebas narkotika di lingkungan kerja maritim."}
+        Pemeriksaan dilaksanakan mengacu pada Peraturan Menteri Perhubungan dan Permenaker No.05/2018.
+      </div>
+    </div>
+
+    <!-- BAGIAN III: 5 HAZARD UTAMA -->
+    <div style="background:#fff;border:1px solid #E2E8F0;border-radius:14px;padding:24px 28px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <div style="width:4px;height:28px;background:#E65100;border-radius:2px"></div>
+        <div>
+          <div style="font-size:15px;font-weight:800;color:#1E293B">III. Pemantauan 5 Hazard Utama (Permenaker No.05/2018)</div>
+          <div style="font-size:11px;color:#64748B">Hasil pemantauan faktor fisika, kimia, biologi, ergonomi, dan psikososial terhadap nilai ambang batas yang ditetapkan</div>
+        </div>
+      </div>
+      <div style="height:1px;background:#E8EDF2;margin:14px 0"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead>
+            <tr style="background:#F1F5F9">
+              <th style="padding:9px 12px;text-align:left;font-weight:700;color:#64748B;font-size:11px">Faktor Hazard</th>
+              <th style="padding:9px 12px;text-align:center;font-weight:700;color:#64748B;font-size:11px">Total</th>
+              <th style="padding:9px 12px;text-align:center;font-weight:700;color:#64748B;font-size:11px">Melebihi NAB</th>
+              <th style="padding:9px 12px;text-align:left;font-weight:700;color:#64748B;font-size:11px">Proporsi</th>
+            </tr>
+          </thead>
+          <tbody>${topHazardRows()}</tbody>
+          <tfoot>
+            <tr style="background:#F8FAFC">
+              <td style="padding:9px 12px;font-weight:800;font-size:12px;color:#1E293B">TOTAL</td>
+              <td style="padding:9px 12px;text-align:center;font-weight:800">${d.hazard.total}</td>
+              <td style="padding:9px 12px;text-align:center;font-weight:800;color:${d.hazard.melebihi>0?"#C62828":"#2E7D32"}">${d.hazard.melebihi}</td>
+              <td style="padding:9px 12px;font-size:11px;color:#94A3B8">${d.hazard.total>0?Math.round(d.hazard.melebihi/d.hazard.total*100):0}% dari total</td>
+            </tr>
+          </tfoot>
+        </table>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="background:#FFF3E0;border-radius:10px;padding:14px 16px">
+            <div style="font-size:11px;font-weight:700;color:#E65100;margin-bottom:6px">TEMUAN KRITIS</div>
+            <div style="font-size:22px;font-weight:800;color:#C62828">${d.hazard.melebihi}</div>
+            <div style="font-size:11px;color:#64748B">parameter melebihi NAB/standar</div>
+          </div>
+          <div style="background:#E8F5E9;border-radius:10px;padding:14px 16px">
+            <div style="font-size:11px;font-weight:700;color:#2E7D32;margin-bottom:6px">DALAM BATAS</div>
+            <div style="font-size:22px;font-weight:800;color:#2E7D32">${d.hazard.total-d.hazard.melebihi}</div>
+            <div style="font-size:11px;color:#64748B">parameter memenuhi persyaratan</div>
+          </div>
+          ${d.bio.total>0?'<div style="background:#F3E5F5;border-radius:10px;padding:14px 16px"><div style="font-size:11px;font-weight:700;color:#7B1FA2;margin-bottom:6px">BIOMONITORING BENZENE</div><div style="font-size:22px;font-weight:800;color:'+( d.bio.melebihi>0?"#C62828":"#7B1FA2")+'">'+ d.bio.melebihi+'</div><div style="font-size:11px;color:#64748B">melebihi BEI dari '+ d.bio.total+' sampel</div></div>':""}
+        </div>
+      </div>
+      <div style="background:#FFF3E0;border-radius:10px;padding:12px 16px;font-size:12px;color:#E65100;line-height:1.7">
+        <strong>Analisis:</strong> Dari total <strong>${d.hazard.total} pengukuran</strong> faktor hazard yang dilaksanakan, terdapat <strong>${d.hazard.melebihi} parameter (${d.hazard.total>0?Math.round(d.hazard.melebihi/d.hazard.total*100):0}%)</strong> yang melampaui Nilai Ambang Batas (NAB) sesuai ketentuan Permenaker No.05/2018.
+        ${d.hazard.fisika.melebihi>0?"Faktor fisika mencatat "+d.hazard.fisika.melebihi+" temuan melebihi NAB, yang menuntut implementasi rekayasa teknik dan administratif secara segera. ":""}
+        ${d.hazard.kimia.melebihi>0?"Paparan faktor kimia terhadap "+d.hazard.kimia.melebihi+" titik sampling melebihi TLV-TWA ACGIH, mengindikasikan kebutuhan peninjauan sistem ventilasi dan pengendalian sumber bahaya secara menyeluruh. ":""}
+        Seluruh temuan kritis wajib ditindaklanjuti dengan implementasi hirarki pengendalian risiko sesuai standar OHSAS 18001/ISO 45001.
+      </div>
+    </div>
+
+    <!-- BAGIAN IV: PEST & RODENT -->
+    <div style="background:#fff;border:1px solid #E2E8F0;border-radius:14px;padding:24px 28px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <div style="width:4px;height:28px;background:#6A1B9A;border-radius:2px"></div>
+        <div>
+          <div style="font-size:15px;font-weight:800;color:#1E293B">IV. Pengendalian Vektor &amp; Hama (Pest &amp; Rodent Control)</div>
+          <div style="font-size:11px;color:#64748B">Rekapitulasi pelaksanaan program pengendalian vektor penyakit dan hama di lingkungan kapal</div>
+        </div>
+      </div>
+      <div style="height:1px;background:#E8EDF2;margin:14px 0"></div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px">
+        ${[
+          {label:"Total Pelaksanaan Pest Control",val:d.pest.count,unit:"kegiatan",color:"#6A1B9A"},
+          {label:"Estimasi Biaya Program",val:formatRupiah(d.pest.biaya),unit:"total anggaran",color:"#4527A0"}
+        ].map(function(k){return'<div style="background:#F8FAFC;border-radius:10px;padding:12px 14px;border-left:3px solid '+k.color+'">'
+          +'<div style="font-size:11px;color:#64748B;margin-bottom:6px">'+k.label+'</div>'
+          +'<div style="font-size:20px;font-weight:800;color:'+k.color+'">'+k.val+'</div>'
+          +'<div style="font-size:10px;color:#94A3B8">'+k.unit+'</div></div>';}).join("")}
+      </div>
+      <div style="background:#F3E5F5;border-radius:10px;padding:12px 16px;font-size:12px;color:#6A1B9A;line-height:1.7">
+        <strong>Analisis:</strong> Program Pest &amp; Rodent Control telah dilaksanakan sebanyak <strong>${d.pest.count} kegiatan</strong> dengan total anggaran <strong>${formatRupiah(d.pest.biaya)}</strong>.
+        Pelaksanaan program pengendalian vektor merupakan kewajiban sanitasi kapal sesuai International Health Regulations (IHR) 2005 WHO dan Ship Sanitation Certificate, guna mencegah transmisi penyakit zoonosis dan infeksi yang bersumber dari hama di lingkungan armada.
+      </div>
+    </div>
+
+    <!-- REKOMENDASI STRATEGIS -->
+    <div style="background:linear-gradient(135deg,#0F2A4A 0%,#1565C0 100%);border-radius:14px;padding:24px 28px;margin-bottom:16px">
+      <div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:4px">V. Rekomendasi Strategis &amp; Tindak Lanjut</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:16px">Rekomendasi berbasis hierarki pengendalian risiko untuk manajemen dan direksi</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+        ${[
+          {prio:"SEGERA",color:"#FF6B6B",bg:"rgba(255,107,107,.15)",items:[
+            "Investigasi dan pengendalian darurat untuk "+d.hazard.melebihi+" temuan melebihi NAB",
+            d.hra.total-d.hra.done>0?"Akselerasi pelaksanaan HRA pada "+(d.hra.total-d.hra.done)+" kapal yang belum terlaksana":"Pertahankan coverage HRA yang telah tercapai",
+            d.dat.positif>0?"Tindak lanjut medis dan administratif untuk "+d.dat.positif+" crew hasil positif DAT":"Pertahankan konsistensi program DAT zero-positif"
+          ]},
+          {prio:"JANGKA PENDEK (1–3 Bulan)",color:"#FFA94D",bg:"rgba(255,169,77,.15)",items:[
+            "Implementasi rekayasa teknik: pemasangan ventilasi dan enclosure untuk parameter melebihi NAB",
+            "Revisi JSA seluruh pekerjaan dengan kategori risiko tinggi di area terdampak",
+            "Pelaksanaan medical surveillance berkala untuk ABK dengan paparan kronik teridentifikasi"
+          ]},
+          {prio:"JANGKA PANJANG (3–12 Bulan)",color:"#69DB7C",bg:"rgba(105,219,124,.15)",items:[
+            "Review komprehensif program IH tahunan dan penetapan target coverage 100%",
+            "Integrasi temuan IH ke dalam Ship Safety Management System (SMS) dan ISM Code",
+            "Penyusunan laporan IH tahunan untuk keperluan audit eksternal, klas, dan regulator"
+          ]}
+        ].map(function(s){return'<div style="background:'+s.bg+';border-radius:10px;padding:14px 16px">'
+          +'<div style="font-size:10px;font-weight:800;color:'+s.color+';letter-spacing:.5px;margin-bottom:10px">'+s.prio+'</div>'
+          +s.items.map(function(it){return'<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:7px"><div style="width:5px;height:5px;background:'+s.color+';border-radius:50%;flex-shrink:0;margin-top:5px"></div><div style="font-size:11px;color:rgba(255,255,255,.85);line-height:1.5">'+it+'</div></div>';}).join("")
+          +'</div>';}).join("")}
+      </div>
+    </div>
+
+    <!-- FOOTER LAPORAN -->
+    <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div style="font-size:11px;color:#94A3B8;line-height:1.7">
+        Laporan ini dihasilkan secara otomatis oleh <strong style="color:#64748B">IH Dashboard v5.0</strong> &mdash; PT Pertamina Patra Niaga Regional III<br>
+        Referensi: Permenaker 05/2018 &bull; ACGIH TLV 2024 &bull; ILO MLC 2006 &bull; IMO MSC/Circ.1351 &bull; ISO 45001:2018
+      </div>
+      <div style="font-size:11px;color:#94A3B8;text-align:right">
+        Diterbitkan: <strong style="color:#64748B">${tgl}</strong><br>
+        Konfidensial &mdash; Hanya untuk internal perusahaan
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ── EXPORT PDF ── */
+async function exportSummaryPDF(){
+  var btn=document.getElementById("btnSummaryPDF");
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Membuat PDF...';}
+  try{
+    var area=document.getElementById("summaryPrintArea");
+    if(!area){showToast("Render halaman summary dulu sebelum export.","warning");return;}
+    var now=new Date();
+    var fleet=(document.getElementById("summary-filter-fleet")||{}).value||"Seluruh Armada";
+    /* html2canvas tangkap area */
+    var canvas=await html2canvas(area,{
+      scale:2,useCORS:true,logging:false,
+      backgroundColor:"#ffffff",
+      width:area.scrollWidth,
+      windowWidth:area.scrollWidth+40
+    });
+    var imgData=canvas.toDataURL("image/jpeg",0.95);
+    var {jsPDF}=window.jspdf;
+    var pdf=new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
+    var pageW=pdf.internal.pageSize.getWidth();
+    var pageH=pdf.internal.pageSize.getHeight();
+    var margin=8;
+    var contentW=pageW-margin*2;
+    var imgH=(canvas.height/canvas.width)*contentW;
+    var posY=margin;
+    var remaining=imgH;
+    var srcY=0;
+    /* Multi halaman */
+    while(remaining>0){
+      var sliceH=Math.min(remaining,pageH-margin*2);
+      var tmpCanvas=document.createElement("canvas");
+      tmpCanvas.width=canvas.width;
+      tmpCanvas.height=Math.floor((sliceH/contentW)*canvas.width);
+      var ctx=tmpCanvas.getContext("2d");
+      ctx.drawImage(canvas,0,Math.floor(srcY/contentW*canvas.width),canvas.width,tmpCanvas.height,0,0,canvas.width,tmpCanvas.height);
+      var sliceData=tmpCanvas.toDataURL("image/jpeg",0.95);
+      pdf.addImage(sliceData,"JPEG",margin,posY,contentW,sliceH);
+      remaining-=sliceH;
+      srcY+=sliceH;
+      if(remaining>0){pdf.addPage();posY=margin;}
+    }
+    var fname="IH_Summary_"+fleet.replace(/\s+/g,"_")+"_"+now.toISOString().slice(0,10)+".pdf";
+    pdf.save(fname);
+    showToast("PDF berhasil didownload!","success");
+  }catch(err){
+    showToast("Gagal export PDF: "+err.message,"error");
+    console.error(err);
+  }
+  if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-file-pdf"></i> Export PDF';}
 }
