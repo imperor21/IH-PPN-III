@@ -38,8 +38,8 @@
 </div>
 </div>
 <div class="login-hero-text">
-<h1 class="login-hero-title">IH MARITIME<br>MONITORING<br>SYSTEM</h1>
-<p class="login-hero-desc">HSSE &mdash; Pertamina Patra Niaga III</p>
+<h1 class="login-hero-title">IH 2026<br>MONITORING<br>SYSTEM</h1>
+<p class="login-hero-desc">Industrial Hygiene Dashboard &mdash; Pertamina Patra Niaga III</p>
 </div>
 <div class="login-stats-row">
 <div class="login-stat"><span class="ls-num">85</span><span class="ls-lbl">Est Kapal Milik</span></div>
@@ -61,7 +61,7 @@
 </div>
 <!-- Mobile-only stats strip -->
 <div class="m-login-stats">
-<div class="m-ls"><span class="m-ls-num">85</span><span class="m-ls-lbl">Est Kapal</span></div>
+<div class="m-ls"><span class="m-ls-num">85</span><span class="m-ls-lbl">Kapal</span></div>
 <div class="m-ls-div"></div>
 <div class="m-ls"><span class="m-ls-num">4</span><span class="m-ls-lbl">Fleet</span></div>
 <div class="m-ls-div"></div>
@@ -252,6 +252,20 @@
 <span>Live — auto refresh 5 Mnt</span>
 </div>
 <div class="last-updated" id="lastUpdated">Menghubungkan...</div>
+<!-- Dashboard age -->
+<div id="dashboardAge" style="
+  margin:4px 0 6px;
+  padding:4px 8px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:6px;
+">
+  <div style="font-size:9px;color:rgba(255,255,255,.35);white-space:nowrap">
+    <i class="fas fa-code-branch" style="margin-right:3px;font-size:8px"></i>Sejak 25 Apr 2026
+  </div>
+  <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.6);white-space:nowrap" id="dashAgeText">—</div>
+</div>
 <button class="btn-logout" onclick="doLogout()">
 <i class="fas fa-right-from-bracket"></i> Logout
 </button>
