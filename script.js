@@ -3,7 +3,7 @@
 /* ✅ Pedoman PDF & Foto Dokumentasi → Google Drive (multi-device)    */
 /* ✅ IndexedDB dihapus — data terpusat di GAS/Drive                  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbzqC6Gb4AWMQu6p9CvvICd-e4QUFggBRcOzCRadEIaH3XFQICYlrbxiZv2vzDg2R7PUNA/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzqCyLLFs-rLkahFThbzxIDWCpeoCjv_cvRZqw00_28Q96W6BerasPhmCaV8_Qel2lrPQ/exec";
 
 async function gasPost(payload) {
   const controller = new AbortController();
@@ -293,7 +293,23 @@ document.addEventListener("DOMContentLoaded",()=>{
   document.querySelectorAll('.nav-item[data-menu="menu6"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(renderPedomanList,80));});
   document.querySelectorAll('.nav-item[data-menu="dokumentasi"]').forEach(item=>{item.addEventListener("click",()=>{currentDokFolder="hra_ih";setTimeout(renderDokGallery,80);});});
   document.querySelectorAll('.nav-item[data-menu="biomonitoring"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(initBiomonitoring,80));});
-  document.querySelectorAll('.nav-item[data-menu="closeout25"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(renderCO25Page,80));});
+  /* ── Dashboard age counter ── */
+  function updateDashboardAge(){
+    var start=new Date("2026-04-25T00:00:00");
+    var now=new Date();
+    var diff=now-start;
+    var days=Math.floor(diff/(1000*60*60*24));
+    var months=Math.floor(days/30);
+    var remainDays=days-(months*30);
+    var txt="";
+    if(months>0&&remainDays>0) txt=months+" Bln "+remainDays+" Hari";
+    else if(months>0) txt=months+" Bulan";
+    else txt=days+" Hari";
+    var el=document.getElementById("dashAgeText");
+    if(el)el.textContent=txt;
+  }
+  updateDashboardAge();
+  setInterval(updateDashboardAge,60000);
   document.querySelectorAll('.nav-item[data-menu="summary"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(renderSummaryPage,80));});
   document.querySelectorAll('.nav-item[data-menu="accesslog"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(loadAccessLog,80));});
   /* Re-apply demo overlay saat pindah halaman */
@@ -2459,7 +2475,7 @@ function renderBioTrendChart(isBiomarker){
 }
 
 /* ── SEARCH ── */
-function searchBioTable(){
+function searchBioPageTable(){
   var q=(document.getElementById('bioSearch').value||'').toLowerCase();
   var isBiomarker=bioCurrentTab==='biomarker';
   var src=isBiomarker?filteredBiomarker:filteredPersonal;
@@ -2472,7 +2488,7 @@ function searchBioTable(){
   /* Restore */
   if(isBiomarker)filteredBiomarker=src; else filteredPersonal=src;
 }
-window.searchBioTable=searchBioTable;
+window.searchBioPageTable=searchBioPageTable;
 
 /* ── INIT ── */
 function initBiomonitoring(){
@@ -2900,6 +2916,7 @@ function getHirarki(hazardType,tipe){
 
 /* ── MAIN EXPORT FUNCTION ── */
 function exportHazardPPT(hazardType){
+  if(typeof PptxGenJS==="undefined"){showToast("Library PPT sedang dimuat, coba lagi dalam beberapa detik.","warning");return;}
   var cfg=HAZARD_CONFIG[hazardType];
   if(!cfg){showToast("Konfigurasi hazard tidak ditemukan.","error");return;}
   var data=cfg.data();
@@ -3791,6 +3808,12 @@ ${d.bio.total>0?`
 async function exportSummaryPDF(){
   var btn=document.getElementById("btnSummaryPDF");
   if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Membuat PDF...';}
+  /* Guard: pastikan library sudah loaded (defer) */
+  if(typeof html2canvas==="undefined"||typeof window.jspdf==="undefined"){
+    showToast("Library PDF sedang dimuat, coba lagi dalam beberapa detik.","warning");
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-file-pdf"></i> Export PDF';}
+    return;
+  }
   try{
     var area=document.getElementById("summaryPrintArea");
     if(!area){showToast("Render halaman summary dulu sebelum export.","warning");if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-file-pdf"></i> Export PDF';}return;}
@@ -3895,6 +3918,10 @@ function exportBiomarkerPPT(){
   var btn=document.getElementById("btnBioPPT");
   function resetBtn(){
     if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-file-powerpoint"></i> Download PPT';}
+  }
+  if(typeof PptxGenJS==="undefined"){
+    showToast("Library PPT sedang dimuat, coba lagi dalam beberapa detik.","warning");
+    resetBtn();return;
   }
   try{
     var tipeF=((document.getElementById("bio-filter-tipe")||{}).value)||"all";
