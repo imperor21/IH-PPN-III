@@ -3404,51 +3404,88 @@ function exportHazardPPT(hazardType){
 
 function getSummaryData(){
   var fleet=(document.getElementById("summary-filter-fleet")||{}).value||"";
-  var filterFleet=function(arr){return fleet?arr.filter(function(r){return(r["Fleet"]||r["Jenis Fleet"]||"")=== fleet;}):arr;};
+  var bulan=(document.getElementById("summary-filter-bulan")||{}).value||"";
+
+  var filterData=function(arr,bulanKey){
+    return arr.filter(function(r){
+      if(fleet&&(r["Fleet"]||r["Jenis Fleet"]||"")!==fleet)return false;
+      if(bulan&&bulanKey&&(r[bulanKey]||"")!==bulan)return false;
+      return true;
+    });
+  };
 
   /* HRA */
-  var hraData=filterFleet(rawHRA);
+  var hraData=filterData(rawHRA,"Bulan Pelaksanaan");
   var hraDone=new Set(hraData.filter(function(r){return(r["Status"]||"").toLowerCase()==="done";}).map(function(r){return r["Nama Kapal"];})).size;
   var hraTotal=fleet?new Set(hraData.map(function(r){return r["Nama Kapal"];})).size:TOTAL_KAPAL;
   var hraBudget=hraData.reduce(function(s,r){return s+parseFloat(r["Est Budget"]||0);},0);
   var hraCoverage=hraTotal>0?((hraDone/hraTotal)*100).toFixed(1):0;
 
   /* DAT */
-  var datData=filterFleet(rawDAT);
+  var datData=filterData(rawDAT,"Bulan Pelaksanaan");
   var datKapal=new Set(datData.map(function(r){return r["Nama Kapal"];})).size;
   var datCrew=datData.reduce(function(s,r){return s+parseInt(r["Total Crew Diperiksa"]||0);},0);
   var datPos=datData.reduce(function(s,r){return s+parseInt(r["Jumlah Crew Positif"]||0);},0);
   var datBiaya=datData.reduce(function(s,r){return s+parseFloat(r["Est Biaya"]||0);},0);
   var datPositifRate=datCrew>0?((datPos/datCrew)*100).toFixed(2):0;
+  /* DAT breakdown per bulan untuk tabel detail */
+  var datBulanMap={};
+  datData.forEach(function(r){
+    var b=r["Bulan Pelaksanaan"]||"Tidak Diketahui";
+    if(!datBulanMap[b])datBulanMap[b]={bulan:b,kapal:new Set(),crew:0,positif:0,biaya:0};
+    datBulanMap[b].kapal.add(r["Nama Kapal"]||"");
+    datBulanMap[b].crew+=parseInt(r["Total Crew Diperiksa"]||0);
+    datBulanMap[b].positif+=parseInt(r["Jumlah Crew Positif"]||0);
+    datBulanMap[b].biaya+=parseFloat(r["Est Biaya"]||0);
+  });
+  var datBulanList=Object.values(datBulanMap).map(function(x){
+    return{bulan:x.bulan,kapal:x.kapal.size,crew:x.crew,positif:x.positif,biaya:x.biaya,
+      rate:x.crew>0?((x.positif/x.crew)*100).toFixed(2):0};
+  }).sort(function(a,b){return BULAN_ORDER.indexOf(a.bulan)-BULAN_ORDER.indexOf(b.bulan);});
 
   /* Pest */
-  var pestData=filterFleet(rawPest);
+  var pestData=filterData(rawPest,"Bulan");
   var pestCount=pestData.length;
   var pestBiaya=pestData.reduce(function(s,r){return s+parseFloat(r["Est Biaya"]||0);},0);
+  var pestKapal=new Set(pestData.map(function(r){return r["Nama Kapal"]||r["Kapal"]||"";})).size;
+  /* Pest breakdown per bulan */
+  var pestBulanMap={};
+  pestData.forEach(function(r){
+    var b=r["Bulan"]||"Tidak Diketahui";
+    if(!pestBulanMap[b])pestBulanMap[b]={bulan:b,count:0,kapal:new Set(),biaya:0,temuan:[]};
+    pestBulanMap[b].count++;
+    pestBulanMap[b].kapal.add(r["Nama Kapal"]||r["Kapal"]||"");
+    pestBulanMap[b].biaya+=parseFloat(r["Est Biaya"]||0);
+    if(r["Temuan / Keluhan"])pestBulanMap[b].temuan.push(r["Temuan / Keluhan"]);
+  });
+  var pestBulanList=Object.values(pestBulanMap).map(function(x){
+    return{bulan:x.bulan,count:x.count,kapal:x.kapal.size,biaya:x.biaya,
+      temuan:[...new Set(x.temuan)].slice(0,2).join("; ")||"Tidak ada temuan"};
+  }).sort(function(a,b){return BULAN_ORDER.indexOf(a.bulan)-BULAN_ORDER.indexOf(b.bulan);});
 
   /* 5 Hazard */
-  var fisikaData=filterFleet(rawFisika);
+  var fisikaData=filterData(rawFisika,"");
   var fisikaMelebihi=fisikaData.filter(function(r){return(r["Status"]||"").toLowerCase().includes("melebihi");}).length;
-  var kimiaData=filterFleet(rawKimia);
+  var kimiaData=filterData(rawKimia,"");
   var kimiaMelebihi=kimiaData.filter(function(r){return(r["Status"]||"").toLowerCase().includes("melebihi");}).length;
-  var biologiData=filterFleet(rawBiologi);
+  var biologiData=filterData(rawBiologi,"");
   var biologiMelebihi=biologiData.filter(function(r){return(r["Status"]||"").toLowerCase().includes("melebihi");}).length;
-  var ergonomiData=filterFleet(rawErgonomi);
+  var ergonomiData=filterData(rawErgonomi,"");
   var ergonomiTinggi=ergonomiData.filter(function(r){var l=(r["Level Risiko (1–4)"]||r["Level Risiko"]||"");return parseInt(l)>=3||String(l).toLowerCase().includes("tinggi");}).length;
-  var psikoData=filterFleet(rawPsikososial);
+  var psikoData=filterData(rawPsikososial,"");
   var psikoTinggi=psikoData.filter(function(r){return(r["Level Risiko"]||"").toLowerCase().includes("tinggi")||parseInt(r["Level Risiko (1–4)"]||r["Level Risiko"]||0)>=3;}).length;
   var hazardTotal=fisikaData.length+kimiaData.length+biologiData.length+ergonomiData.length+psikoData.length;
   var hazardMelebihi=fisikaMelebihi+kimiaMelebihi+biologiMelebihi+ergonomiTinggi+psikoTinggi;
 
   /* Biomarker */
-  var bioData=filterFleet(rawBiomarker);
+  var bioData=filterData(rawBiomarker,"");
   var bioMelebihi=bioData.filter(function(r){return r.kreatinin>r.rujukan;}).length;
 
   return{
-    fleet:fleet,
+    fleet:fleet, bulan:bulan,
     hra:{done:hraDone,total:hraTotal,budget:hraBudget,coverage:hraCoverage,data:hraData},
-    dat:{kapal:datKapal,crew:datCrew,positif:datPos,biaya:datBiaya,rate:datPositifRate,data:datData},
-    pest:{count:pestCount,biaya:pestBiaya,data:pestData},
+    dat:{kapal:datKapal,crew:datCrew,positif:datPos,biaya:datBiaya,rate:datPositifRate,data:datData,bulanList:datBulanList},
+    pest:{count:pestCount,kapal:pestKapal,biaya:pestBiaya,data:pestData,bulanList:pestBulanList},
     hazard:{total:hazardTotal,melebihi:hazardMelebihi,
       fisika:{total:fisikaData.length,melebihi:fisikaMelebihi},
       kimia:{total:kimiaData.length,melebihi:kimiaMelebihi},
@@ -3472,334 +3509,339 @@ function renderSummaryPage(){
   var d=getSummaryData();
   var now=new Date();
   var tgl=now.toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"});
-  var bulan=now.toLocaleDateString("id-ID",{month:"long",year:"numeric"});
+  var tahun=now.getFullYear();
   var fleetLabel=d.fleet||"Seluruh Armada";
-  var hraTL=trafficLight(parseFloat(d.hra.coverage));
-  var datTL=trafficLight(d.dat.crew>0?((1-(d.dat.positif/d.dat.crew))*100):100);
-  var hazardPct=d.hazard.total>0?(((d.hazard.total-d.hazard.melebihi)/d.hazard.total)*100):100;
-  var hazardTL=trafficLight(hazardPct);
-  var pestTL=trafficLight(d.pest.count>0?100:0);
+  var bulanLabel=d.bulan||"Semua Periode";
+  var periodeLabel=d.bulan?(d.bulan+" "+tahun):("Tahun "+tahun);
 
-  /* Helper: tabel hazard */
-  function hazardTableRows(){
+  /* Update subtitle */
+  var subEl=document.getElementById("summarySubtitle");
+  if(subEl)subEl.textContent="PT Pertamina Patra Niaga III \u2014 "+periodeLabel+(d.fleet?" \u2014 "+d.fleet:"");
+
+  var hazardPct=d.hazard.total>0?(((d.hazard.total-d.hazard.melebihi)/d.hazard.total)*100):100;
+  var datKepatuhan=d.dat.crew>0?((1-(d.dat.positif/d.dat.crew))*100):100;
+
+  function kpiBox(label,val,unit,color,bg){
+    return'<div style="background:'+bg+';border-radius:10px;padding:12px 14px;border-left:3px solid '+color+'">'+
+      '<div style="font-family:Arial,sans-serif;font-size:10.5px;color:#64748B;line-height:1.4;margin-bottom:6px">'+label+'</div>'+
+      '<div style="font-family:Arial,sans-serif;font-size:20px;font-weight:700;color:'+color+'">'+val+'</div>'+
+      '<div style="font-family:Arial,sans-serif;font-size:10px;color:#94A3B8;margin-top:2px">'+unit+'</div></div>';
+  }
+  function anaBox(color,bg,border,label,text){
+    return'<div style="background:'+bg+';border:1px solid '+border+';border-radius:10px;padding:12px 16px;font-family:Arial,sans-serif;font-size:12px;color:#334155;line-height:1.8">'+
+      '<b style="color:'+color+'">'+label+':</b> '+text+'</div>';
+  }
+  function sectionHead(color,nomor,judul,sub){
+    return'<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">'+
+      '<div style="width:4px;height:32px;background:'+color+';border-radius:2px;flex-shrink:0"></div>'+
+      '<div><div style="font-family:Arial,sans-serif;font-size:15px;font-weight:700;color:#1E293B">'+nomor+'&nbsp;&nbsp;'+judul+'</div>'+
+      '<div style="font-family:Arial,sans-serif;font-size:11px;color:#64748B;margin-top:2px">'+sub+'</div></div></div>';
+  }
+  function tl(pct){
+    if(pct>=80)return{c:"#2E7D32",bg:"#E8F5E9",lbl:"BAIK",ic:"fa-circle-check"};
+    if(pct>=50)return{c:"#E65100",bg:"#FFF3E0",lbl:"PERHATIAN",ic:"fa-circle-exclamation"};
+    return{c:"#C62828",bg:"#FFEBEE",lbl:"KRITIS",ic:"fa-circle-xmark"};
+  }
+  var tlHRA=tl(parseFloat(d.hra.coverage));
+  var tlDAT=tl(datKepatuhan);
+  var tlHaz=tl(hazardPct);
+
+  /* Teks akademis dinamis */
+  var anaHRA=parseFloat(d.hra.coverage)>=80
+    ?'Tingkat coverage pelaksanaan HRA sebesar <b>'+d.hra.coverage+'%</b> mencerminkan kepatuhan yang <b>baik</b> terhadap target program IH tahunan, melampaui ambang minimal 80% sebagaimana ditetapkan Permenaker No.05/2018. Sebanyak <b>'+d.hra.done+' unit armada</b> telah menyelesaikan siklus HRA penuh dengan estimasi anggaran program <b>'+formatRupiah(d.hra.budget)+'</b>.'
+    :'Coverage pelaksanaan HRA sebesar <b>'+d.hra.coverage+'%</b> menunjukkan adanya <b>kesenjangan implementasi signifikan</b>. Terdapat <b>'+(d.hra.total-d.hra.done)+' unit armada</b> yang belum menyelesaikan siklus HRA, berpotensi menimbulkan blind spot dalam manajemen bahaya ketenagakerjaan sesuai Permenaker No.05/2018 Pasal 6 ayat (1).';
+
+  var anaDAT=d.dat.positif===0
+    ?'Program DAT mencatat <b>zero positive rate</b> dari <b>'+fmtNum(d.dat.crew)+' awak kapal</b> yang diperiksa pada <b>'+d.dat.kapal+' unit armada</b>. Capaian ini merupakan indikator tertinggi kepatuhan terhadap MLC 2006 Regulation 4.3 dan peraturan bebas zat adiktif di lingkungan maritim.'
+    :'Program DAT menemukan <b>'+d.dat.positif+' awak kapal reaktif</b> (prevalensi <b>'+d.dat.rate+'%</b>) dari '+fmtNum(d.dat.crew)+' yang diperiksa. Seluruh kasus wajib mendapat penanganan medis dan tindak lanjut administratif sesuai SOP perusahaan, MLC 2006 Reg.4.3, dan Peraturan Menteri Perhubungan.';
+
+  var anaPest=d.pest.count>0
+    ?'Program Pest &amp; Rodent Control telah terlaksana <b>'+d.pest.count+' kegiatan</b> pada <b>'+d.pest.kapal+' unit armada</b>, dengan total anggaran <b>'+formatRupiah(d.pest.biaya)+'</b>. Pelaksanaan ini memenuhi kewajiban sanitasi kapal sesuai International Health Regulations (IHR) 2005 WHO dan Ship Sanitation Certificate.'
+    :'Belum terdapat data pelaksanaan Pest &amp; Rodent Control pada periode ini. Program pengendalian vektor merupakan kewajiban regulatif periodik berdasarkan IHR 2005 WHO untuk mencegah transmisi penyakit zoonosis di lingkungan armada.';
+
+  var anaHazard=d.hazard.melebihi===0
+    ?'Seluruh <b>'+d.hazard.total+' parameter hazard</b> menunjukkan nilai dalam batas NAB yang ditetapkan Permenaker No.05/2018, mencerminkan efektivitas program pengendalian bahaya eksisting. Pemantauan berkala tetap diperlukan untuk mempertahankan kondisi ini.'
+    :'Teridentifikasi <b>'+d.hazard.melebihi+' parameter ('+Math.round(d.hazard.melebihi/d.hazard.total*100)+'%)</b> melampaui NAB dari '+d.hazard.total+' total pengukuran. Kondisi ini menuntut implementasi segera hierarki pengendalian risiko sesuai Permenaker No.05/2018 dan ISO 45001:2018.';
+
+  /* Tabel detail DAT per bulan */
+  function datBulanTable(){
+    if(!d.dat.bulanList||!d.dat.bulanList.length)return'<div style="padding:20px;text-align:center;font-family:Arial,sans-serif;font-size:12px;color:#94A3B8">Tidak ada data DAT pada periode ini</div>';
+    return'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif;font-size:11.5px">'+
+      '<thead><tr style="background:#0F2A4A">'+
+      '<th style="padding:9px 14px;text-align:left;color:#fff;font-weight:700">Bulan</th>'+
+      '<th style="padding:9px 14px;text-align:center;color:#fff;font-weight:700">Kapal</th>'+
+      '<th style="padding:9px 14px;text-align:center;color:#fff;font-weight:700">Crew Diperiksa</th>'+
+      '<th style="padding:9px 14px;text-align:center;color:#fff;font-weight:700">Hasil Positif</th>'+
+      '<th style="padding:9px 14px;text-align:center;color:#fff;font-weight:700">Prevalensi</th>'+
+      '<th style="padding:9px 14px;text-align:right;color:#fff;font-weight:700">Est. Biaya</th>'+
+      '<th style="padding:9px 14px;text-align:center;color:#fff;font-weight:700">Status</th>'+
+      '</tr></thead><tbody>'+
+      d.dat.bulanList.map(function(r,i){
+        var ok=r.positif===0;
+        return'<tr style="background:'+(i%2===0?'#fff':'#F8FAFC')+'">'+
+          '<td style="padding:8px 14px;font-weight:600;color:#1E293B;border-bottom:1px solid #EEF2F7">'+r.bulan+'</td>'+
+          '<td style="padding:8px 14px;text-align:center;border-bottom:1px solid #EEF2F7">'+r.kapal+' unit</td>'+
+          '<td style="padding:8px 14px;text-align:center;font-weight:700;border-bottom:1px solid #EEF2F7">'+fmtNum(r.crew)+'</td>'+
+          '<td style="padding:8px 14px;text-align:center;font-weight:700;color:'+(ok?'#2E7D32':'#C62828')+';border-bottom:1px solid #EEF2F7">'+r.positif+'</td>'+
+          '<td style="padding:8px 14px;text-align:center;color:'+(ok?'#2E7D32':'#C62828')+';border-bottom:1px solid #EEF2F7">'+r.rate+'%</td>'+
+          '<td style="padding:8px 14px;text-align:right;border-bottom:1px solid #EEF2F7">'+formatRupiah(r.biaya)+'</td>'+
+          '<td style="padding:8px 14px;text-align:center;border-bottom:1px solid #EEF2F7">'+
+          '<span style="background:'+(ok?'#E8F5E9':'#FFEBEE')+';color:'+(ok?'#2E7D32':'#C62828')+';padding:2px 9px;border-radius:20px;font-size:10.5px;font-weight:700">'+(ok?'Negatif':'Ada Temuan')+'</span></td>'+
+          '</tr>';
+      }).join("")+
+      '<tr style="background:#F0F4F8">'+
+      '<td style="padding:8px 14px;font-weight:700;font-size:12px">TOTAL</td>'+
+      '<td style="padding:8px 14px;text-align:center;font-weight:700">'+d.dat.kapal+' unit</td>'+
+      '<td style="padding:8px 14px;text-align:center;font-weight:700">'+fmtNum(d.dat.crew)+'</td>'+
+      '<td style="padding:8px 14px;text-align:center;font-weight:700;color:'+(d.dat.positif>0?'#C62828':'#2E7D32')+'">'+d.dat.positif+'</td>'+
+      '<td style="padding:8px 14px;text-align:center;font-weight:700;color:'+(d.dat.positif>0?'#C62828':'#2E7D32')+'">'+d.dat.rate+'%</td>'+
+      '<td style="padding:8px 14px;text-align:right;font-weight:700">'+formatRupiah(d.dat.biaya)+'</td>'+
+      '<td></td></tr>'+
+      '</tbody></table></div>';
+  }
+
+  /* Tabel detail Pest per bulan */
+  function pestBulanTable(){
+    if(!d.pest.bulanList||!d.pest.bulanList.length)return'<div style="padding:20px;text-align:center;font-family:Arial,sans-serif;font-size:12px;color:#94A3B8">Tidak ada data Pest Control pada periode ini</div>';
+    return'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif;font-size:11.5px">'+
+      '<thead><tr style="background:#0F2A4A">'+
+      '<th style="padding:9px 14px;text-align:left;color:#fff;font-weight:700">Bulan</th>'+
+      '<th style="padding:9px 14px;text-align:center;color:#fff;font-weight:700">Kegiatan</th>'+
+      '<th style="padding:9px 14px;text-align:center;color:#fff;font-weight:700">Kapal</th>'+
+      '<th style="padding:9px 14px;text-align:left;color:#fff;font-weight:700">Temuan Utama</th>'+
+      '<th style="padding:9px 14px;text-align:right;color:#fff;font-weight:700">Est. Biaya</th>'+
+      '</tr></thead><tbody>'+
+      d.pest.bulanList.map(function(r,i){
+        return'<tr style="background:'+(i%2===0?'#fff':'#F8FAFC')+'">'+
+          '<td style="padding:8px 14px;font-weight:600;color:#1E293B;border-bottom:1px solid #EEF2F7">'+r.bulan+'</td>'+
+          '<td style="padding:8px 14px;text-align:center;font-weight:700;border-bottom:1px solid #EEF2F7">'+r.count+'x</td>'+
+          '<td style="padding:8px 14px;text-align:center;border-bottom:1px solid #EEF2F7">'+r.kapal+' unit</td>'+
+          '<td style="padding:8px 14px;font-size:11px;color:#475569;border-bottom:1px solid #EEF2F7">'+esc(r.temuan)+'</td>'+
+          '<td style="padding:8px 14px;text-align:right;border-bottom:1px solid #EEF2F7">'+formatRupiah(r.biaya)+'</td>'+
+          '</tr>';
+      }).join("")+
+      '<tr style="background:#F0F4F8">'+
+      '<td style="padding:8px 14px;font-weight:700;font-size:12px">TOTAL</td>'+
+      '<td style="padding:8px 14px;text-align:center;font-weight:700">'+d.pest.count+'x</td>'+
+      '<td style="padding:8px 14px;text-align:center;font-weight:700">'+d.pest.kapal+' unit</td>'+
+      '<td></td>'+
+      '<td style="padding:8px 14px;text-align:right;font-weight:700">'+formatRupiah(d.pest.biaya)+'</td>'+
+      '</tr>'+
+      '</tbody></table></div>';
+  }
+
+  /* Tabel hazard */
+  function hazardRows(){
     var rows=[
-      {label:"Faktor Fisika",total:d.hazard.fisika.total,over:d.hazard.fisika.melebihi,pct:d.hazard.fisika.total>0?Math.round(d.hazard.fisika.melebihi/d.hazard.fisika.total*100):0},
-      {label:"Faktor Kimia",total:d.hazard.kimia.total,over:d.hazard.kimia.melebihi,pct:d.hazard.kimia.total>0?Math.round(d.hazard.kimia.melebihi/d.hazard.kimia.total*100):0},
-      {label:"Faktor Biologi",total:d.hazard.biologi.total,over:d.hazard.biologi.melebihi,pct:d.hazard.biologi.total>0?Math.round(d.hazard.biologi.melebihi/d.hazard.biologi.total*100):0},
-      {label:"Faktor Ergonomi",total:d.hazard.ergonomi.total,over:d.hazard.ergonomi.tinggi,pct:d.hazard.ergonomi.total>0?Math.round(d.hazard.ergonomi.tinggi/d.hazard.ergonomi.total*100):0},
-      {label:"Faktor Psikososial",total:d.hazard.psiko.total,over:d.hazard.psiko.tinggi,pct:d.hazard.psiko.total>0?Math.round(d.hazard.psiko.tinggi/d.hazard.psiko.total*100):0}
+      {label:"Faktor Fisika",total:d.hazard.fisika.total,over:d.hazard.fisika.melebihi},
+      {label:"Faktor Kimia",total:d.hazard.kimia.total,over:d.hazard.kimia.melebihi},
+      {label:"Faktor Biologi",total:d.hazard.biologi.total,over:d.hazard.biologi.melebihi},
+      {label:"Faktor Ergonomi",total:d.hazard.ergonomi.total,over:d.hazard.ergonomi.tinggi},
+      {label:"Faktor Psikososial",total:d.hazard.psiko.total,over:d.hazard.psiko.tinggi}
     ];
     return rows.map(function(r,i){
-      var bc=r.pct>50?"#C62828":r.pct>20?"#E65100":"#2E7D32";
+      var pct=r.total>0?Math.round(r.over/r.total*100):0;
+      var bc=pct>50?"#C62828":pct>20?"#E65100":"#2E7D32";
       return'<tr style="background:'+(i%2===0?'#fff':'#F8FAFC')+'">'+
-        '<td style="padding:8px 14px;border-bottom:1px solid #EEF2F7;font-size:12px;font-weight:600;color:#1E293B">'+r.label+'</td>'+
-        '<td style="padding:8px 14px;border-bottom:1px solid #EEF2F7;text-align:center;font-size:12px;color:#475569">'+r.total+'</td>'+
-        '<td style="padding:8px 14px;border-bottom:1px solid #EEF2F7;text-align:center;font-size:12px;font-weight:700;color:'+(r.over>0?"#C62828":"#2E7D32")+'">'+r.over+'</td>'+
+        '<td style="padding:8px 14px;border-bottom:1px solid #EEF2F7;font-family:Arial,sans-serif;font-size:12px;font-weight:600;color:#1E293B">'+r.label+'</td>'+
+        '<td style="padding:8px 14px;border-bottom:1px solid #EEF2F7;text-align:center;font-family:Arial,sans-serif;font-size:12px;color:#475569">'+r.total+'</td>'+
+        '<td style="padding:8px 14px;border-bottom:1px solid #EEF2F7;text-align:center;font-family:Arial,sans-serif;font-size:12px;font-weight:700;color:'+(r.over>0?'#C62828':'#2E7D32')+'">'+r.over+'</td>'+
         '<td style="padding:8px 14px;border-bottom:1px solid #EEF2F7">'+
           '<div style="display:flex;align-items:center;gap:8px">'+
-          '<div style="flex:1;background:#E8EDF2;border-radius:4px;height:7px;overflow:hidden">'+
-          '<div style="width:'+Math.min(r.pct,100)+'%;background:'+bc+';height:100%;border-radius:4px"></div></div>'+
-          '<span style="font-size:11px;font-weight:700;color:'+bc+';min-width:32px">'+r.pct+'%</span></div></td>'+
+          '<div style="flex:1;background:#E8EDF2;border-radius:3px;height:7px;overflow:hidden">'+
+          '<div style="width:'+Math.min(pct,100)+'%;background:'+bc+';height:100%;border-radius:3px"></div></div>'+
+          '<span style="font-family:Arial,sans-serif;font-size:10px;font-weight:700;color:'+bc+';min-width:30px">'+pct+'%</span></div></td>'+
         '</tr>';
     }).join("");
   }
 
-  /* Teks akademis dinamis per bagian */
-  var anaHRA = d.hra.coverage>=80
-    ? 'Tingkat coverage pelaksanaan HRA sebesar <b>'+d.hra.coverage+'%</b> mencerminkan kepatuhan yang <b>baik dan sesuai target program</b>. Capaian ini melampaui ambang minimal 80% yang ditetapkan dalam Peraturan Menteri Ketenagakerjaan Nomor 05 Tahun 2018 sebagai indikator kinerja IH minimal. Sebanyak <b>'+d.hra.done+' unit armada</b> telah menyelesaikan siklus HRA penuh, dengan estimasi total anggaran program sebesar <b>'+formatRupiah(d.hra.budget)+'</b>.'
-    : 'Tingkat coverage pelaksanaan HRA sebesar <b>'+d.hra.coverage+'%</b> menunjukkan adanya <b>kesenjangan implementasi yang signifikan</b> terhadap target program IH tahunan. Dari total <b>'+d.hra.total+' unit armada</b>, masih terdapat <b>'+( d.hra.total-d.hra.done)+' kapal</b> yang belum menyelesaikan siklus HRA, berpotensi menimbulkan blind spot dalam sistem manajemen bahaya ketenagakerjaan. Diperlukan percepatan dan prioritisasi pelaksanaan HRA sesuai amanat Permenaker No.05/2018 Pasal 6 ayat (1).';
+  /* Status keseluruhan */
+  var skor=0;
+  if(parseFloat(d.hra.coverage)>=80)skor++;
+  if(d.dat.positif===0)skor+=2;else if(parseFloat(d.dat.rate)<1)skor++;
+  if(d.hazard.melebihi===0)skor+=2;else if(d.hazard.melebihi<=3)skor++;
+  if(d.pest.count>0)skor++;
+  var statusOvr=skor>=5?{lbl:"BAIK",c:"#1B5E20",bg:"#E8F5E9",br:"#4CAF50"}:skor>=3?{lbl:"PERHATIAN",c:"#E65100",bg:"#FFF3E0",br:"#FF9800"}:{lbl:"KRITIS",c:"#B71C1C",bg:"#FFEBEE",br:"#F44336"};
 
-  var anaDAT = d.dat.positif===0
-    ? 'Program Drugs &amp; Alcohol Test (DAT) mencatat capaian <b>zero positive rate</b> dari total <b>'+fmtNum(d.dat.crew)+' awak kapal</b> yang diperiksa pada <b>'+d.dat.kapal+' unit armada</b>. Capaian ini merupakan indikator tertinggi kepatuhan terhadap ketentuan Maritime Labour Convention (MLC) 2006 Regulation 4.3 tentang lingkungan kerja bebas zat adiktif, serta Peraturan Menteri Perhubungan terkait sertifikasi kesehatan awak kapal.'
-    : 'Program DAT mencatat <b>'+d.dat.positif+' kasus reaktif</b> dari <b>'+fmtNum(d.dat.crew)+' awak kapal</b> yang diperiksa (tingkat prevalensi: <b>'+d.dat.rate+'%</b>). Seluruh kasus reaktif wajib mendapatkan penanganan medis dan tindak lanjut administratif sesuai Prosedur Operasional Standar perusahaan, mencakup evaluasi kesehatan, rujukan spesialis, serta potensi pembebastugasan sementara. Penemuan ini memerlukan evaluasi komprehensif terhadap faktor risiko lingkungan dan sosial di unit armada terdampak.';
-
-  var anaHazard = d.hazard.melebihi===0
-    ? 'Seluruh <b>'+d.hazard.total+' parameter hazard</b> yang diukur menunjukkan nilai berada dalam batas Nilai Ambang Batas (NAB) yang ditetapkan. Kondisi ini mencerminkan efektivitas program pengendalian bahaya eksisting dan kepatuhan penuh terhadap Permenaker No.05/2018 Pasal 9 tentang pengendalian faktor bahaya lingkungan kerja. Pemantauan berkala tetap diperlukan untuk mempertahankan kondisi ini.'
-    : 'Dari total <b>'+d.hazard.total+' pengukuran</b> faktor hazard yang dilaksanakan, teridentifikasi <b>'+d.hazard.melebihi+' parameter ('+Math.round(d.hazard.melebihi/d.hazard.total*100)+'%)</b> melampaui NAB yang ditetapkan. Temuan ini menuntut implementasi segera hirarki pengendalian risiko (eliminasi → substitusi → rekayasa teknik → administratif → APD) sesuai amanat Permenaker No.05/2018, ISO 45001:2018, dan standar IMO MSC/Circ.1351. Prioritas tindak lanjut diarahkan pada parameter dengan persentase ekseedance tertinggi.';
-
-  var anaPest = d.pest.count>0
-    ? 'Program pengendalian vektor dan hama telah terlaksana sebanyak <b>'+d.pest.count+' kegiatan</b> dengan total anggaran <b>'+formatRupiah(d.pest.biaya)+'</b>. Pelaksanaan ini memenuhi kewajiban sanitasi kapal sebagaimana diatur dalam International Health Regulations (IHR) 2005 WHO dan persyaratan Ship Sanitation Certificate yang diverifikasi pada setiap kunjungan pelabuhan.'
-    : 'Data pelaksanaan Pest &amp; Rodent Control belum tersedia pada periode pelaporan ini. Pelaksanaan program pengendalian vektor merupakan kewajiban regulatif yang harus dipenuhi secara periodik sesuai IHR 2005 WHO untuk menjaga sanitasi kapal dan mencegah transmisi penyakit zoonosis.';
-
-  var anaBio = d.bio.total>0
-    ? 'Pemantauan biologis benzene terhadap <b>'+d.bio.total+' sampel</b> menunjukkan <b>'+d.bio.melebihi+' sampel ('+Math.round(d.bio.melebihi/d.bio.total*100)+'%)</b> '+(d.bio.melebihi>0?'melampaui Biological Exposure Indices (BEI) ACGIH 2024 sebesar 25 µg/g kreatinin. Mengingat benzene terklasifikasi sebagai karsinogen Grup 1 oleh IARC, temuan ini memerlukan respons kesehatan segera mencakup pemeriksaan hematologi lengkap, evaluasi paparan sumber, dan implementasi rekayasa pengendalian di area kerja terdampak.':'berada dalam batas BEI ACGIH 2024 (25 µg/g kreatinin). Pemantauan berkala setiap 6 bulan tetap direkomendasikan mengingat klasifikasi karsinogen Grup 1 benzene oleh IARC.')
-    : 'Data biomonitoring benzene belum tersedia. Program pemantauan biologis direkomendasikan untuk seluruh ABK yang berpotensi terpapar benzene sesuai standar ACGIH BEI 2024.';
-
-  /* Penentuan warna status komprehensif */
-  var statusKeseluruhan=function(){
-    var skor=0;
-    if(parseFloat(d.hra.coverage)>=80)skor++;
-    if(d.dat.positif===0)skor+=2;else if(parseFloat(d.dat.rate)<1)skor++;
-    if(d.hazard.melebihi===0)skor+=2;else if(d.hazard.melebihi<=3)skor++;
-    if(d.pest.count>0)skor++;
-    if(skor>=5)return{label:"BAIK",color:"#1B5E20",bg:"#E8F5E9",border:"#4CAF50"};
-    if(skor>=3)return{label:"PERHATIAN",color:"#E65100",bg:"#FFF3E0",border:"#FF9800"};
-    return{label:"KRITIS",color:"#B71C1C",bg:"#FFEBEE",border:"#F44336"};
-  }();
+  var nomBio=d.bio.total>0;
+  var n={dat:2,pest:3,haz:nomBio?5:4,bio:4,rek:nomBio?6:5};
 
   el.innerHTML=`
 <div id="summaryPrintArea" style="font-family:Arial,Helvetica,sans-serif;color:#1E293B;width:100%;background:#fff">
 
-<!-- ═══ KOVER LAPORAN ═══ -->
-<div style="background:linear-gradient(135deg,#0D2137 0%,#0F3460 60%,#16537E 100%);padding:42px 48px 36px;position:relative;overflow:hidden;page-break-after:avoid">
-  <div style="position:absolute;right:-60px;top:-60px;width:280px;height:280px;border-radius:50%;background:rgba(255,255,255,.04)"></div>
-  <div style="position:absolute;right:60px;bottom:-80px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.03)"></div>
+<!-- ═══ KOVER ═══ -->
+<div style="background:linear-gradient(135deg,#0D2137 0%,#0F3460 60%,#16537E 100%);padding:40px 48px 32px;position:relative;overflow:hidden">
+  <div style="position:absolute;right:-60px;top:-60px;width:260px;height:260px;border-radius:50%;background:rgba(255,255,255,.04)"></div>
   <div style="position:absolute;top:0;left:0;width:6px;height:100%;background:linear-gradient(180deg,#3B82F6,#06B6D4)"></div>
   <div style="position:relative;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:20px">
-    <div style="flex:1;min-width:300px">
-      <div style="font-family:Arial,sans-serif;font-size:10px;font-weight:700;color:rgba(255,255,255,.5);letter-spacing:2.5px;text-transform:uppercase;margin-bottom:10px">Laporan Komprehensif Industrial Hygiene</div>
-      <div style="font-family:Arial,sans-serif;font-size:30px;font-weight:700;color:#fff;line-height:1.1;margin-bottom:4px">Monitoring, Assessment</div>
-      <div style="font-family:Arial,sans-serif;font-size:30px;font-weight:700;color:#60B4F4;line-height:1.1;margin-bottom:18px">&amp; Hazard Management</div>
-      <div style="font-family:Arial,sans-serif;font-size:12.5px;color:rgba(255,255,255,.7);line-height:1.8">
+    <div style="flex:1;min-width:280px">
+      <div style="font-family:Arial,sans-serif;font-size:10px;font-weight:700;color:rgba(255,255,255,.45);letter-spacing:2.5px;text-transform:uppercase;margin-bottom:10px">Laporan Komprehensif — Industrial Hygiene</div>
+      <div style="font-family:Arial,sans-serif;font-size:28px;font-weight:700;color:#fff;line-height:1.15;margin-bottom:4px">Monitoring, Assessment</div>
+      <div style="font-family:Arial,sans-serif;font-size:28px;font-weight:700;color:#60B4F4;line-height:1.15;margin-bottom:16px">&amp; Hazard Management</div>
+      <div style="font-family:Arial,sans-serif;font-size:12px;color:rgba(255,255,255,.7);line-height:1.9">
         <b style="color:#fff">PT Pertamina Patra Niaga</b> &mdash; Satuan Kerja Regional III<br>
         Divisi Industrial Hygiene &amp; Occupational Health<br>
-        Armada: <b style="color:#fff">${fleetLabel}</b> &nbsp;&bull;&nbsp; Periode: <b style="color:#fff">${bulan}</b>
+        Armada: <b style="color:#fff">${fleetLabel}</b> &nbsp;&bull;&nbsp; Periode: <b style="color:#fff">${periodeLabel}</b><br>
+        Dihasilkan: <b style="color:#fff">${tgl}</b>
       </div>
     </div>
-    <div style="display:flex;flex-direction:column;gap:8px;min-width:190px">
-      <div style="background:rgba(255,255,255,.1);backdrop-filter:blur(4px);border-radius:12px;padding:14px 18px;text-align:center;border:1px solid rgba(255,255,255,.15)">
+    <div style="display:flex;flex-direction:column;gap:8px;min-width:180px">
+      <div style="background:rgba(255,255,255,.1);border-radius:12px;padding:14px 18px;text-align:center;border:1px solid rgba(255,255,255,.15)">
         <div style="font-family:Arial,sans-serif;font-size:34px;font-weight:700;color:#fff;line-height:1">${d.hra.coverage}%</div>
-        <div style="font-family:Arial,sans-serif;font-size:10px;color:rgba(255,255,255,.6);margin-top:3px;text-transform:uppercase;letter-spacing:1px">Coverage HRA</div>
+        <div style="font-family:Arial,sans-serif;font-size:10px;color:rgba(255,255,255,.55);margin-top:3px;letter-spacing:1px">COVERAGE HRA</div>
       </div>
-      <div style="background:${statusKeseluruhan.bg};border:1px solid ${statusKeseluruhan.border};border-radius:10px;padding:10px 18px;text-align:center">
-        <div style="font-family:Arial,sans-serif;font-size:11px;font-weight:700;color:${statusKeseluruhan.color};text-transform:uppercase;letter-spacing:1px">Status Keseluruhan</div>
-        <div style="font-family:Arial,sans-serif;font-size:18px;font-weight:700;color:${statusKeseluruhan.color};margin-top:2px">${statusKeseluruhan.label}</div>
+      <div style="background:${statusOvr.bg};border:1px solid ${statusOvr.br};border-radius:10px;padding:10px 18px;text-align:center">
+        <div style="font-family:Arial,sans-serif;font-size:10px;font-weight:700;color:${statusOvr.c};letter-spacing:1px">STATUS KESELURUHAN</div>
+        <div style="font-family:Arial,sans-serif;font-size:18px;font-weight:700;color:${statusOvr.c};margin-top:2px">${statusOvr.lbl}</div>
       </div>
     </div>
   </div>
-  <div style="position:relative;margin-top:24px;padding-top:18px;border-top:1px solid rgba(255,255,255,.12)">
-    <div style="font-family:Arial,sans-serif;font-size:10px;color:rgba(255,255,255,.4);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">Kerangka Regulasi &amp; Standar</div>
+  <div style="position:relative;margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,.12)">
     <div style="display:flex;gap:7px;flex-wrap:wrap">
-      ${["Permenaker No.05/2018","ACGIH TLV &amp; BEI 2024","ILO MLC 2006","IMO MSC/Circ.1351","IARC Monograph","ISO 45001:2018","OSHA 29 CFR 1910"].map(function(s){return'<span style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.75);padding:4px 11px;border-radius:20px;font-family:Arial,sans-serif;font-size:10px;font-weight:600;border:1px solid rgba(255,255,255,.15)">'+s+'</span>';}).join("")}
+      ${["Permenaker No.05/2018","ACGIH TLV & BEI 2024","ILO MLC 2006","IMO MSC/Circ.1351","IARC Monograph","ISO 45001:2018","OSHA 29 CFR 1910"].map(function(s){return'<span style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.75);padding:3px 11px;border-radius:20px;font-family:Arial,sans-serif;font-size:10px;font-weight:600;border:1px solid rgba(255,255,255,.15)">'+s+'</span>';}).join("")}
     </div>
   </div>
 </div>
 
 <!-- ═══ RINGKASAN EKSEKUTIF ═══ -->
-<div style="background:#F0F4F8;padding:20px 48px;border-bottom:3px solid #E2E8F0">
-  <div style="font-family:Arial,sans-serif;font-size:10px;font-weight:700;color:#94A3B8;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px">Ringkasan Eksekutif</div>
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+<div style="background:#F0F4F8;padding:18px 48px;border-bottom:2px solid #E2E8F0">
+  <div style="font-family:Arial,sans-serif;font-size:10px;font-weight:700;color:#94A3B8;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px">Ringkasan Eksekutif</div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
     ${[
-      {judul:"Hazard Recognition &amp; Assessment",sub:"Pelaksanaan HRA Armada",pct:parseFloat(d.hra.coverage),icon:"&#x1F52C;",detail:d.hra.done+"/"+d.hra.total+" kapal"},
-      {judul:"Drugs &amp; Alcohol Testing",sub:"Tingkat Kepatuhan Awak",pct:d.dat.crew>0?(1-d.dat.positif/d.dat.crew)*100:100,icon:"&#x1F9EA;",detail:d.dat.positif+" positif dari "+fmtNum(d.dat.crew)+" crew"},
-      {judul:"5 Hazard Utama",sub:"Kepatuhan Nilai Ambang Batas",pct:hazardPct,icon:"&#x26A0;",detail:d.hazard.melebihi+" parameter melebihi NAB"}
+      {j:"HRA Coverage",s:"Pelaksanaan Armada",pct:parseFloat(d.hra.coverage),det:d.hra.done+"/"+d.hra.total+" kapal"},
+      {j:"Drugs & Alcohol Test",s:"Tingkat Kepatuhan",pct:datKepatuhan,det:d.dat.positif+" positif dari "+fmtNum(d.dat.crew)+" crew"},
+      {j:"Pest & Rodent Control",s:"Pelaksanaan Program",pct:d.pest.count>0?100:0,det:d.pest.count+" kegiatan / "+d.pest.kapal+" kapal"},
+      {j:"5 Hazard Utama",s:"Kepatuhan NAB",pct:hazardPct,det:d.hazard.melebihi+" parameter melebihi standar"}
     ].map(function(c){
-      var tl=trafficLight(c.pct);
-      return'<div style="background:'+tl.bg+';border:1.5px solid '+tl.color+'40;border-left:4px solid '+tl.color+';border-radius:10px;padding:14px 16px">'
-        +'<div style="font-family:Arial,sans-serif;font-size:10px;font-weight:700;color:'+tl.color+';text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">'+tl.label+'</div>'
-        +'<div style="font-family:Arial,sans-serif;font-size:12.5px;font-weight:700;color:#1E293B;margin-bottom:2px">'+c.judul+'</div>'
-        +'<div style="font-family:Arial,sans-serif;font-size:11px;color:#64748B;margin-bottom:10px">'+c.sub+'</div>'
-        +'<div style="font-family:Arial,sans-serif;font-size:26px;font-weight:700;color:'+tl.color+'">'+Math.round(c.pct)+'%</div>'
-        +'<div style="font-family:Arial,sans-serif;font-size:10px;color:#94A3B8;margin-top:4px">'+c.detail+'</div>'
-        +'</div>';
+      var t=tl(c.pct);
+      return'<div style="background:'+t.bg+';border:1.5px solid '+t.c+'40;border-left:4px solid '+t.c+';border-radius:10px;padding:12px 14px">'+
+        '<div style="font-family:Arial,sans-serif;font-size:9px;font-weight:700;color:'+t.c+';text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">'+t.lbl+'</div>'+
+        '<div style="font-family:Arial,sans-serif;font-size:12px;font-weight:700;color:#1E293B;margin-bottom:2px">'+c.j+'</div>'+
+        '<div style="font-family:Arial,sans-serif;font-size:10px;color:#64748B;margin-bottom:8px">'+c.s+'</div>'+
+        '<div style="font-family:Arial,sans-serif;font-size:24px;font-weight:700;color:'+t.c+'">'+Math.round(c.pct)+'%</div>'+
+        '<div style="font-family:Arial,sans-serif;font-size:10px;color:#94A3B8;margin-top:3px">'+c.det+'</div></div>';
     }).join("")}
   </div>
 </div>
 
 <div style="padding:28px 48px">
 
-<!-- ═══ BAGIAN I: HRA ═══ -->
-<div style="margin-bottom:28px;page-break-inside:avoid">
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-    <div style="width:4px;height:32px;background:#1565C0;border-radius:2px;flex-shrink:0"></div>
-    <div>
-      <div style="font-family:Arial,sans-serif;font-size:15px;font-weight:700;color:#1E293B">I.&nbsp; Hazard Recognition &amp; Assessment (HRA)</div>
-      <div style="font-family:Arial,sans-serif;font-size:11px;color:#64748B;margin-top:2px">Analisis komprehensif pelaksanaan identifikasi, penilaian, dan pengendalian bahaya di seluruh unit armada</div>
-    </div>
-  </div>
+<!-- ═══ I. HRA ═══ -->
+<div style="margin-bottom:28px">
+  ${sectionHead("#1565C0","I.","Hazard Recognition &amp; Assessment (HRA)","Analisis komprehensif pelaksanaan identifikasi, penilaian, dan pengendalian bahaya di seluruh unit armada")}
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
-    ${[
-      {label:"Kapal Telah Dilaksanakan HRA",val:d.hra.done,unit:"unit armada",color:"#1565C0",bg:"#EBF5FF"},
-      {label:"Kapal Belum Melaksanakan HRA",val:d.hra.total-d.hra.done,unit:"unit",color:(d.hra.total-d.hra.done>0?"#C62828":"#2E7D32"),bg:(d.hra.total-d.hra.done>0?"#FFEBEE":"#E8F5E9")},
-      {label:"Coverage Pelaksanaan HRA",val:d.hra.coverage+"%",unit:"dari total armada",color:"#0F2A4A",bg:"#F0F4F8"},
-      {label:"Estimasi Anggaran Program",val:formatRupiah(d.hra.budget),unit:"total alokasi",color:"#6A1B9A",bg:"#F3E5F5"}
-    ].map(function(k){return'<div style="background:'+k.bg+';border-radius:10px;padding:12px 14px;border-left:3px solid '+k.color+'">'+
-      '<div style="font-family:Arial,sans-serif;font-size:10.5px;color:#64748B;line-height:1.4;margin-bottom:6px">'+k.label+'</div>'+
-      '<div style="font-family:Arial,sans-serif;font-size:20px;font-weight:700;color:'+k.color+'">'+k.val+'</div>'+
-      '<div style="font-family:Arial,sans-serif;font-size:10px;color:#94A3B8;margin-top:2px">'+k.unit+'</div></div>';}).join("")}
+    ${kpiBox("Kapal Telah HRA",d.hra.done,"unit armada","#1565C0","#EBF5FF")}
+    ${kpiBox("Kapal Belum HRA",d.hra.total-d.hra.done,"unit",(d.hra.total-d.hra.done>0?"#C62828":"#2E7D32"),(d.hra.total-d.hra.done>0?"#FFEBEE":"#E8F5E9"))}
+    ${kpiBox("Coverage HRA",d.hra.coverage+"%","dari total armada","#0F2A4A","#F0F4F8")}
+    ${kpiBox("Estimasi Anggaran",formatRupiah(d.hra.budget),"total alokasi","#6A1B9A","#F3E5F5")}
   </div>
-  <div style="background:#EBF5FF;border:1px solid #BFDBFE;border-radius:10px;padding:12px 16px;font-family:Arial,sans-serif;font-size:12px;color:#1E3A5F;line-height:1.75">
-    <b style="color:#1565C0">Analisis:</b> ${anaHRA}
-  </div>
+  ${anaBox("#1565C0","#EBF5FF","#BFDBFE","Analisis",anaHRA)}
 </div>
 
-<!-- ═══ BAGIAN II: DAT ═══ -->
-<div style="margin-bottom:28px;page-break-inside:avoid">
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-    <div style="width:4px;height:32px;background:#2E7D32;border-radius:2px;flex-shrink:0"></div>
-    <div>
-      <div style="font-family:Arial,sans-serif;font-size:15px;font-weight:700;color:#1E293B">II.&nbsp; Pengujian Narkotika, Psikotropika &amp; Stimulan (Drugs &amp; Alcohol Test)</div>
-      <div style="font-family:Arial,sans-serif;font-size:11px;color:#64748B;margin-top:2px">Evaluasi pelaksanaan program pemeriksaan zat adiktif pada awak kapal sesuai ketentuan regulasi maritim internasional</div>
-    </div>
-  </div>
+<!-- ═══ II. DAT ═══ -->
+<div style="margin-bottom:28px">
+  ${sectionHead("#2E7D32","II.","Pengujian Narkotika, Psikotropika &amp; Stimulan (Drugs &amp; Alcohol Test)","Evaluasi pelaksanaan pemeriksaan zat adiktif pada awak kapal sesuai ketentuan regulasi maritim internasional")}
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
-    ${[
-      {label:"Jumlah Kapal Terperiksa",val:d.dat.kapal,unit:"unit armada",color:"#2E7D32",bg:"#E8F5E9"},
-      {label:"Total Awak Kapal Diperiksa",val:fmtNum(d.dat.crew),unit:"crew",color:"#0F2A4A",bg:"#F0F4F8"},
-      {label:"Awak Hasil Reaktif",val:d.dat.positif,unit:d.dat.positif>0?"perlu tindak lanjut":"tidak ada temuan",color:(d.dat.positif>0?"#C62828":"#2E7D32"),bg:(d.dat.positif>0?"#FFEBEE":"#E8F5E9")},
-      {label:"Tingkat Prevalensi",val:d.dat.rate+"%",unit:"dari total terperiksa",color:(parseFloat(d.dat.rate)>0?"#E65100":"#2E7D32"),bg:(parseFloat(d.dat.rate)>0?"#FFF3E0":"#E8F5E9")}
-    ].map(function(k){return'<div style="background:'+k.bg+';border-radius:10px;padding:12px 14px;border-left:3px solid '+k.color+'">'+
-      '<div style="font-family:Arial,sans-serif;font-size:10.5px;color:#64748B;line-height:1.4;margin-bottom:6px">'+k.label+'</div>'+
-      '<div style="font-family:Arial,sans-serif;font-size:20px;font-weight:700;color:'+k.color+'">'+k.val+'</div>'+
-      '<div style="font-family:Arial,sans-serif;font-size:10px;color:#94A3B8;margin-top:2px">'+k.unit+'</div></div>';}).join("")}
+    ${kpiBox("Kapal Terperiksa",d.dat.kapal,"unit armada","#2E7D32","#E8F5E9")}
+    ${kpiBox("Total Crew Diperiksa",fmtNum(d.dat.crew),"awak kapal","#0F2A4A","#F0F4F8")}
+    ${kpiBox("Hasil Reaktif",d.dat.positif,(d.dat.positif>0?"perlu tindak lanjut":"tidak ada temuan"),(d.dat.positif>0?"#C62828":"#2E7D32"),(d.dat.positif>0?"#FFEBEE":"#E8F5E9"))}
+    ${kpiBox("Tingkat Prevalensi",d.dat.rate+"%","dari total terperiksa",(parseFloat(d.dat.rate)>0?"#E65100":"#2E7D32"),(parseFloat(d.dat.rate)>0?"#FFF3E0":"#E8F5E9"))}
   </div>
-  <div style="background:#E8F5E9;border:1px solid #A5D6A7;border-radius:10px;padding:12px 16px;font-family:Arial,sans-serif;font-size:12px;color:#1B4332;line-height:1.75">
-    <b style="color:#2E7D32">Analisis:</b> ${anaDAT}
-  </div>
+  <div style="margin-bottom:14px">${anaBox("#2E7D32","#E8F5E9","#A5D6A7","Analisis",anaDAT)}</div>
+  <div style="font-family:Arial,sans-serif;font-size:11px;font-weight:700;color:#2E7D32;margin-bottom:8px">Rekapitulasi Pelaksanaan DAT per Periode</div>
+  <div style="border:1px solid #E2E8F0;border-radius:10px;overflow:hidden">${datBulanTable()}</div>
 </div>
 
-<!-- ═══ BAGIAN III: 5 HAZARD ═══ -->
-<div style="margin-bottom:28px;page-break-inside:avoid">
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-    <div style="width:4px;height:32px;background:#E65100;border-radius:2px;flex-shrink:0"></div>
-    <div>
-      <div style="font-family:Arial,sans-serif;font-size:15px;font-weight:700;color:#1E293B">III.&nbsp; Pemantauan 5 Hazard Utama (Permenaker No.05/2018)</div>
-      <div style="font-family:Arial,sans-serif;font-size:11px;color:#64748B;margin-top:2px">Hasil pengukuran faktor fisika, kimia, biologi, ergonomi, dan psikososial dibandingkan terhadap Nilai Ambang Batas (NAB) yang berlaku</div>
-    </div>
+<!-- ═══ III. PEST CONTROL ═══ -->
+<div style="margin-bottom:28px">
+  ${sectionHead("#6A1B9A","III.","Pengendalian Vektor &amp; Hama (Pest &amp; Rodent Control)","Rekapitulasi pelaksanaan program sanitasi kapal dan pengendalian vektor penyakit sesuai IHR 2005 WHO")}
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
+    ${kpiBox("Total Pelaksanaan",d.pest.count,"kegiatan","#6A1B9A","#F3E5F5")}
+    ${kpiBox("Kapal Terlayani",d.pest.kapal,"unit armada","#4527A0","#EDE7F6")}
+    ${kpiBox("Estimasi Anggaran",formatRupiah(d.pest.biaya),"total program","#6A1B9A","#F3E5F5")}
+    ${kpiBox("Status",d.pest.count>0?"Terlaksana":"Belum Ada Data",d.pest.count>0?"sesuai jadwal":"perlu percepatan",(d.pest.count>0?"#2E7D32":"#E65100"),(d.pest.count>0?"#E8F5E9":"#FFF3E0"))}
   </div>
+  <div style="margin-bottom:14px">${anaBox("#6A1B9A","#EDE7F6","#B39DDB","Analisis",anaPest)}</div>
+  <div style="font-family:Arial,sans-serif;font-size:11px;font-weight:700;color:#6A1B9A;margin-bottom:8px">Rekapitulasi Pelaksanaan Pest Control per Periode</div>
+  <div style="border:1px solid #E2E8F0;border-radius:10px;overflow:hidden">${pestBulanTable()}</div>
+</div>
+
+<!-- ═══ IV/V. 5 HAZARD ═══ -->
+<div style="margin-bottom:28px">
+  ${sectionHead("#E65100","IV.","Pemantauan 5 Hazard Utama (Permenaker No.05/2018)","Hasil pengukuran faktor fisika, kimia, biologi, ergonomi, dan psikososial terhadap Nilai Ambang Batas yang berlaku")}
   <div style="display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px">
-    <div>
-      <table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif">
-        <thead>
-          <tr style="background:#0F2A4A">
-            <th style="padding:9px 14px;text-align:left;font-size:11px;font-weight:700;color:#fff;border-radius:0">Faktor Hazard</th>
-            <th style="padding:9px 14px;text-align:center;font-size:11px;font-weight:700;color:#fff">Total Ukur</th>
-            <th style="padding:9px 14px;text-align:center;font-size:11px;font-weight:700;color:#fff">Melebihi NAB</th>
-            <th style="padding:9px 14px;text-align:left;font-size:11px;font-weight:700;color:#fff">Proporsi</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${hazardTableRows()}
-          <tr style="background:#F0F4F8">
-            <td style="padding:9px 14px;font-family:Arial,sans-serif;font-size:12px;font-weight:700;color:#1E293B">Total Keseluruhan</td>
-            <td style="padding:9px 14px;text-align:center;font-family:Arial,sans-serif;font-size:12px;font-weight:700">${d.hazard.total}</td>
-            <td style="padding:9px 14px;text-align:center;font-family:Arial,sans-serif;font-size:12px;font-weight:700;color:${d.hazard.melebihi>0?"#C62828":"#2E7D32"}">${d.hazard.melebihi}</td>
-            <td style="padding:9px 14px;font-family:Arial,sans-serif;font-size:11px;color:#94A3B8">${d.hazard.total>0?Math.round(d.hazard.melebihi/d.hazard.total*100):0}% dari total</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <div><table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif">
+      <thead><tr style="background:#0F2A4A">
+        <th style="padding:9px 14px;text-align:left;font-size:11px;font-weight:700;color:#fff">Faktor Hazard</th>
+        <th style="padding:9px 14px;text-align:center;font-size:11px;font-weight:700;color:#fff">Total</th>
+        <th style="padding:9px 14px;text-align:center;font-size:11px;font-weight:700;color:#fff">Melebihi NAB</th>
+        <th style="padding:9px 14px;text-align:left;font-size:11px;font-weight:700;color:#fff">Proporsi</th>
+      </tr></thead>
+      <tbody>${hazardRows()}
+        <tr style="background:#F0F4F8">
+          <td style="padding:9px 14px;font-family:Arial,sans-serif;font-size:12px;font-weight:700;color:#1E293B">Total</td>
+          <td style="padding:9px 14px;text-align:center;font-family:Arial,sans-serif;font-size:12px;font-weight:700">${d.hazard.total}</td>
+          <td style="padding:9px 14px;text-align:center;font-family:Arial,sans-serif;font-size:12px;font-weight:700;color:${d.hazard.melebihi>0?"#C62828":"#2E7D32"}">${d.hazard.melebihi}</td>
+          <td style="padding:9px 14px;font-family:Arial,sans-serif;font-size:11px;color:#94A3B8">${d.hazard.total>0?Math.round(d.hazard.melebihi/d.hazard.total*100):0}% dari total</td>
+        </tr>
+      </tbody></table></div>
     <div style="display:flex;flex-direction:column;gap:8px">
       <div style="background:#FFEBEE;border-radius:10px;padding:14px 16px;flex:1">
-        <div style="font-family:Arial,sans-serif;font-size:10px;font-weight:700;color:#C62828;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Parameter Melebihi NAB</div>
+        <div style="font-family:Arial,sans-serif;font-size:10px;font-weight:700;color:#C62828;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Melebihi NAB</div>
         <div style="font-family:Arial,sans-serif;font-size:28px;font-weight:700;color:#C62828">${d.hazard.melebihi}</div>
-        <div style="font-family:Arial,sans-serif;font-size:10.5px;color:#64748B;margin-top:3px">dari ${d.hazard.total} total pengukuran</div>
+        <div style="font-family:Arial,sans-serif;font-size:10.5px;color:#64748B;margin-top:3px">dari ${d.hazard.total} pengukuran</div>
       </div>
       <div style="background:#E8F5E9;border-radius:10px;padding:14px 16px;flex:1">
-        <div style="font-family:Arial,sans-serif;font-size:10px;font-weight:700;color:#2E7D32;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Parameter dalam Batas</div>
+        <div style="font-family:Arial,sans-serif;font-size:10px;font-weight:700;color:#2E7D32;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Dalam Batas</div>
         <div style="font-family:Arial,sans-serif;font-size:28px;font-weight:700;color:#2E7D32">${d.hazard.total-d.hazard.melebihi}</div>
-        <div style="font-family:Arial,sans-serif;font-size:10.5px;color:#64748B;margin-top:3px">memenuhi persyaratan NAB</div>
+        <div style="font-family:Arial,sans-serif;font-size:10.5px;color:#64748B;margin-top:3px">memenuhi persyaratan</div>
       </div>
       ${d.bio.total>0?'<div style="background:#F3E5F5;border-radius:10px;padding:14px 16px;flex:1"><div style="font-family:Arial,sans-serif;font-size:10px;font-weight:700;color:#7B1FA2;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Biomarker Benzene</div><div style="font-family:Arial,sans-serif;font-size:28px;font-weight:700;color:'+(d.bio.melebihi>0?"#C62828":"#7B1FA2")+'">'+d.bio.melebihi+'</div><div style="font-family:Arial,sans-serif;font-size:10.5px;color:#64748B;margin-top:3px">melebihi BEI dari '+d.bio.total+' sampel</div></div>':""}
     </div>
   </div>
-  <div style="background:#FFF3E0;border:1px solid #FFCC80;border-radius:10px;padding:12px 16px;font-family:Arial,sans-serif;font-size:12px;color:#5D3A00;line-height:1.75">
-    <b style="color:#E65100">Analisis:</b> ${anaHazard}
-  </div>
-</div>
-
-<!-- ═══ BAGIAN IV: BIOMONITORING ═══ -->
-${d.bio.total>0?`
-<div style="margin-bottom:28px;page-break-inside:avoid">
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-    <div style="width:4px;height:32px;background:#7B1FA2;border-radius:2px;flex-shrink:0"></div>
-    <div>
-      <div style="font-family:Arial,sans-serif;font-size:15px;font-weight:700;color:#1E293B">IV.&nbsp; Biomonitoring Benzene (Faktor Kimia)</div>
-      <div style="font-family:Arial,sans-serif;font-size:11px;color:#64748B;margin-top:2px">Pemantauan biologis dan personal air sampling paparan benzene sesuai ACGIH BEI 2024 &amp; Permenaker No.05/2018</div>
-    </div>
-  </div>
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
-    <div style="background:#F3E5F5;border-radius:10px;padding:12px 14px;border-left:3px solid #7B1FA2">
-      <div style="font-family:Arial,sans-serif;font-size:10.5px;color:#64748B;margin-bottom:6px">Total Sampel Biomarker</div>
-      <div style="font-family:Arial,sans-serif;font-size:20px;font-weight:700;color:#7B1FA2">${d.bio.total}</div>
-      <div style="font-family:Arial,sans-serif;font-size:10px;color:#94A3B8">sampel urin/udara</div>
-    </div>
-    <div style="background:${d.bio.melebihi>0?"#FFEBEE":"#E8F5E9"};border-radius:10px;padding:12px 14px;border-left:3px solid ${d.bio.melebihi>0?"#C62828":"#2E7D32"}">
-      <div style="font-family:Arial,sans-serif;font-size:10.5px;color:#64748B;margin-bottom:6px">Melebihi BEI ACGIH 2024</div>
-      <div style="font-family:Arial,sans-serif;font-size:20px;font-weight:700;color:${d.bio.melebihi>0?"#C62828":"#2E7D32"}">${d.bio.melebihi}</div>
-      <div style="font-family:Arial,sans-serif;font-size:10px;color:#94A3B8">BEI: 25 µg/g kreat. | NAB: 0.5 ppm</div>
-    </div>
-    <div style="background:#E8F5E9;border-radius:10px;padding:12px 14px;border-left:3px solid #2E7D32">
-      <div style="font-family:Arial,sans-serif;font-size:10.5px;color:#64748B;margin-bottom:6px">Dalam Batas Normal</div>
-      <div style="font-family:Arial,sans-serif;font-size:20px;font-weight:700;color:#2E7D32">${d.bio.total-d.bio.melebihi}</div>
-      <div style="font-family:Arial,sans-serif;font-size:10px;color:#94A3B8">IARC Grup 1 — pantau berkala</div>
-    </div>
-  </div>
-  <div style="background:#F3E5F5;border:1px solid #CE93D8;border-radius:10px;padding:12px 16px;font-family:Arial,sans-serif;font-size:12px;color:#3E0054;line-height:1.75">
-    <b style="color:#7B1FA2">Analisis:</b> ${anaBio}
-  </div>
-</div>`:""}
-
-<!-- ═══ BAGIAN V: PEST CONTROL ═══ -->
-<div style="margin-bottom:28px;page-break-inside:avoid">
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-    <div style="width:4px;height:32px;background:#6A1B9A;border-radius:2px;flex-shrink:0"></div>
-    <div>
-      <div style="font-family:Arial,sans-serif;font-size:15px;font-weight:700;color:#1E293B">${d.bio.total>0?"V.":"IV."}&nbsp; Pengendalian Vektor &amp; Hama (Pest &amp; Rodent Control)</div>
-      <div style="font-family:Arial,sans-serif;font-size:11px;color:#64748B;margin-top:2px">Rekapitulasi pelaksanaan program sanitasi kapal dan pengendalian vektor penyakit sesuai IHR 2005 WHO</div>
-    </div>
-  </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-    <div style="background:#F3E5F5;border-radius:10px;padding:12px 14px;border-left:3px solid #6A1B9A">
-      <div style="font-family:Arial,sans-serif;font-size:10.5px;color:#64748B;margin-bottom:6px">Total Pelaksanaan Pest Control</div>
-      <div style="font-family:Arial,sans-serif;font-size:20px;font-weight:700;color:#6A1B9A">${d.pest.count}</div>
-      <div style="font-family:Arial,sans-serif;font-size:10px;color:#94A3B8">kegiatan terlaksana</div>
-    </div>
-    <div style="background:#EDE7F6;border-radius:10px;padding:12px 14px;border-left:3px solid #4527A0">
-      <div style="font-family:Arial,sans-serif;font-size:10.5px;color:#64748B;margin-bottom:6px">Estimasi Anggaran Program</div>
-      <div style="font-family:Arial,sans-serif;font-size:20px;font-weight:700;color:#4527A0">${formatRupiah(d.pest.biaya)}</div>
-      <div style="font-family:Arial,sans-serif;font-size:10px;color:#94A3B8">total anggaran pest control</div>
-    </div>
-  </div>
-  <div style="background:#EDE7F6;border:1px solid #B39DDB;border-radius:10px;padding:12px 16px;font-family:Arial,sans-serif;font-size:12px;color:#1A0036;line-height:1.75">
-    <b style="color:#6A1B9A">Analisis:</b> ${anaPest}
-  </div>
+  ${anaBox("#E65100","#FFF3E0","#FFCC80","Analisis",anaHazard)}
 </div>
 
 <!-- ═══ REKOMENDASI STRATEGIS ═══ -->
-<div style="margin-bottom:28px;page-break-inside:avoid">
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-    <div style="width:4px;height:32px;background:#0F2A4A;border-radius:2px;flex-shrink:0"></div>
-    <div>
-      <div style="font-family:Arial,sans-serif;font-size:15px;font-weight:700;color:#1E293B">${d.bio.total>0?"VI.":"V."}&nbsp; Rekomendasi Strategis &amp; Program Tindak Lanjut</div>
-      <div style="font-family:Arial,sans-serif;font-size:11px;color:#64748B;margin-top:2px">Rekomendasi berbasis hierarki pengendalian risiko ISO 45001:2018 untuk manajemen senior dan direksi</div>
-    </div>
-  </div>
+<div style="margin-bottom:28px">
+  ${sectionHead("#0F2A4A",(nomBio?"V.":"IV."),"Rekomendasi Strategis &amp; Program Tindak Lanjut","Rekomendasi berbasis hierarki pengendalian risiko ISO 45001:2018 untuk manajemen senior dan direksi")}
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
     ${[
-      {prio:"Segera (0–30 Hari)",color:"#C62828",bg:"#FFEBEE",border:"#EF9A9A",items:[
-        d.hazard.melebihi>0?"Implementasi pengendalian teknis segera untuk "+d.hazard.melebihi+" parameter hazard yang melampaui NAB":"Pertahankan program pengendalian hazard yang telah efektif",
-        d.hra.total-d.hra.done>0?"Akselerasi pelaksanaan HRA pada "+(d.hra.total-d.hra.done)+" unit armada yang belum terlaksana":"Verifikasi dan dokumentasi hasil HRA seluruh armada",
-        d.dat.positif>0?"Pelaksanaan protokol medis dan administratif untuk "+d.dat.positif+" awak dengan hasil DAT reaktif":"Pertahankan konsistensi program DAT dengan hasil nol positif"
+      {p:"Segera (0–30 Hari)",c:"#C62828",bg:"#FFEBEE",br:"#EF9A9A",items:[
+        d.hazard.melebihi>0?"Implementasi pengendalian teknis segera untuk "+d.hazard.melebihi+" parameter hazard melampaui NAB":"Pertahankan program pengendalian hazard yang telah efektif",
+        d.dat.positif>0?"Protokol medis dan administratif untuk "+d.dat.positif+" awak reaktif sesuai SOP perusahaan":"Pertahankan konsistensi program DAT dengan hasil zero positive",
+        d.hra.total-d.hra.done>0?"Akselerasi HRA pada "+(d.hra.total-d.hra.done)+" unit armada yang belum terlaksana":"Verifikasi dan dokumentasi hasil HRA seluruh armada"
       ]},
-      {prio:"Jangka Pendek (1–3 Bulan)",color:"#E65100",bg:"#FFF3E0",border:"#FFCC80",items:[
-        "Pemasangan rekayasa teknik: sistem ventilasi, enclosure, dan monitoring kontinu pada area hazard",
-        "Revisi Job Safety Analysis (JSA) untuk seluruh pekerjaan berisiko tinggi di area terdampak temuan",
-        "Pelaksanaan medical surveillance berkala bagi ABK dengan riwayat paparan kronik teridentifikasi"
+      {p:"Jangka Pendek (1–3 Bulan)",c:"#E65100",bg:"#FFF3E0",br:"#FFCC80",items:[
+        "Pemasangan rekayasa teknik: sistem ventilasi, enclosure, dan monitoring kontinu di area terdampak",
+        "Revisi Job Safety Analysis (JSA) untuk seluruh pekerjaan berisiko tinggi di area temuan",
+        "Medical surveillance berkala bagi ABK dengan riwayat paparan kronik teridentifikasi"
       ]},
-      {prio:"Jangka Panjang (3–12 Bulan)",color:"#1565C0",bg:"#EBF5FF",border:"#90CAF9",items:[
-        "Review komprehensif program IH tahunan dan penetapan target coverage HRA 100% armada",
-        "Integrasi seluruh temuan IH ke dalam Ship Safety Management System (SMS) dan ISM Code",
+      {p:"Jangka Panjang (3–12 Bulan)",c:"#1565C0",bg:"#EBF5FF",br:"#90CAF9",items:[
+        "Review komprehensif program IH tahunan dan penetapan target coverage HRA 100%",
+        "Integrasi temuan IH ke dalam Ship Safety Management System (SMS) dan ISM Code",
         "Penyusunan laporan IH tahunan untuk audit eksternal, biro klasifikasi, dan otoritas regulator"
       ]}
-    ].map(function(s){return'<div style="background:'+s.bg+';border:1px solid '+s.border+';border-top:3px solid '+s.color+';border-radius:10px;padding:14px 16px">'+
-      '<div style="font-family:Arial,sans-serif;font-size:10px;font-weight:700;color:'+s.color+';text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">'+s.prio+'</div>'+
-      s.items.map(function(it){return'<div style="display:flex;align-items:flex-start;gap:7px;margin-bottom:8px"><div style="width:5px;height:5px;background:'+s.color+';border-radius:50%;flex-shrink:0;margin-top:5px"></div><div style="font-family:Arial,sans-serif;font-size:11.5px;color:#334155;line-height:1.6">'+it+'</div></div>';}).join("")+
-      '</div>';}).join("")}
+    ].map(function(s){
+      return'<div style="background:'+s.bg+';border:1px solid '+s.br+';border-top:3px solid '+s.c+';border-radius:10px;padding:14px 16px">'+
+        '<div style="font-family:Arial,sans-serif;font-size:10px;font-weight:700;color:'+s.c+';text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">'+s.p+'</div>'+
+        s.items.map(function(it){return'<div style="display:flex;align-items:flex-start;gap:7px;margin-bottom:8px"><div style="width:5px;height:5px;background:'+s.c+';border-radius:50%;flex-shrink:0;margin-top:5px"></div><div style="font-family:Arial,sans-serif;font-size:11.5px;color:#334155;line-height:1.65">'+it+'</div></div>';}).join("")+
+        '</div>';
+    }).join("")}
   </div>
 </div>
 
 </div>
 
 <!-- ═══ FOOTER ═══ -->
-<div style="background:#F0F4F8;border-top:2px solid #E2E8F0;padding:16px 48px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+<div style="background:#F0F4F8;border-top:2px solid #E2E8F0;padding:14px 48px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
   <div style="font-family:Arial,sans-serif;font-size:10.5px;color:#94A3B8;line-height:1.7">
-    Laporan ini dihasilkan secara otomatis oleh <b style="color:#64748B">IH Dashboard v5.0</b> &mdash; PT Pertamina Patra Niaga Satuan Kerja Regional III<br>
-    <span style="font-size:10px">Ref: Permenaker 05/2018 &bull; ACGIH TLV &amp; BEI 2024 &bull; ILO MLC 2006 &bull; IMO MSC/Circ.1351 &bull; ISO 45001:2018 &bull; IARC Monograph</span>
+    Dihasilkan oleh <b style="color:#64748B">IH Dashboard v5.0</b> &mdash; PT Pertamina Patra Niaga Satuan Kerja Regional III<br>
+    <span style="font-size:10px">Ref: Permenaker 05/2018 &bull; ACGIH TLV &amp; BEI 2024 &bull; ILO MLC 2006 &bull; IMO MSC/Circ.1351 &bull; ISO 45001:2018 &bull; IHR 2005 WHO</span>
   </div>
   <div style="text-align:right">
     <div style="font-family:Arial,sans-serif;font-size:10.5px;color:#64748B;font-weight:700">${tgl}</div>
-    <div style="font-family:Arial,sans-serif;font-size:10px;color:#94A3B8;margin-top:2px">Dokumen Konfidensial &mdash; Hanya untuk Penggunaan Internal</div>
+    <div style="font-family:Arial,sans-serif;font-size:10px;color:#94A3B8;margin-top:2px">Konfidensial &mdash; Untuk Penggunaan Internal</div>
   </div>
 </div>
 
