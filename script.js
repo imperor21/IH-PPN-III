@@ -3420,24 +3420,24 @@ function getSummaryData(){
       rate:x.crew>0?((x.positif/x.crew)*100).toFixed(2):0};
   }).sort(function(a,b){return BULAN_ORDER.indexOf(a.bulan)-BULAN_ORDER.indexOf(b.bulan);});
 
-  /* Pest */
+  /* Pest — semua data dari sheet Pest & Rodent */
   var pestData=filterData(rawPest,"Bulan");
   var pestCount=pestData.length;
   var pestBiaya=pestData.reduce(function(s,r){return s+parseFloat(r["Est Biaya"]||0);},0);
-  var pestKapal=new Set(pestData.map(function(r){return r["Nama Kapal"]||r["Kapal"]||"";})).size;
+  var pestLokasi=new Set(pestData.map(function(r){return r["Lokasi"]||"";})).size;
   /* Pest breakdown per bulan */
   var pestBulanMap={};
   pestData.forEach(function(r){
     var b=r["Bulan"]||"Tidak Diketahui";
-    if(!pestBulanMap[b])pestBulanMap[b]={bulan:b,count:0,kapal:new Set(),biaya:0,temuan:[]};
+    if(!pestBulanMap[b])pestBulanMap[b]={bulan:b,count:0,lokasi:new Set(),biaya:0,temuan:[]};
     pestBulanMap[b].count++;
-    pestBulanMap[b].kapal.add(r["Nama Kapal"]||r["Kapal"]||"");
+    pestBulanMap[b].lokasi.add(r["Lokasi"]||"");
     pestBulanMap[b].biaya+=parseFloat(r["Est Biaya"]||0);
     if(r["Temuan / Keluhan"])pestBulanMap[b].temuan.push(r["Temuan / Keluhan"]);
   });
   var pestBulanList=Object.values(pestBulanMap).map(function(x){
-    return{bulan:x.bulan,count:x.count,kapal:x.kapal.size,biaya:x.biaya,
-      temuan:[...new Set(x.temuan)].slice(0,2).join("; ")||"Tidak ada temuan"};
+    return{bulan:x.bulan,count:x.count,lokasi:x.lokasi.size,biaya:x.biaya,
+      temuan:[...new Set(x.temuan)].slice(0,2).join("; ")||"Belum ada temuan"};
   }).sort(function(a,b){return BULAN_ORDER.indexOf(a.bulan)-BULAN_ORDER.indexOf(b.bulan);});
 
   /* 5 Hazard */
@@ -3462,7 +3462,7 @@ function getSummaryData(){
     fleet:fleet, bulan:bulan,
     hra:{done:hraDone,total:hraTotal,budget:hraBudget,coverage:hraCoverage,data:hraData},
     dat:{kapal:datKapal,crew:datCrew,positif:datPos,biaya:datBiaya,rate:datPositifRate,data:datData,bulanList:datBulanList},
-    pest:{count:pestCount,kapal:pestKapal,biaya:pestBiaya,data:pestData,bulanList:pestBulanList},
+    pest:{count:pestCount,lokasi:pestLokasi,biaya:pestBiaya,data:pestData,bulanList:pestBulanList},
     hazard:{total:hazardTotal,melebihi:hazardMelebihi,
       fisika:{total:fisikaData.length,melebihi:fisikaMelebihi},
       kimia:{total:kimiaData.length,melebihi:kimiaMelebihi},
@@ -3525,14 +3525,38 @@ function renderSummaryPage(){
   var anaDAT=d.dat.positif===0
     ?'Program DAT mencatat <b>zero positive rate</b> dari <b>'+fmtNum(d.dat.crew)+' awak kapal</b> yang diperiksa pada <b>'+d.dat.kapal+' unit armada</b>. Capaian ini merupakan indikator tertinggi kepatuhan terhadap MLC 2006 Regulation 4.3 dan peraturan bebas zat adiktif di lingkungan maritim.'
     :'Program DAT menemukan <b>'+d.dat.positif+' awak kapal reaktif</b> (prevalensi <b>'+d.dat.rate+'%</b>) dari '+fmtNum(d.dat.crew)+' yang diperiksa. Seluruh kasus wajib mendapat penanganan medis dan tindak lanjut administratif sesuai SOP perusahaan dan MLC 2006 Reg.4.3.';
-  var anaPest=d.pest.count>0
-    ?'Program Pest &amp; Rodent Control telah terlaksana <b>'+d.pest.count+' kegiatan</b> pada <b>'+d.pest.kapal+' unit armada</b> dengan total anggaran <b>'+formatRupiah(d.pest.biaya)+'</b>, memenuhi kewajiban sanitasi kapal sesuai International Health Regulations (IHR) 2005 WHO dan Ship Sanitation Certificate.'
-    :'Belum terdapat data Pest &amp; Rodent Control pada periode ini. Program pengendalian vektor merupakan kewajiban regulatif periodik berdasarkan IHR 2005 WHO untuk mencegah transmisi penyakit zoonosis di lingkungan armada.';
   var anaHazard=d.hazard.melebihi===0
     ?'Seluruh <b>'+d.hazard.total+' parameter hazard</b> menunjukkan nilai dalam batas NAB sesuai Permenaker No.05/2018, mencerminkan efektivitas program pengendalian bahaya eksisting. Pemantauan berkala tetap diperlukan.'
     :'Teridentifikasi <b>'+d.hazard.melebihi+' parameter ('+Math.round(d.hazard.melebihi/d.hazard.total*100)+'%)</b> melampaui NAB dari '+d.hazard.total+' total pengukuran. Kondisi ini menuntut implementasi segera hierarki pengendalian risiko sesuai Permenaker No.05/2018 dan ISO 45001:2018.';
+  var anaPest=d.pest.count>0
+    ?'Program Pest &amp; Rodent Control perkantoran telah terlaksana sebanyak <b>'+d.pest.count+' kegiatan</b> pada <b>'+d.pest.lokasi+' lokasi</b> di lingkungan gedung kantor, dengan total estimasi anggaran <b>'+formatRupiah(d.pest.biaya)+'</b>. Pelaksanaan ini memenuhi kewajiban sanitasi dan pengendalian vektor sesuai standar kesehatan lingkungan kerja perkantoran dan IHR 2005 WHO.'
+    :'Belum terdapat data pelaksanaan Pest &amp; Rodent Control pada periode ini. Program pengendalian vektor merupakan kewajiban regulatif periodik untuk mencegah transmisi penyakit dan menjaga standar sanitasi lingkungan kerja.';
 
-  /* Tabel DAT per bulan */
+  /* Tabel Pest per bulan */
+  function pestTable(){
+    if(!d.pest.bulanList||!d.pest.bulanList.length)
+      return'<div style="padding:20px;text-align:center;font-family:Arial,sans-serif;font-size:12px;color:#94A3B8">Tidak ada data Pest Control periode ini</div>';
+    var th='<thead><tr style="background:#0F2A4A">'+['Bulan','Kegiatan','Lokasi','Temuan Utama','Est. Biaya'].map(function(h){return'<th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:700;color:#fff;font-family:Arial,sans-serif">'+h+'</th>';}).join('')+'</tr></thead>';
+    var tb='<tbody>'+d.pest.bulanList.map(function(r,i){
+      return'<tr style="background:'+(i%2===0?'#fff':'#F8FAFC')+'">'
+        +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:600;color:#1E293B;border-bottom:1px solid #EEF2F7">'+r.bulan+'</td>'
+        +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:700;border-bottom:1px solid #EEF2F7">'+r.count+'x</td>'
+        +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;border-bottom:1px solid #EEF2F7">'+r.lokasi+' lokasi</td>'
+        +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:11px;color:#475569;border-bottom:1px solid #EEF2F7">'+esc(r.temuan)+'</td>'
+        +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;border-bottom:1px solid #EEF2F7">'+formatRupiah(r.biaya)+'</td>'
+        +'</tr>';
+    }).join('')
+    +'<tr style="background:#F0F4F8">'
+    +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:700">TOTAL</td>'
+    +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:700">'+d.pest.count+'x</td>'
+    +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:700">'+d.pest.lokasi+' lokasi</td>'
+    +'<td></td>'
+    +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:700">'+formatRupiah(d.pest.biaya)+'</td>'
+    +'</tr></tbody>';
+    return'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">'+th+tb+'</table></div>';
+  }
+
+  /* Tabel 5 Hazard */
   function datTable(){
     if(!d.dat.bulanList||!d.dat.bulanList.length)
       return'<div style="padding:20px;text-align:center;font-family:Arial,sans-serif;font-size:12px;color:#94A3B8">Tidak ada data DAT periode ini</div>';
@@ -3556,30 +3580,6 @@ function renderSummaryPage(){
     +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:700;color:'+(d.dat.positif>0?'#C62828':'#2E7D32')+'">'+d.dat.rate+'%</td>'
     +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:700">'+formatRupiah(d.dat.biaya)+'</td>'
     +'<td></td></tr></tbody>';
-    return'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">'+th+tb+'</table></div>';
-  }
-
-  /* Tabel Pest per bulan */
-  function pestTable(){
-    if(!d.pest.bulanList||!d.pest.bulanList.length)
-      return'<div style="padding:20px;text-align:center;font-family:Arial,sans-serif;font-size:12px;color:#94A3B8">Tidak ada data Pest Control periode ini</div>';
-    var th='<thead><tr style="background:#0F2A4A">'+['Bulan','Kegiatan','Kapal','Temuan Utama','Est. Biaya'].map(function(h){return'<th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:700;color:#fff;font-family:Arial,sans-serif">'+h+'</th>';}).join('')+'</tr></thead>';
-    var tb='<tbody>'+d.pest.bulanList.map(function(r,i){
-      return'<tr style="background:'+(i%2===0?'#fff':'#F8FAFC')+'">'
-        +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:600;color:#1E293B;border-bottom:1px solid #EEF2F7">'+r.bulan+'</td>'
-        +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:700;border-bottom:1px solid #EEF2F7">'+r.count+'x</td>'
-        +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;border-bottom:1px solid #EEF2F7">'+r.kapal+' unit</td>'
-        +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:11px;color:#475569;border-bottom:1px solid #EEF2F7">'+esc(r.temuan)+'</td>'
-        +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;border-bottom:1px solid #EEF2F7">'+formatRupiah(r.biaya)+'</td>'
-        +'</tr>';
-    }).join('')
-    +'<tr style="background:#F0F4F8">'
-    +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:700">TOTAL</td>'
-    +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:700">'+d.pest.count+'x</td>'
-    +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:700">'+d.pest.kapal+' unit</td>'
-    +'<td></td>'
-    +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:700">'+formatRupiah(d.pest.biaya)+'</td>'
-    +'</tr></tbody>';
     return'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">'+th+tb+'</table></div>';
   }
 
@@ -3656,7 +3656,7 @@ function renderSummaryPage(){
     ${[
       {j:"HRA Coverage",s:"Pelaksanaan Armada",pct:parseFloat(d.hra.coverage),det:d.hra.done+"/"+d.hra.total+" kapal"},
       {j:"Drugs & Alcohol Test",s:"Tingkat Kepatuhan",pct:datKepatuhan,det:d.dat.positif+" positif dari "+fmtNum(d.dat.crew)+" crew"},
-      {j:"Pest & Rodent Control",s:"Pelaksanaan Program",pct:d.pest.count>0?100:0,det:d.pest.count+" kegiatan / "+d.pest.kapal+" kapal"},
+      {j:"Pest & Rodent Control",s:"Pelaksanaan Perkantoran",pct:d.pest.count>0?100:0,det:d.pest.count+" kegiatan / "+d.pest.lokasi+" lokasi"},
       {j:"5 Hazard Utama",s:"Kepatuhan NAB",pct:hazardPct,det:d.hazard.melebihi+" parameter melebihi NAB"}
     ].map(function(c){
       var t=tl(c.pct);
@@ -3700,12 +3700,12 @@ function renderSummaryPage(){
 
 <!-- III. PEST -->
 <div style="margin-bottom:28px">
-  ${secHead("#6A1B9A","III.","Pengendalian Vektor &amp; Hama (Pest &amp; Rodent Control)","Rekapitulasi pelaksanaan program sanitasi kapal dan pengendalian vektor penyakit sesuai IHR 2005 WHO")}
+  ${secHead("#6A1B9A","III.","Pengendalian Vektor &amp; Hama (Pest &amp; Rodent Control)","Rekapitulasi pelaksanaan program pengendalian vektor dan sanitasi di lingkungan kantor")}
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
     ${kpiBox("Total Kegiatan",d.pest.count,"pelaksanaan","#6A1B9A","#F3E5F5")}
-    ${kpiBox("Kapal Terlayani",d.pest.kapal,"unit armada","#4527A0","#EDE7F6")}
+    ${kpiBox("Lokasi Terlayani",d.pest.lokasi,"lokasi kantor","#4527A0","#EDE7F6")}
     ${kpiBox("Estimasi Anggaran",formatRupiah(d.pest.biaya),"total program","#6A1B9A","#F3E5F5")}
-    ${kpiBox("Status",d.pest.count>0?"Terlaksana":"Belum Ada Data",d.pest.count>0?"sesuai IHR 2005 WHO":"perlu percepatan",(d.pest.count>0?"#2E7D32":"#E65100"),(d.pest.count>0?"#E8F5E9":"#FFF3E0"))}
+    ${kpiBox("Status",d.pest.count>0?"Terlaksana":"Belum Ada Data",d.pest.count>0?"sesuai jadwal":"perlu percepatan",(d.pest.count>0?"#2E7D32":"#E65100"),(d.pest.count>0?"#E8F5E9":"#FFF3E0"))}
   </div>
   <div style="margin-bottom:12px">${anaBox("#6A1B9A","#EDE7F6","#B39DDB","Analisis",anaPest)}</div>
   <div style="font-family:Arial,sans-serif;font-size:11px;font-weight:700;color:#6A1B9A;margin-bottom:8px">Rekapitulasi Pelaksanaan Pest Control per Periode</div>
