@@ -1022,10 +1022,10 @@
 <div class="page-header-row">
   <div>
     <h2 class="page-title-main"><i class="fas fa-shield-halved" style="color:#7B2FBE"></i> Access Log</h2>
-    <p class="page-subtitle">Riwayat akses dashboard — siapa, kapan, dan lewat perangkat apa</p>
+    <p class="page-subtitle">Riwayat akses dashboard &mdash; hanya dapat dilihat oleh <strong>ihpis2026</strong></p>
   </div>
-  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-    <select id="alog-filter-user" onchange="applyAlogFilters()" class="filter-select" style="min-width:140px"><option value="">Semua User</option></select>
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <select id="alog-filter-user" onchange="applyAlogFilters()" class="filter-select" style="min-width:130px"><option value="">Semua User</option></select>
     <select id="alog-filter-status" onchange="applyAlogFilters()" class="filter-select">
       <option value="">Semua Status</option>
       <option value="LOGIN_OK">Login Berhasil</option>
@@ -1039,20 +1039,20 @@
       <option value="90">3 Bulan</option>
       <option value="0">Semua</option>
     </select>
-    <button class="btn-refresh" onclick="loadAccessLog()" style="gap:7px"><i class="fas fa-rotate-right"></i> Refresh</button>
+    <button class="btn-refresh" onclick="loadAccessLog()"><i class="fas fa-rotate-right"></i> Refresh</button>
   </div>
 </div>
+
+<!-- 5 KPI ringkas -->
 <div class="kpi-row">
-  <div class="kpi-card blue"><div class="kpi-icon"><i class="fas fa-right-to-bracket"></i></div><div class="kpi-body"><div class="kpi-value" id="alog-total-login">—</div><div class="kpi-label">Total Login</div></div></div>
+  <div class="kpi-card blue"><div class="kpi-icon"><i class="fas fa-right-to-bracket"></i></div><div class="kpi-body"><div class="kpi-value" id="alog-total-login">—</div><div class="kpi-label">Total Akses</div></div></div>
   <div class="kpi-card green"><div class="kpi-icon"><i class="fas fa-circle-check"></i></div><div class="kpi-body"><div class="kpi-value" id="alog-success">—</div><div class="kpi-label">Login Berhasil</div></div></div>
   <div class="kpi-card red"><div class="kpi-icon"><i class="fas fa-circle-xmark"></i></div><div class="kpi-body"><div class="kpi-value" id="alog-fail">—</div><div class="kpi-label">Login Gagal</div></div></div>
-  <div class="kpi-card purple"><div class="kpi-icon"><i class="fas fa-mobile-screen"></i></div><div class="kpi-body"><div class="kpi-value" id="alog-mobile">—</div><div class="kpi-label">Akses Mobile</div></div></div>
-  <div class="kpi-card teal"><div class="kpi-icon"><i class="fas fa-desktop"></i></div><div class="kpi-body"><div class="kpi-value" id="alog-desktop">—</div><div class="kpi-label">Akses Desktop</div></div></div>
+  <div class="kpi-card purple"><div class="kpi-icon"><i class="fas fa-mobile-screen"></i></div><div class="kpi-body"><div class="kpi-value" id="alog-mobile">—</div><div class="kpi-label">Dari HP</div></div></div>
+  <div class="kpi-card teal"><div class="kpi-icon"><i class="fas fa-desktop"></i></div><div class="kpi-body"><div class="kpi-value" id="alog-desktop">—</div><div class="kpi-label">Dari Desktop</div></div></div>
 </div>
-<div class="chart-row">
-  <div class="chart-card"><div class="chart-header"><span class="chart-title"><i class="fas fa-chart-column"></i> Aktivitas Login per Hari (14 hari)</span></div><div class="chart-body"><canvas id="alogBarChart"></canvas></div></div>
-  <div class="chart-card" style="max-width:320px"><div class="chart-header"><span class="chart-title"><i class="fas fa-chart-pie"></i> Browser Digunakan</span></div><div class="chart-body"><canvas id="alogBrowserChart"></canvas></div></div>
-</div>
+
+<!-- Tabel log — tanpa chart -->
 <div class="table-card" style="margin-top:0">
   <div class="chart-header" style="flex-wrap:wrap;gap:10px">
     <span class="chart-title"><i class="fas fa-list-ul"></i> Log Detail Akses</span>
@@ -1065,12 +1065,15 @@
         <th onclick="sortAlogTable(1)">Username <i class="fas fa-sort fa-xs"></i></th>
         <th onclick="sortAlogTable(2)">Role <i class="fas fa-sort fa-xs"></i></th>
         <th onclick="sortAlogTable(3)">Status <i class="fas fa-sort fa-xs"></i></th>
-        <th onclick="sortAlogTable(4)">Browser <i class="fas fa-sort fa-xs"></i></th>
-        <th onclick="sortAlogTable(5)">OS <i class="fas fa-sort fa-xs"></i></th>
-        <th onclick="sortAlogTable(6)">Perangkat <i class="fas fa-sort fa-xs"></i></th>
-        <th onclick="sortAlogTable(7)">Layar <i class="fas fa-sort fa-xs"></i></th>
+        <th onclick="sortAlogTable(4)">Perangkat <i class="fas fa-sort fa-xs"></i></th>
+        <th onclick="sortAlogTable(5)">Browser <i class="fas fa-sort fa-xs"></i></th>
+        <th onclick="sortAlogTable(6)">OS <i class="fas fa-sort fa-xs"></i></th>
       </tr></thead>
-      <tbody id="alogTableBody"><tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted)"><i class="fas fa-circle-notch fa-spin"></i> Memuat log...</td></tr></tbody>
+      <tbody id="alogTableBody">
+        <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">
+          <i class="fas fa-circle-notch fa-spin" style="margin-right:8px"></i>Memuat log akses...
+        </td></tr>
+      </tbody>
     </table>
   </div>
   <div class="table-footer" id="alogTableFooter">—</div>
