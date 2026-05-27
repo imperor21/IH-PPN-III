@@ -2596,140 +2596,117 @@ async function fetchBiomonitoring(){
 var rawAlog=[],filteredAlog=[],alogSortCol=0,alogSortDir=-1;
 var alogBarChart=null,alogBrowserChart=null;
 
+/* ─── ACCESS LOG — ringkas, hanya admin ihpis2026 ─── */
 async function loadAccessLog(){
-  if(!isAdmin())return;
-  const tbody=document.getElementById("alogTableBody");
-  if(tbody)tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted)"><i class="fas fa-circle-notch fa-spin" style="margin-right:8px"></i>Memuat log akses...</td></tr>';
+  if(!isAdmin()){
+    var tb=document.getElementById("alogTableBody");
+    if(tb)tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:30px;color:#C62828"><i class="fas fa-lock" style="margin-right:8px"></i>Hanya Admin yang dapat melihat Access Log.</td></tr>';
+    return;
+  }
+  var tbody=document.getElementById("alogTableBody");
+  if(tbody)tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)"><i class="fas fa-circle-notch fa-spin" style="margin-right:8px"></i>Memuat log akses...</td></tr>';
   try{
-    const data=await gasPost({action:"getAccessLog",token:getToken(),days:90});
-    if(data.status==="ok"){
+    var days=parseInt(((document.getElementById("alog-filter-days")||{}).value)||"14");
+    var data=await gasPost({action:"getAccessLog",token:getToken(),days:days});
+    if(data&&data.status==="ok"){
       rawAlog=data.logs||[];
       filteredAlog=[...rawAlog];
       applyAlogFilters();
     }else{
-      if(tbody)tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:30px;color:#C62828">Gagal memuat log: '+(data.message||"")+'</td></tr>';
+      if(tbody)tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:30px;color:#C62828">Gagal memuat log: '+esc((data&&data.message)||"Error")+'</td></tr>';
     }
   }catch(err){
-    if(tbody)tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:30px;color:#C62828">Error: '+err.message+'</td></tr>';
+    if(tbody)tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:30px;color:#C62828">Error: '+esc(err.message)+'</td></tr>';
   }
 }
 
 function applyAlogFilters(){
-  const userF=(document.getElementById("alog-filter-user")||{}).value||"";
-  const statusF=(document.getElementById("alog-filter-status")||{}).value||"";
-  const daysF=parseInt(((document.getElementById("alog-filter-days")||{}).value)||"14");
-  const now=Date.now();
-  const cutoff=daysF>0?(now-daysF*24*60*60*1000):0;
-
+  var userF=((document.getElementById("alog-filter-user")||{}).value)||"";
+  var statusF=((document.getElementById("alog-filter-status")||{}).value)||"";
+  var daysF=parseInt(((document.getElementById("alog-filter-days")||{}).value)||"14");
+  var cutoff=daysF>0?(Date.now()-daysF*24*60*60*1000):0;
   filteredAlog=rawAlog.filter(function(r){
-    const ts=new Date(r.timestamp||0).getTime();
-    if(daysF>0&&ts<cutoff)return false;
+    if(daysF>0&&new Date(r.timestamp||0).getTime()<cutoff)return false;
     if(userF&&r.username!==userF)return false;
     if(statusF&&r.status!==statusF)return false;
     return true;
   });
-
   /* Populate user dropdown */
-  const userSel=document.getElementById("alog-filter-user");
+  var userSel=document.getElementById("alog-filter-user");
   if(userSel){
-    const curVal=userSel.value;
-    const users=[...new Set(rawAlog.map(function(r){return r.username;}).filter(Boolean))].sort();
-    userSel.innerHTML='<option value="">Semua User</option>'+users.map(function(u){return'<option'+(u===curVal?" selected":"")+'>'+esc(u)+'</option>';}).join("");
+    var cur=userSel.value;
+    var users=[...new Set(rawAlog.map(function(r){return r.username;}).filter(Boolean))].sort();
+    userSel.innerHTML='<option value="">Semua User</option>'+users.map(function(u){return'<option'+(u===cur?' selected':'')+'>'+esc(u)+'</option>';}).join("");
   }
-
   renderAlogKPI();
-  renderAlogBarChart();
-  renderAlogBrowserChart();
   renderAlogTable(filteredAlog);
 }
 
 function renderAlogKPI(){
-  const total=filteredAlog.filter(function(r){return r.status==="LOGIN_OK"||r.status==="LOGIN_FAIL";}).length;
-  const success=filteredAlog.filter(function(r){return r.status==="LOGIN_OK";}).length;
-  const fail=filteredAlog.filter(function(r){return r.status==="LOGIN_FAIL";}).length;
-  const mobile=filteredAlog.filter(function(r){return r.deviceType==="Mobile";}).length;
-  const desktop=filteredAlog.filter(function(r){return r.deviceType==="Desktop"||r.deviceType==="Tablet";}).length;
-  function set(id,v){const el=document.getElementById(id);if(el)el.textContent=fmtNum(v);}
+  var total=filteredAlog.length;
+  var success=filteredAlog.filter(function(r){return r.status==="LOGIN_OK";}).length;
+  var fail=filteredAlog.filter(function(r){return r.status==="LOGIN_FAIL";}).length;
+  var mobile=filteredAlog.filter(function(r){return(r.deviceType||"").toLowerCase()==="mobile";}).length;
+  var desktop=filteredAlog.filter(function(r){var dt=(r.deviceType||"").toLowerCase();return dt==="desktop"||dt==="tablet";}).length;
+  function set(id,v){var el=document.getElementById(id);if(el)el.textContent=fmtNum(v);}
   set("alog-total-login",total);set("alog-success",success);set("alog-fail",fail);
   set("alog-mobile",mobile);set("alog-desktop",desktop);
 }
 
-function renderAlogBarChart(){
-  const ctx=document.getElementById("alogBarChart");
-  if(!ctx)return;
-  if(alogBarChart){alogBarChart.destroy();alogBarChart=null;}
-  const labels=[],dataOk=[],dataFail=[];
-  for(var i=13;i>=0;i--){
-    const d=new Date();d.setDate(d.getDate()-i);
-    const key=d.toISOString().slice(0,10);
-    labels.push(key.slice(5));
-    dataOk.push(filteredAlog.filter(function(r){return r.status==="LOGIN_OK"&&(r.timestamp||"").startsWith(key);}).length);
-    dataFail.push(filteredAlog.filter(function(r){return r.status==="LOGIN_FAIL"&&(r.timestamp||"").startsWith(key);}).length);
-  }
-  alogBarChart=new Chart(ctx,{type:"bar",data:{labels:labels,datasets:[{label:"Berhasil",data:dataOk,backgroundColor:"#43A047",borderRadius:5},{label:"Gagal",data:dataFail,backgroundColor:"#E53935",borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"top",labels:{font:{size:11}}}},scales:{x:{ticks:{font:{size:10}}},y:{beginAtZero:true,ticks:{stepSize:1,font:{size:10}}}}}});
-}
-
-function renderAlogBrowserChart(){
-  const ctx=document.getElementById("alogBrowserChart");
-  if(!ctx)return;
-  if(alogBrowserChart){alogBrowserChart.destroy();alogBrowserChart=null;}
-  const bmap={};
-  filteredAlog.forEach(function(r){const b=r.browser||"Unknown";bmap[b]=(bmap[b]||0)+1;});
-  const sorted=Object.entries(bmap).sort(function(a,b){return b[1]-a[1];});
-  const palette=["#1976D2","#43A047","#FB8C00","#8E24AA","#00838F","#E53935","#F9A825"];
-  alogBrowserChart=new Chart(ctx,{type:"doughnut",data:{labels:sorted.map(function(e){return e[0];}),datasets:[{data:sorted.map(function(e){return e[1];}),backgroundColor:palette,borderColor:"#fff",borderWidth:3,hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:false,cutout:"60%",plugins:{legend:{position:"bottom",labels:{font:{size:11},padding:10,boxWidth:12}}}}});
-}
-
-function getBrowserIcon(b){
-  if(!b)return"globe";const bl=b.toLowerCase();
-  if(bl.includes("chrome"))return"chrome";if(bl.includes("firefox"))return"firefox-browser";
-  if(bl.includes("safari"))return"safari";if(bl.includes("edge"))return"edge";
-  if(bl.includes("opera"))return"opera";if(bl.includes("samsung"))return"android";
-  return"globe";
-}
-
 function renderAlogTable(data){
-  const tbody=document.getElementById("alogTableBody");
+  var tbody=document.getElementById("alogTableBody");
   if(!tbody)return;
-  if(!data.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted)">Tidak ada data pada periode ini</td></tr>';return;}
-  const devIcon={Mobile:'<i class="fas fa-mobile-screen" style="color:#7B2FBE"></i>',Tablet:'<i class="fas fa-tablet-screen-button" style="color:#0288D1"></i>',Desktop:'<i class="fas fa-desktop" style="color:#388E3C"></i>'};
-  const statusBadge={
-    LOGIN_OK:'<span style="background:#E8F5E9;color:#2E7D32;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700"><i class="fas fa-circle-check"></i> Berhasil</span>',
-    LOGIN_FAIL:'<span style="background:#FFEBEE;color:#C62828;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700"><i class="fas fa-circle-xmark"></i> Gagal</span>',
-    LOGOUT:'<span style="background:#F3F4F6;color:#6B7280;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700"><i class="fas fa-right-from-bracket"></i> Logout</span>'
+  if(!data||!data.length){
+    tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">Tidak ada log pada periode ini</td></tr>';
+    var ft=document.getElementById("alogTableFooter");
+    if(ft)ft.textContent="Tidak ada data";
+    return;
+  }
+  var devIcon={Mobile:'<i class="fas fa-mobile-screen" style="color:#7B2FBE;margin-right:4px"></i>HP',Tablet:'<i class="fas fa-tablet-screen-button" style="color:#0288D1;margin-right:4px"></i>Tablet',Desktop:'<i class="fas fa-desktop" style="color:#388E3C;margin-right:4px"></i>Desktop'};
+  var statusBadge={
+    LOGIN_OK:'<span style="background:#E8F5E9;color:#2E7D32;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700"><i class="fas fa-circle-check" style="margin-right:3px"></i>Berhasil</span>',
+    LOGIN_FAIL:'<span style="background:#FFEBEE;color:#C62828;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700"><i class="fas fa-circle-xmark" style="margin-right:3px"></i>Gagal</span>',
+    LOGOUT:'<span style="background:#F3F4F6;color:#6B7280;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700"><i class="fas fa-right-from-bracket" style="margin-right:3px"></i>Logout</span>'
   };
   tbody.innerHTML=data.map(function(r){
-    const ts=r.timestamp?(String(r.timestamp).replace("T"," ").slice(0,16)):"—";
-    const badge=statusBadge[r.status]||('<span>'+esc(r.status||"—")+'</span>');
-    const dicon=(devIcon[r.deviceType]||'<i class="fas fa-question"></i>');
-    const rc=r.role==="admin"?"#C62828":r.role==="demo"?"#F59E0B":"#1976D2";
+    var ts=r.timestamp?String(r.timestamp).replace("T"," ").slice(0,16):"—";
+    var badge=statusBadge[r.status]||('<span>'+esc(r.status||"—")+'</span>');
+    var dev=devIcon[r.deviceType]||('<i class="fas fa-question" style="margin-right:4px"></i>'+esc(r.deviceType||"—"));
+    var rc=r.role==="admin"?"#C62828":r.role==="demo"?"#F59E0B":"#1976D2";
     return'<tr>'
-      +'<td style="white-space:nowrap;font-weight:600;font-size:12px">'+esc(ts)+'</td>'
+      +'<td style="white-space:nowrap;font-size:12px;color:#475569">'+esc(ts)+'</td>'
       +'<td><strong>'+esc(r.username||"—")+'</strong></td>'
       +'<td><span style="background:'+rc+'18;color:'+rc+';padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">'+esc(r.role||"—")+'</span></td>'
       +'<td>'+badge+'</td>'
-      +'<td><i class="fab fa-'+getBrowserIcon(r.browser)+'" style="margin-right:5px"></i>'+esc(r.browser||"—")+'</td>'
-      +'<td>'+esc(r.os||"—")+'</td>'
-      +'<td style="text-align:center">'+dicon+' '+esc(r.deviceType||"—")+'</td>'
-      +'<td style="font-size:11px;color:var(--text-muted)">'+esc(r.screenRes||"—")+'</td>'
+      +'<td style="font-size:12px">'+dev+'</td>'
+      +'<td style="font-size:12px;color:#475569"><i class="fab fa-'+_getBrowserIcon(r.browser)+'" style="margin-right:5px"></i>'+esc(r.browser||"—")+'</td>'
+      +'<td style="font-size:12px;color:#475569">'+esc(r.os||"—")+'</td>'
       +'</tr>';
   }).join("");
-  const footer=document.getElementById("alogTableFooter");
-  if(footer)footer.textContent="Menampilkan "+data.length+" dari "+rawAlog.length+" entri";
+  var ft=document.getElementById("alogTableFooter");
+  if(ft)ft.textContent="Menampilkan "+data.length+" dari "+rawAlog.length+" entri";
 }
 
+function _getBrowserIcon(b){
+  var m={"Chrome":"chrome","Firefox":"firefox","Safari":"safari","Edge":"edge","Opera":"opera","Samsung":"samsung-internet"};
+  return m[b]||"globe";
+}
+
+var alogSortCol=0,alogSortDir=-1;
+function sortAlogTable(col){
+  if(alogSortCol===col)alogSortDir*=-1;else{alogSortCol=col;alogSortDir=-1;}
+  var keys=["timestamp","username","role","status","deviceType","browser","os"];
+  filteredAlog.sort(function(a,b){return String(a[keys[col]]||"").localeCompare(String(b[keys[col]]||""),undefined,{numeric:true})*alogSortDir;});
+  renderAlogTable(filteredAlog);
+}
 function searchAlogTable(){
-  const q=((document.getElementById("alog-search")||{}).value||"").toLowerCase();
-  const res=q?filteredAlog.filter(function(r){return(r.username||"").toLowerCase().includes(q)||(r.browser||"").toLowerCase().includes(q)||(r.os||"").toLowerCase().includes(q)||(r.deviceType||"").toLowerCase().includes(q);}):filteredAlog;
+  var q=((document.getElementById("alog-search")||{}).value||"").toLowerCase();
+  var res=q?filteredAlog.filter(function(r){
+    return(r.username||"").toLowerCase().includes(q)||(r.browser||"").toLowerCase().includes(q)||(r.os||"").toLowerCase().includes(q)||(r.deviceType||"").toLowerCase().includes(q);
+  }):filteredAlog;
   renderAlogTable(res);
 }
 
-function sortAlogTable(col){
-  if(alogSortCol===col)alogSortDir*=-1;else{alogSortCol=col;alogSortDir=-1;}
-  const keys=["timestamp","username","role","status","browser","os","deviceType","screenRes"];
-  filteredAlog.sort(function(a,b){return String(a[keys[col]]||"").localeCompare(String(b[keys[col]]||""))*alogSortDir;});
-  renderAlogTable(filteredAlog);
-}
 
 
 /* ═══════════════════════════════════════════════════════════════
@@ -3511,147 +3488,118 @@ function renderSummaryPage(){
   var tgl=now.toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"});
   var tahun=now.getFullYear();
   var fleetLabel=d.fleet||"Seluruh Armada";
-  var bulanLabel=d.bulan||"Semua Periode";
   var periodeLabel=d.bulan?(d.bulan+" "+tahun):("Tahun "+tahun);
+  var hazardPct=d.hazard.total>0?(((d.hazard.total-d.hazard.melebihi)/d.hazard.total)*100):100;
+  var datKepatuhan=d.dat.crew>0?((1-(d.dat.positif/d.dat.crew))*100):100;
 
   /* Update subtitle */
   var subEl=document.getElementById("summarySubtitle");
   if(subEl)subEl.textContent="PT Pertamina Patra Niaga III \u2014 "+periodeLabel+(d.fleet?" \u2014 "+d.fleet:"");
 
-  var hazardPct=d.hazard.total>0?(((d.hazard.total-d.hazard.melebihi)/d.hazard.total)*100):100;
-  var datKepatuhan=d.dat.crew>0?((1-(d.dat.positif/d.dat.crew))*100):100;
-
-  function kpiBox(label,val,unit,color,bg){
-    return'<div style="background:'+bg+';border-radius:10px;padding:12px 14px;border-left:3px solid '+color+'">'+
-      '<div style="font-family:Arial,sans-serif;font-size:10.5px;color:#64748B;line-height:1.4;margin-bottom:6px">'+label+'</div>'+
-      '<div style="font-family:Arial,sans-serif;font-size:20px;font-weight:700;color:'+color+'">'+val+'</div>'+
-      '<div style="font-family:Arial,sans-serif;font-size:10px;color:#94A3B8;margin-top:2px">'+unit+'</div></div>';
-  }
-  function anaBox(color,bg,border,label,text){
-    return'<div style="background:'+bg+';border:1px solid '+border+';border-radius:10px;padding:12px 16px;font-family:Arial,sans-serif;font-size:12px;color:#334155;line-height:1.8">'+
-      '<b style="color:'+color+'">'+label+':</b> '+text+'</div>';
-  }
-  function sectionHead(color,nomor,judul,sub){
-    return'<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">'+
-      '<div style="width:4px;height:32px;background:'+color+';border-radius:2px;flex-shrink:0"></div>'+
-      '<div><div style="font-family:Arial,sans-serif;font-size:15px;font-weight:700;color:#1E293B">'+nomor+'&nbsp;&nbsp;'+judul+'</div>'+
-      '<div style="font-family:Arial,sans-serif;font-size:11px;color:#64748B;margin-top:2px">'+sub+'</div></div></div>';
-  }
   function tl(pct){
     if(pct>=80)return{c:"#2E7D32",bg:"#E8F5E9",lbl:"BAIK",ic:"fa-circle-check"};
     if(pct>=50)return{c:"#E65100",bg:"#FFF3E0",lbl:"PERHATIAN",ic:"fa-circle-exclamation"};
     return{c:"#C62828",bg:"#FFEBEE",lbl:"KRITIS",ic:"fa-circle-xmark"};
   }
-  var tlHRA=tl(parseFloat(d.hra.coverage));
-  var tlDAT=tl(datKepatuhan);
-  var tlHaz=tl(hazardPct);
+  function kpiBox(label,val,unit,color,bg){
+    return'<div style="background:'+bg+';border-radius:10px;padding:12px 14px;border-left:3px solid '+color+'">'
+      +'<div style="font-family:Arial,sans-serif;font-size:10.5px;color:#64748B;line-height:1.4;margin-bottom:6px">'+label+'</div>'
+      +'<div style="font-family:Arial,sans-serif;font-size:20px;font-weight:700;color:'+color+'">'+val+'</div>'
+      +'<div style="font-family:Arial,sans-serif;font-size:10px;color:#94A3B8;margin-top:2px">'+unit+'</div></div>';
+  }
+  function anaBox(color,bg,border,label,text){
+    return'<div style="background:'+bg+';border:1px solid '+border+';border-radius:10px;padding:12px 16px;font-family:Arial,sans-serif;font-size:12px;color:#334155;line-height:1.8">'
+      +'<b style="color:'+color+'">'+label+':</b> '+text+'</div>';
+  }
+  function secHead(color,nomor,judul,sub){
+    return'<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">'
+      +'<div style="width:4px;height:32px;background:'+color+';border-radius:2px;flex-shrink:0"></div>'
+      +'<div><div style="font-family:Arial,sans-serif;font-size:15px;font-weight:700;color:#1E293B">'+nomor+'&nbsp;&nbsp;'+judul+'</div>'
+      +'<div style="font-family:Arial,sans-serif;font-size:11px;color:#64748B;margin-top:2px">'+sub+'</div></div></div>';
+  }
 
-  /* Teks akademis dinamis */
+  /* Analisis teks akademis dinamis */
   var anaHRA=parseFloat(d.hra.coverage)>=80
-    ?'Tingkat coverage pelaksanaan HRA sebesar <b>'+d.hra.coverage+'%</b> mencerminkan kepatuhan yang <b>baik</b> terhadap target program IH tahunan, melampaui ambang minimal 80% sebagaimana ditetapkan Permenaker No.05/2018. Sebanyak <b>'+d.hra.done+' unit armada</b> telah menyelesaikan siklus HRA penuh dengan estimasi anggaran program <b>'+formatRupiah(d.hra.budget)+'</b>.'
-    :'Coverage pelaksanaan HRA sebesar <b>'+d.hra.coverage+'%</b> menunjukkan adanya <b>kesenjangan implementasi signifikan</b>. Terdapat <b>'+(d.hra.total-d.hra.done)+' unit armada</b> yang belum menyelesaikan siklus HRA, berpotensi menimbulkan blind spot dalam manajemen bahaya ketenagakerjaan sesuai Permenaker No.05/2018 Pasal 6 ayat (1).';
-
+    ?'Tingkat coverage pelaksanaan HRA sebesar <b>'+d.hra.coverage+'%</b> mencerminkan kepatuhan yang <b>baik</b> terhadap target program IH tahunan, melampaui ambang minimal 80% sesuai Permenaker No.05/2018. Sebanyak <b>'+d.hra.done+' unit armada</b> telah menyelesaikan siklus HRA penuh dengan estimasi anggaran <b>'+formatRupiah(d.hra.budget)+'</b>.'
+    :'Coverage HRA sebesar <b>'+d.hra.coverage+'%</b> menunjukkan <b>kesenjangan implementasi signifikan</b>. Terdapat <b>'+(d.hra.total-d.hra.done)+' unit armada</b> belum menyelesaikan HRA, berpotensi menimbulkan blind spot dalam manajemen bahaya ketenagakerjaan sesuai Permenaker No.05/2018 Pasal 6 ayat (1).';
   var anaDAT=d.dat.positif===0
     ?'Program DAT mencatat <b>zero positive rate</b> dari <b>'+fmtNum(d.dat.crew)+' awak kapal</b> yang diperiksa pada <b>'+d.dat.kapal+' unit armada</b>. Capaian ini merupakan indikator tertinggi kepatuhan terhadap MLC 2006 Regulation 4.3 dan peraturan bebas zat adiktif di lingkungan maritim.'
-    :'Program DAT menemukan <b>'+d.dat.positif+' awak kapal reaktif</b> (prevalensi <b>'+d.dat.rate+'%</b>) dari '+fmtNum(d.dat.crew)+' yang diperiksa. Seluruh kasus wajib mendapat penanganan medis dan tindak lanjut administratif sesuai SOP perusahaan, MLC 2006 Reg.4.3, dan Peraturan Menteri Perhubungan.';
-
+    :'Program DAT menemukan <b>'+d.dat.positif+' awak kapal reaktif</b> (prevalensi <b>'+d.dat.rate+'%</b>) dari '+fmtNum(d.dat.crew)+' yang diperiksa. Seluruh kasus wajib mendapat penanganan medis dan tindak lanjut administratif sesuai SOP perusahaan dan MLC 2006 Reg.4.3.';
   var anaPest=d.pest.count>0
-    ?'Program Pest &amp; Rodent Control telah terlaksana <b>'+d.pest.count+' kegiatan</b> pada <b>'+d.pest.kapal+' unit armada</b>, dengan total anggaran <b>'+formatRupiah(d.pest.biaya)+'</b>. Pelaksanaan ini memenuhi kewajiban sanitasi kapal sesuai International Health Regulations (IHR) 2005 WHO dan Ship Sanitation Certificate.'
-    :'Belum terdapat data pelaksanaan Pest &amp; Rodent Control pada periode ini. Program pengendalian vektor merupakan kewajiban regulatif periodik berdasarkan IHR 2005 WHO untuk mencegah transmisi penyakit zoonosis di lingkungan armada.';
-
+    ?'Program Pest &amp; Rodent Control telah terlaksana <b>'+d.pest.count+' kegiatan</b> pada <b>'+d.pest.kapal+' unit armada</b> dengan total anggaran <b>'+formatRupiah(d.pest.biaya)+'</b>, memenuhi kewajiban sanitasi kapal sesuai International Health Regulations (IHR) 2005 WHO dan Ship Sanitation Certificate.'
+    :'Belum terdapat data Pest &amp; Rodent Control pada periode ini. Program pengendalian vektor merupakan kewajiban regulatif periodik berdasarkan IHR 2005 WHO untuk mencegah transmisi penyakit zoonosis di lingkungan armada.';
   var anaHazard=d.hazard.melebihi===0
-    ?'Seluruh <b>'+d.hazard.total+' parameter hazard</b> menunjukkan nilai dalam batas NAB yang ditetapkan Permenaker No.05/2018, mencerminkan efektivitas program pengendalian bahaya eksisting. Pemantauan berkala tetap diperlukan untuk mempertahankan kondisi ini.'
+    ?'Seluruh <b>'+d.hazard.total+' parameter hazard</b> menunjukkan nilai dalam batas NAB sesuai Permenaker No.05/2018, mencerminkan efektivitas program pengendalian bahaya eksisting. Pemantauan berkala tetap diperlukan.'
     :'Teridentifikasi <b>'+d.hazard.melebihi+' parameter ('+Math.round(d.hazard.melebihi/d.hazard.total*100)+'%)</b> melampaui NAB dari '+d.hazard.total+' total pengukuran. Kondisi ini menuntut implementasi segera hierarki pengendalian risiko sesuai Permenaker No.05/2018 dan ISO 45001:2018.';
 
-  /* Tabel detail DAT per bulan */
-  function datBulanTable(){
-    if(!d.dat.bulanList||!d.dat.bulanList.length)return'<div style="padding:20px;text-align:center;font-family:Arial,sans-serif;font-size:12px;color:#94A3B8">Tidak ada data DAT pada periode ini</div>';
-    return'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif;font-size:11.5px">'+
-      '<thead><tr style="background:#0F2A4A">'+
-      '<th style="padding:9px 14px;text-align:left;color:#fff;font-weight:700">Bulan</th>'+
-      '<th style="padding:9px 14px;text-align:center;color:#fff;font-weight:700">Kapal</th>'+
-      '<th style="padding:9px 14px;text-align:center;color:#fff;font-weight:700">Crew Diperiksa</th>'+
-      '<th style="padding:9px 14px;text-align:center;color:#fff;font-weight:700">Hasil Positif</th>'+
-      '<th style="padding:9px 14px;text-align:center;color:#fff;font-weight:700">Prevalensi</th>'+
-      '<th style="padding:9px 14px;text-align:right;color:#fff;font-weight:700">Est. Biaya</th>'+
-      '<th style="padding:9px 14px;text-align:center;color:#fff;font-weight:700">Status</th>'+
-      '</tr></thead><tbody>'+
-      d.dat.bulanList.map(function(r,i){
-        var ok=r.positif===0;
-        return'<tr style="background:'+(i%2===0?'#fff':'#F8FAFC')+'">'+
-          '<td style="padding:8px 14px;font-weight:600;color:#1E293B;border-bottom:1px solid #EEF2F7">'+r.bulan+'</td>'+
-          '<td style="padding:8px 14px;text-align:center;border-bottom:1px solid #EEF2F7">'+r.kapal+' unit</td>'+
-          '<td style="padding:8px 14px;text-align:center;font-weight:700;border-bottom:1px solid #EEF2F7">'+fmtNum(r.crew)+'</td>'+
-          '<td style="padding:8px 14px;text-align:center;font-weight:700;color:'+(ok?'#2E7D32':'#C62828')+';border-bottom:1px solid #EEF2F7">'+r.positif+'</td>'+
-          '<td style="padding:8px 14px;text-align:center;color:'+(ok?'#2E7D32':'#C62828')+';border-bottom:1px solid #EEF2F7">'+r.rate+'%</td>'+
-          '<td style="padding:8px 14px;text-align:right;border-bottom:1px solid #EEF2F7">'+formatRupiah(r.biaya)+'</td>'+
-          '<td style="padding:8px 14px;text-align:center;border-bottom:1px solid #EEF2F7">'+
-          '<span style="background:'+(ok?'#E8F5E9':'#FFEBEE')+';color:'+(ok?'#2E7D32':'#C62828')+';padding:2px 9px;border-radius:20px;font-size:10.5px;font-weight:700">'+(ok?'Negatif':'Ada Temuan')+'</span></td>'+
-          '</tr>';
-      }).join("")+
-      '<tr style="background:#F0F4F8">'+
-      '<td style="padding:8px 14px;font-weight:700;font-size:12px">TOTAL</td>'+
-      '<td style="padding:8px 14px;text-align:center;font-weight:700">'+d.dat.kapal+' unit</td>'+
-      '<td style="padding:8px 14px;text-align:center;font-weight:700">'+fmtNum(d.dat.crew)+'</td>'+
-      '<td style="padding:8px 14px;text-align:center;font-weight:700;color:'+(d.dat.positif>0?'#C62828':'#2E7D32')+'">'+d.dat.positif+'</td>'+
-      '<td style="padding:8px 14px;text-align:center;font-weight:700;color:'+(d.dat.positif>0?'#C62828':'#2E7D32')+'">'+d.dat.rate+'%</td>'+
-      '<td style="padding:8px 14px;text-align:right;font-weight:700">'+formatRupiah(d.dat.biaya)+'</td>'+
-      '<td></td></tr>'+
-      '</tbody></table></div>';
+  /* Tabel DAT per bulan */
+  function datTable(){
+    if(!d.dat.bulanList||!d.dat.bulanList.length)
+      return'<div style="padding:20px;text-align:center;font-family:Arial,sans-serif;font-size:12px;color:#94A3B8">Tidak ada data DAT periode ini</div>';
+    var th='<thead><tr style="background:#0F2A4A">'+['Bulan','Kapal','Crew Diperiksa','Hasil Positif','Prevalensi','Est. Biaya','Status'].map(function(h){return'<th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:700;color:#fff;font-family:Arial,sans-serif">'+h+'</th>';}).join('')+'</tr></thead>';
+    var tb='<tbody>'+d.dat.bulanList.map(function(r,i){
+      var ok=r.positif===0;
+      return'<tr style="background:'+(i%2===0?'#fff':'#F8FAFC')+'">'
+        +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:600;color:#1E293B;border-bottom:1px solid #EEF2F7">'+r.bulan+'</td>'
+        +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;border-bottom:1px solid #EEF2F7">'+r.kapal+' unit</td>'
+        +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:700;border-bottom:1px solid #EEF2F7">'+fmtNum(r.crew)+'</td>'
+        +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:700;color:'+(ok?'#2E7D32':'#C62828')+';border-bottom:1px solid #EEF2F7">'+r.positif+'</td>'
+        +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;color:'+(ok?'#2E7D32':'#C62828')+';border-bottom:1px solid #EEF2F7">'+r.rate+'%</td>'
+        +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;border-bottom:1px solid #EEF2F7">'+formatRupiah(r.biaya)+'</td>'
+        +'<td style="padding:7px 12px;border-bottom:1px solid #EEF2F7"><span style="background:'+(ok?'#E8F5E9':'#FFEBEE')+';color:'+(ok?'#2E7D32':'#C62828')+';padding:2px 9px;border-radius:20px;font-size:10.5px;font-weight:700">'+(ok?'Negatif':'Ada Temuan')+'</span></td>'
+        +'</tr>';
+    }).join('')
+    +'<tr style="background:#F0F4F8"><td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:700">TOTAL</td>'
+    +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:700">'+d.dat.kapal+' unit</td>'
+    +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:700">'+fmtNum(d.dat.crew)+'</td>'
+    +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:700;color:'+(d.dat.positif>0?'#C62828':'#2E7D32')+'">'+d.dat.positif+'</td>'
+    +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:700;color:'+(d.dat.positif>0?'#C62828':'#2E7D32')+'">'+d.dat.rate+'%</td>'
+    +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:700">'+formatRupiah(d.dat.biaya)+'</td>'
+    +'<td></td></tr></tbody>';
+    return'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">'+th+tb+'</table></div>';
   }
 
-  /* Tabel detail Pest per bulan */
-  function pestBulanTable(){
-    if(!d.pest.bulanList||!d.pest.bulanList.length)return'<div style="padding:20px;text-align:center;font-family:Arial,sans-serif;font-size:12px;color:#94A3B8">Tidak ada data Pest Control pada periode ini</div>';
-    return'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif;font-size:11.5px">'+
-      '<thead><tr style="background:#0F2A4A">'+
-      '<th style="padding:9px 14px;text-align:left;color:#fff;font-weight:700">Bulan</th>'+
-      '<th style="padding:9px 14px;text-align:center;color:#fff;font-weight:700">Kegiatan</th>'+
-      '<th style="padding:9px 14px;text-align:center;color:#fff;font-weight:700">Kapal</th>'+
-      '<th style="padding:9px 14px;text-align:left;color:#fff;font-weight:700">Temuan Utama</th>'+
-      '<th style="padding:9px 14px;text-align:right;color:#fff;font-weight:700">Est. Biaya</th>'+
-      '</tr></thead><tbody>'+
-      d.pest.bulanList.map(function(r,i){
-        return'<tr style="background:'+(i%2===0?'#fff':'#F8FAFC')+'">'+
-          '<td style="padding:8px 14px;font-weight:600;color:#1E293B;border-bottom:1px solid #EEF2F7">'+r.bulan+'</td>'+
-          '<td style="padding:8px 14px;text-align:center;font-weight:700;border-bottom:1px solid #EEF2F7">'+r.count+'x</td>'+
-          '<td style="padding:8px 14px;text-align:center;border-bottom:1px solid #EEF2F7">'+r.kapal+' unit</td>'+
-          '<td style="padding:8px 14px;font-size:11px;color:#475569;border-bottom:1px solid #EEF2F7">'+esc(r.temuan)+'</td>'+
-          '<td style="padding:8px 14px;text-align:right;border-bottom:1px solid #EEF2F7">'+formatRupiah(r.biaya)+'</td>'+
-          '</tr>';
-      }).join("")+
-      '<tr style="background:#F0F4F8">'+
-      '<td style="padding:8px 14px;font-weight:700;font-size:12px">TOTAL</td>'+
-      '<td style="padding:8px 14px;text-align:center;font-weight:700">'+d.pest.count+'x</td>'+
-      '<td style="padding:8px 14px;text-align:center;font-weight:700">'+d.pest.kapal+' unit</td>'+
-      '<td></td>'+
-      '<td style="padding:8px 14px;text-align:right;font-weight:700">'+formatRupiah(d.pest.biaya)+'</td>'+
-      '</tr>'+
-      '</tbody></table></div>';
+  /* Tabel Pest per bulan */
+  function pestTable(){
+    if(!d.pest.bulanList||!d.pest.bulanList.length)
+      return'<div style="padding:20px;text-align:center;font-family:Arial,sans-serif;font-size:12px;color:#94A3B8">Tidak ada data Pest Control periode ini</div>';
+    var th='<thead><tr style="background:#0F2A4A">'+['Bulan','Kegiatan','Kapal','Temuan Utama','Est. Biaya'].map(function(h){return'<th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:700;color:#fff;font-family:Arial,sans-serif">'+h+'</th>';}).join('')+'</tr></thead>';
+    var tb='<tbody>'+d.pest.bulanList.map(function(r,i){
+      return'<tr style="background:'+(i%2===0?'#fff':'#F8FAFC')+'">'
+        +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:600;color:#1E293B;border-bottom:1px solid #EEF2F7">'+r.bulan+'</td>'
+        +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:700;border-bottom:1px solid #EEF2F7">'+r.count+'x</td>'
+        +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;border-bottom:1px solid #EEF2F7">'+r.kapal+' unit</td>'
+        +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:11px;color:#475569;border-bottom:1px solid #EEF2F7">'+esc(r.temuan)+'</td>'
+        +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;border-bottom:1px solid #EEF2F7">'+formatRupiah(r.biaya)+'</td>'
+        +'</tr>';
+    }).join('')
+    +'<tr style="background:#F0F4F8">'
+    +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:700">TOTAL</td>'
+    +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:700">'+d.pest.count+'x</td>'
+    +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:700">'+d.pest.kapal+' unit</td>'
+    +'<td></td>'
+    +'<td style="padding:7px 12px;font-family:Arial,sans-serif;font-size:12px;font-weight:700">'+formatRupiah(d.pest.biaya)+'</td>'
+    +'</tr></tbody>';
+    return'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">'+th+tb+'</table></div>';
   }
 
-  /* Tabel hazard */
+  /* Tabel 5 Hazard */
   function hazardRows(){
-    var rows=[
+    return[
       {label:"Faktor Fisika",total:d.hazard.fisika.total,over:d.hazard.fisika.melebihi},
       {label:"Faktor Kimia",total:d.hazard.kimia.total,over:d.hazard.kimia.melebihi},
       {label:"Faktor Biologi",total:d.hazard.biologi.total,over:d.hazard.biologi.melebihi},
       {label:"Faktor Ergonomi",total:d.hazard.ergonomi.total,over:d.hazard.ergonomi.tinggi},
       {label:"Faktor Psikososial",total:d.hazard.psiko.total,over:d.hazard.psiko.tinggi}
-    ];
-    return rows.map(function(r,i){
+    ].map(function(r,i){
       var pct=r.total>0?Math.round(r.over/r.total*100):0;
       var bc=pct>50?"#C62828":pct>20?"#E65100":"#2E7D32";
-      return'<tr style="background:'+(i%2===0?'#fff':'#F8FAFC')+'">'+
-        '<td style="padding:8px 14px;border-bottom:1px solid #EEF2F7;font-family:Arial,sans-serif;font-size:12px;font-weight:600;color:#1E293B">'+r.label+'</td>'+
-        '<td style="padding:8px 14px;border-bottom:1px solid #EEF2F7;text-align:center;font-family:Arial,sans-serif;font-size:12px;color:#475569">'+r.total+'</td>'+
-        '<td style="padding:8px 14px;border-bottom:1px solid #EEF2F7;text-align:center;font-family:Arial,sans-serif;font-size:12px;font-weight:700;color:'+(r.over>0?'#C62828':'#2E7D32')+'">'+r.over+'</td>'+
-        '<td style="padding:8px 14px;border-bottom:1px solid #EEF2F7">'+
-          '<div style="display:flex;align-items:center;gap:8px">'+
-          '<div style="flex:1;background:#E8EDF2;border-radius:3px;height:7px;overflow:hidden">'+
-          '<div style="width:'+Math.min(pct,100)+'%;background:'+bc+';height:100%;border-radius:3px"></div></div>'+
-          '<span style="font-family:Arial,sans-serif;font-size:10px;font-weight:700;color:'+bc+';min-width:30px">'+pct+'%</span></div></td>'+
-        '</tr>';
+      return'<tr style="background:'+(i%2===0?'#fff':'#F8FAFC')+'">'
+        +'<td style="padding:8px 14px;border-bottom:1px solid #EEF2F7;font-family:Arial,sans-serif;font-size:12px;font-weight:600;color:#1E293B">'+r.label+'</td>'
+        +'<td style="padding:8px 14px;border-bottom:1px solid #EEF2F7;text-align:center;font-family:Arial,sans-serif;font-size:12px">'+r.total+'</td>'
+        +'<td style="padding:8px 14px;border-bottom:1px solid #EEF2F7;text-align:center;font-family:Arial,sans-serif;font-size:12px;font-weight:700;color:'+(r.over>0?'#C62828':'#2E7D32')+'">'+r.over+'</td>'
+        +'<td style="padding:8px 14px;border-bottom:1px solid #EEF2F7"><div style="display:flex;align-items:center;gap:8px"><div style="flex:1;background:#E8EDF2;border-radius:3px;height:7px;overflow:hidden"><div style="width:'+Math.min(pct,100)+'%;background:'+bc+';height:100%;border-radius:3px"></div></div><span style="font-family:Arial,sans-serif;font-size:10px;font-weight:700;color:'+bc+';min-width:30px">'+pct+'%</span></div></td>'
+        +'</tr>';
     }).join("");
   }
 
@@ -3661,15 +3609,13 @@ function renderSummaryPage(){
   if(d.dat.positif===0)skor+=2;else if(parseFloat(d.dat.rate)<1)skor++;
   if(d.hazard.melebihi===0)skor+=2;else if(d.hazard.melebihi<=3)skor++;
   if(d.pest.count>0)skor++;
-  var statusOvr=skor>=5?{lbl:"BAIK",c:"#1B5E20",bg:"#E8F5E9",br:"#4CAF50"}:skor>=3?{lbl:"PERHATIAN",c:"#E65100",bg:"#FFF3E0",br:"#FF9800"}:{lbl:"KRITIS",c:"#B71C1C",bg:"#FFEBEE",br:"#F44336"};
-
+  var stOvr=skor>=5?{lbl:"BAIK",c:"#1B5E20",bg:"#E8F5E9",br:"#4CAF50"}:skor>=3?{lbl:"PERHATIAN",c:"#E65100",bg:"#FFF3E0",br:"#FF9800"}:{lbl:"KRITIS",c:"#B71C1C",bg:"#FFEBEE",br:"#F44336"};
   var nomBio=d.bio.total>0;
-  var n={dat:2,pest:3,haz:nomBio?5:4,bio:4,rek:nomBio?6:5};
 
   el.innerHTML=`
 <div id="summaryPrintArea" style="font-family:Arial,Helvetica,sans-serif;color:#1E293B;width:100%;background:#fff">
 
-<!-- ═══ KOVER ═══ -->
+<!-- KOVER -->
 <div style="background:linear-gradient(135deg,#0D2137 0%,#0F3460 60%,#16537E 100%);padding:40px 48px 32px;position:relative;overflow:hidden">
   <div style="position:absolute;right:-60px;top:-60px;width:260px;height:260px;border-radius:50%;background:rgba(255,255,255,.04)"></div>
   <div style="position:absolute;top:0;left:0;width:6px;height:100%;background:linear-gradient(180deg,#3B82F6,#06B6D4)"></div>
@@ -3690,20 +3636,20 @@ function renderSummaryPage(){
         <div style="font-family:Arial,sans-serif;font-size:34px;font-weight:700;color:#fff;line-height:1">${d.hra.coverage}%</div>
         <div style="font-family:Arial,sans-serif;font-size:10px;color:rgba(255,255,255,.55);margin-top:3px;letter-spacing:1px">COVERAGE HRA</div>
       </div>
-      <div style="background:${statusOvr.bg};border:1px solid ${statusOvr.br};border-radius:10px;padding:10px 18px;text-align:center">
-        <div style="font-family:Arial,sans-serif;font-size:10px;font-weight:700;color:${statusOvr.c};letter-spacing:1px">STATUS KESELURUHAN</div>
-        <div style="font-family:Arial,sans-serif;font-size:18px;font-weight:700;color:${statusOvr.c};margin-top:2px">${statusOvr.lbl}</div>
+      <div style="background:${stOvr.bg};border:1px solid ${stOvr.br};border-radius:10px;padding:10px 18px;text-align:center">
+        <div style="font-family:Arial,sans-serif;font-size:10px;font-weight:700;color:${stOvr.c};letter-spacing:1px">STATUS KESELURUHAN</div>
+        <div style="font-family:Arial,sans-serif;font-size:18px;font-weight:700;color:${stOvr.c};margin-top:2px">${stOvr.lbl}</div>
       </div>
     </div>
   </div>
   <div style="position:relative;margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,.12)">
     <div style="display:flex;gap:7px;flex-wrap:wrap">
-      ${["Permenaker No.05/2018","ACGIH TLV & BEI 2024","ILO MLC 2006","IMO MSC/Circ.1351","IARC Monograph","ISO 45001:2018","OSHA 29 CFR 1910"].map(function(s){return'<span style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.75);padding:3px 11px;border-radius:20px;font-family:Arial,sans-serif;font-size:10px;font-weight:600;border:1px solid rgba(255,255,255,.15)">'+s+'</span>';}).join("")}
+      ${["Permenaker No.05/2018","ACGIH TLV & BEI 2024","ILO MLC 2006","IMO MSC/Circ.1351","IARC Monograph","ISO 45001:2018","IHR 2005 WHO"].map(function(s){return'<span style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.75);padding:3px 11px;border-radius:20px;font-family:Arial,sans-serif;font-size:10px;font-weight:600;border:1px solid rgba(255,255,255,.15)">'+s+'</span>';}).join("")}
     </div>
   </div>
 </div>
 
-<!-- ═══ RINGKASAN EKSEKUTIF ═══ -->
+<!-- RINGKASAN EKSEKUTIF -->
 <div style="background:#F0F4F8;padding:18px 48px;border-bottom:2px solid #E2E8F0">
   <div style="font-family:Arial,sans-serif;font-size:10px;font-weight:700;color:#94A3B8;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px">Ringkasan Eksekutif</div>
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
@@ -3711,24 +3657,24 @@ function renderSummaryPage(){
       {j:"HRA Coverage",s:"Pelaksanaan Armada",pct:parseFloat(d.hra.coverage),det:d.hra.done+"/"+d.hra.total+" kapal"},
       {j:"Drugs & Alcohol Test",s:"Tingkat Kepatuhan",pct:datKepatuhan,det:d.dat.positif+" positif dari "+fmtNum(d.dat.crew)+" crew"},
       {j:"Pest & Rodent Control",s:"Pelaksanaan Program",pct:d.pest.count>0?100:0,det:d.pest.count+" kegiatan / "+d.pest.kapal+" kapal"},
-      {j:"5 Hazard Utama",s:"Kepatuhan NAB",pct:hazardPct,det:d.hazard.melebihi+" parameter melebihi standar"}
+      {j:"5 Hazard Utama",s:"Kepatuhan NAB",pct:hazardPct,det:d.hazard.melebihi+" parameter melebihi NAB"}
     ].map(function(c){
       var t=tl(c.pct);
-      return'<div style="background:'+t.bg+';border:1.5px solid '+t.c+'40;border-left:4px solid '+t.c+';border-radius:10px;padding:12px 14px">'+
-        '<div style="font-family:Arial,sans-serif;font-size:9px;font-weight:700;color:'+t.c+';text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">'+t.lbl+'</div>'+
-        '<div style="font-family:Arial,sans-serif;font-size:12px;font-weight:700;color:#1E293B;margin-bottom:2px">'+c.j+'</div>'+
-        '<div style="font-family:Arial,sans-serif;font-size:10px;color:#64748B;margin-bottom:8px">'+c.s+'</div>'+
-        '<div style="font-family:Arial,sans-serif;font-size:24px;font-weight:700;color:'+t.c+'">'+Math.round(c.pct)+'%</div>'+
-        '<div style="font-family:Arial,sans-serif;font-size:10px;color:#94A3B8;margin-top:3px">'+c.det+'</div></div>';
+      return'<div style="background:'+t.bg+';border:1.5px solid '+t.c+'40;border-left:4px solid '+t.c+';border-radius:10px;padding:12px 14px">'
+        +'<div style="font-family:Arial,sans-serif;font-size:9px;font-weight:700;color:'+t.c+';text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">'+t.lbl+'</div>'
+        +'<div style="font-family:Arial,sans-serif;font-size:12px;font-weight:700;color:#1E293B;margin-bottom:2px">'+c.j+'</div>'
+        +'<div style="font-family:Arial,sans-serif;font-size:10px;color:#64748B;margin-bottom:8px">'+c.s+'</div>'
+        +'<div style="font-family:Arial,sans-serif;font-size:24px;font-weight:700;color:'+t.c+'">'+Math.round(c.pct)+'%</div>'
+        +'<div style="font-family:Arial,sans-serif;font-size:10px;color:#94A3B8;margin-top:3px">'+c.det+'</div></div>';
     }).join("")}
   </div>
 </div>
 
 <div style="padding:28px 48px">
 
-<!-- ═══ I. HRA ═══ -->
+<!-- I. HRA -->
 <div style="margin-bottom:28px">
-  ${sectionHead("#1565C0","I.","Hazard Recognition &amp; Assessment (HRA)","Analisis komprehensif pelaksanaan identifikasi, penilaian, dan pengendalian bahaya di seluruh unit armada")}
+  ${secHead("#1565C0","I.","Hazard Recognition &amp; Assessment (HRA)","Analisis komprehensif pelaksanaan identifikasi, penilaian, dan pengendalian bahaya di seluruh unit armada")}
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
     ${kpiBox("Kapal Telah HRA",d.hra.done,"unit armada","#1565C0","#EBF5FF")}
     ${kpiBox("Kapal Belum HRA",d.hra.total-d.hra.done,"unit",(d.hra.total-d.hra.done>0?"#C62828":"#2E7D32"),(d.hra.total-d.hra.done>0?"#FFEBEE":"#E8F5E9"))}
@@ -3738,53 +3684,55 @@ function renderSummaryPage(){
   ${anaBox("#1565C0","#EBF5FF","#BFDBFE","Analisis",anaHRA)}
 </div>
 
-<!-- ═══ II. DAT ═══ -->
+<!-- II. DAT -->
 <div style="margin-bottom:28px">
-  ${sectionHead("#2E7D32","II.","Pengujian Narkotika, Psikotropika &amp; Stimulan (Drugs &amp; Alcohol Test)","Evaluasi pelaksanaan pemeriksaan zat adiktif pada awak kapal sesuai ketentuan regulasi maritim internasional")}
+  ${secHead("#2E7D32","II.","Pengujian Narkotika, Psikotropika &amp; Stimulan (Drugs &amp; Alcohol Test)","Evaluasi pelaksanaan pemeriksaan zat adiktif pada awak kapal sesuai ketentuan regulasi maritim internasional")}
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
     ${kpiBox("Kapal Terperiksa",d.dat.kapal,"unit armada","#2E7D32","#E8F5E9")}
     ${kpiBox("Total Crew Diperiksa",fmtNum(d.dat.crew),"awak kapal","#0F2A4A","#F0F4F8")}
     ${kpiBox("Hasil Reaktif",d.dat.positif,(d.dat.positif>0?"perlu tindak lanjut":"tidak ada temuan"),(d.dat.positif>0?"#C62828":"#2E7D32"),(d.dat.positif>0?"#FFEBEE":"#E8F5E9"))}
     ${kpiBox("Tingkat Prevalensi",d.dat.rate+"%","dari total terperiksa",(parseFloat(d.dat.rate)>0?"#E65100":"#2E7D32"),(parseFloat(d.dat.rate)>0?"#FFF3E0":"#E8F5E9"))}
   </div>
-  <div style="margin-bottom:14px">${anaBox("#2E7D32","#E8F5E9","#A5D6A7","Analisis",anaDAT)}</div>
+  <div style="margin-bottom:12px">${anaBox("#2E7D32","#E8F5E9","#A5D6A7","Analisis",anaDAT)}</div>
   <div style="font-family:Arial,sans-serif;font-size:11px;font-weight:700;color:#2E7D32;margin-bottom:8px">Rekapitulasi Pelaksanaan DAT per Periode</div>
-  <div style="border:1px solid #E2E8F0;border-radius:10px;overflow:hidden">${datBulanTable()}</div>
+  <div style="border:1px solid #E2E8F0;border-radius:10px;overflow:hidden">${datTable()}</div>
 </div>
 
-<!-- ═══ III. PEST CONTROL ═══ -->
+<!-- III. PEST -->
 <div style="margin-bottom:28px">
-  ${sectionHead("#6A1B9A","III.","Pengendalian Vektor &amp; Hama (Pest &amp; Rodent Control)","Rekapitulasi pelaksanaan program sanitasi kapal dan pengendalian vektor penyakit sesuai IHR 2005 WHO")}
+  ${secHead("#6A1B9A","III.","Pengendalian Vektor &amp; Hama (Pest &amp; Rodent Control)","Rekapitulasi pelaksanaan program sanitasi kapal dan pengendalian vektor penyakit sesuai IHR 2005 WHO")}
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
-    ${kpiBox("Total Pelaksanaan",d.pest.count,"kegiatan","#6A1B9A","#F3E5F5")}
+    ${kpiBox("Total Kegiatan",d.pest.count,"pelaksanaan","#6A1B9A","#F3E5F5")}
     ${kpiBox("Kapal Terlayani",d.pest.kapal,"unit armada","#4527A0","#EDE7F6")}
     ${kpiBox("Estimasi Anggaran",formatRupiah(d.pest.biaya),"total program","#6A1B9A","#F3E5F5")}
-    ${kpiBox("Status",d.pest.count>0?"Terlaksana":"Belum Ada Data",d.pest.count>0?"sesuai jadwal":"perlu percepatan",(d.pest.count>0?"#2E7D32":"#E65100"),(d.pest.count>0?"#E8F5E9":"#FFF3E0"))}
+    ${kpiBox("Status",d.pest.count>0?"Terlaksana":"Belum Ada Data",d.pest.count>0?"sesuai IHR 2005 WHO":"perlu percepatan",(d.pest.count>0?"#2E7D32":"#E65100"),(d.pest.count>0?"#E8F5E9":"#FFF3E0"))}
   </div>
-  <div style="margin-bottom:14px">${anaBox("#6A1B9A","#EDE7F6","#B39DDB","Analisis",anaPest)}</div>
+  <div style="margin-bottom:12px">${anaBox("#6A1B9A","#EDE7F6","#B39DDB","Analisis",anaPest)}</div>
   <div style="font-family:Arial,sans-serif;font-size:11px;font-weight:700;color:#6A1B9A;margin-bottom:8px">Rekapitulasi Pelaksanaan Pest Control per Periode</div>
-  <div style="border:1px solid #E2E8F0;border-radius:10px;overflow:hidden">${pestBulanTable()}</div>
+  <div style="border:1px solid #E2E8F0;border-radius:10px;overflow:hidden">${pestTable()}</div>
 </div>
 
-<!-- ═══ IV/V. 5 HAZARD ═══ -->
+<!-- IV. 5 HAZARD -->
 <div style="margin-bottom:28px">
-  ${sectionHead("#E65100","IV.","Pemantauan 5 Hazard Utama (Permenaker No.05/2018)","Hasil pengukuran faktor fisika, kimia, biologi, ergonomi, dan psikososial terhadap Nilai Ambang Batas yang berlaku")}
+  ${secHead("#E65100","IV.","Pemantauan 5 Hazard Utama (Permenaker No.05/2018)","Hasil pengukuran faktor fisika, kimia, biologi, ergonomi, dan psikososial terhadap Nilai Ambang Batas yang berlaku")}
   <div style="display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px">
-    <div><table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif">
+    <table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif">
       <thead><tr style="background:#0F2A4A">
         <th style="padding:9px 14px;text-align:left;font-size:11px;font-weight:700;color:#fff">Faktor Hazard</th>
-        <th style="padding:9px 14px;text-align:center;font-size:11px;font-weight:700;color:#fff">Total</th>
+        <th style="padding:9px 14px;text-align:center;font-size:11px;font-weight:700;color:#fff">Total Ukur</th>
         <th style="padding:9px 14px;text-align:center;font-size:11px;font-weight:700;color:#fff">Melebihi NAB</th>
         <th style="padding:9px 14px;text-align:left;font-size:11px;font-weight:700;color:#fff">Proporsi</th>
       </tr></thead>
-      <tbody>${hazardRows()}
+      <tbody>
+        ${hazardRows()}
         <tr style="background:#F0F4F8">
-          <td style="padding:9px 14px;font-family:Arial,sans-serif;font-size:12px;font-weight:700;color:#1E293B">Total</td>
+          <td style="padding:9px 14px;font-family:Arial,sans-serif;font-size:12px;font-weight:700">Total</td>
           <td style="padding:9px 14px;text-align:center;font-family:Arial,sans-serif;font-size:12px;font-weight:700">${d.hazard.total}</td>
           <td style="padding:9px 14px;text-align:center;font-family:Arial,sans-serif;font-size:12px;font-weight:700;color:${d.hazard.melebihi>0?"#C62828":"#2E7D32"}">${d.hazard.melebihi}</td>
           <td style="padding:9px 14px;font-family:Arial,sans-serif;font-size:11px;color:#94A3B8">${d.hazard.total>0?Math.round(d.hazard.melebihi/d.hazard.total*100):0}% dari total</td>
         </tr>
-      </tbody></table></div>
+      </tbody>
+    </table>
     <div style="display:flex;flex-direction:column;gap:8px">
       <div style="background:#FFEBEE;border-radius:10px;padding:14px 16px;flex:1">
         <div style="font-family:Arial,sans-serif;font-size:10px;font-weight:700;color:#C62828;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Melebihi NAB</div>
@@ -3794,46 +3742,46 @@ function renderSummaryPage(){
       <div style="background:#E8F5E9;border-radius:10px;padding:14px 16px;flex:1">
         <div style="font-family:Arial,sans-serif;font-size:10px;font-weight:700;color:#2E7D32;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Dalam Batas</div>
         <div style="font-family:Arial,sans-serif;font-size:28px;font-weight:700;color:#2E7D32">${d.hazard.total-d.hazard.melebihi}</div>
-        <div style="font-family:Arial,sans-serif;font-size:10.5px;color:#64748B;margin-top:3px">memenuhi persyaratan</div>
+        <div style="font-family:Arial,sans-serif;font-size:10.5px;color:#64748B;margin-top:3px">memenuhi persyaratan NAB</div>
       </div>
-      ${d.bio.total>0?'<div style="background:#F3E5F5;border-radius:10px;padding:14px 16px;flex:1"><div style="font-family:Arial,sans-serif;font-size:10px;font-weight:700;color:#7B1FA2;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Biomarker Benzene</div><div style="font-family:Arial,sans-serif;font-size:28px;font-weight:700;color:'+(d.bio.melebihi>0?"#C62828":"#7B1FA2")+'">'+d.bio.melebihi+'</div><div style="font-family:Arial,sans-serif;font-size:10.5px;color:#64748B;margin-top:3px">melebihi BEI dari '+d.bio.total+' sampel</div></div>':""}
+      ${nomBio?'<div style="background:#F3E5F5;border-radius:10px;padding:14px 16px;flex:1"><div style="font-family:Arial,sans-serif;font-size:10px;font-weight:700;color:#7B1FA2;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Biomarker Benzene</div><div style="font-family:Arial,sans-serif;font-size:28px;font-weight:700;color:'+(d.bio.melebihi>0?'#C62828':'#7B1FA2')+'">'+d.bio.melebihi+'</div><div style="font-family:Arial,sans-serif;font-size:10.5px;color:#64748B;margin-top:3px">melebihi BEI dari '+d.bio.total+' sampel</div></div>':""}
     </div>
   </div>
   ${anaBox("#E65100","#FFF3E0","#FFCC80","Analisis",anaHazard)}
 </div>
 
-<!-- ═══ REKOMENDASI STRATEGIS ═══ -->
+<!-- REKOMENDASI -->
 <div style="margin-bottom:28px">
-  ${sectionHead("#0F2A4A",(nomBio?"V.":"IV."),"Rekomendasi Strategis &amp; Program Tindak Lanjut","Rekomendasi berbasis hierarki pengendalian risiko ISO 45001:2018 untuk manajemen senior dan direksi")}
+  ${secHead("#0F2A4A",(nomBio?"VI.":"V."),"Rekomendasi Strategis &amp; Program Tindak Lanjut","Rekomendasi berbasis hierarki pengendalian risiko ISO 45001:2018 untuk manajemen senior dan direksi")}
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
     ${[
       {p:"Segera (0–30 Hari)",c:"#C62828",bg:"#FFEBEE",br:"#EF9A9A",items:[
         d.hazard.melebihi>0?"Implementasi pengendalian teknis segera untuk "+d.hazard.melebihi+" parameter hazard melampaui NAB":"Pertahankan program pengendalian hazard yang telah efektif",
-        d.dat.positif>0?"Protokol medis dan administratif untuk "+d.dat.positif+" awak reaktif sesuai SOP perusahaan":"Pertahankan konsistensi program DAT dengan hasil zero positive",
+        d.dat.positif>0?"Protokol medis dan administratif untuk "+d.dat.positif+" awak reaktif sesuai SOP dan MLC 2006":"Pertahankan konsistensi program DAT dengan hasil zero positive",
         d.hra.total-d.hra.done>0?"Akselerasi HRA pada "+(d.hra.total-d.hra.done)+" unit armada yang belum terlaksana":"Verifikasi dan dokumentasi hasil HRA seluruh armada"
       ]},
       {p:"Jangka Pendek (1–3 Bulan)",c:"#E65100",bg:"#FFF3E0",br:"#FFCC80",items:[
-        "Pemasangan rekayasa teknik: sistem ventilasi, enclosure, dan monitoring kontinu di area terdampak",
-        "Revisi Job Safety Analysis (JSA) untuk seluruh pekerjaan berisiko tinggi di area temuan",
+        "Pemasangan rekayasa teknik: ventilasi, enclosure, dan monitoring kontinu di area terdampak",
+        "Revisi Job Safety Analysis (JSA) untuk pekerjaan berisiko tinggi di area temuan",
         "Medical surveillance berkala bagi ABK dengan riwayat paparan kronik teridentifikasi"
       ]},
       {p:"Jangka Panjang (3–12 Bulan)",c:"#1565C0",bg:"#EBF5FF",br:"#90CAF9",items:[
         "Review komprehensif program IH tahunan dan penetapan target coverage HRA 100%",
-        "Integrasi temuan IH ke dalam Ship Safety Management System (SMS) dan ISM Code",
-        "Penyusunan laporan IH tahunan untuk audit eksternal, biro klasifikasi, dan otoritas regulator"
+        "Integrasi seluruh temuan IH ke dalam Ship Safety Management System (SMS) dan ISM Code",
+        "Penyusunan laporan IH tahunan untuk audit eksternal, biro klasifikasi, dan regulator"
       ]}
     ].map(function(s){
-      return'<div style="background:'+s.bg+';border:1px solid '+s.br+';border-top:3px solid '+s.c+';border-radius:10px;padding:14px 16px">'+
-        '<div style="font-family:Arial,sans-serif;font-size:10px;font-weight:700;color:'+s.c+';text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">'+s.p+'</div>'+
-        s.items.map(function(it){return'<div style="display:flex;align-items:flex-start;gap:7px;margin-bottom:8px"><div style="width:5px;height:5px;background:'+s.c+';border-radius:50%;flex-shrink:0;margin-top:5px"></div><div style="font-family:Arial,sans-serif;font-size:11.5px;color:#334155;line-height:1.65">'+it+'</div></div>';}).join("")+
-        '</div>';
+      return'<div style="background:'+s.bg+';border:1px solid '+s.br+';border-top:3px solid '+s.c+';border-radius:10px;padding:14px 16px">'
+        +'<div style="font-family:Arial,sans-serif;font-size:10px;font-weight:700;color:'+s.c+';text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">'+s.p+'</div>'
+        +s.items.map(function(it){return'<div style="display:flex;align-items:flex-start;gap:7px;margin-bottom:8px"><div style="width:5px;height:5px;background:'+s.c+';border-radius:50%;flex-shrink:0;margin-top:5px"></div><div style="font-family:Arial,sans-serif;font-size:11.5px;color:#334155;line-height:1.65">'+it+'</div></div>';}).join("")
+        +'</div>';
     }).join("")}
   </div>
 </div>
 
 </div>
 
-<!-- ═══ FOOTER ═══ -->
+<!-- FOOTER -->
 <div style="background:#F0F4F8;border-top:2px solid #E2E8F0;padding:14px 48px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
   <div style="font-family:Arial,sans-serif;font-size:10.5px;color:#94A3B8;line-height:1.7">
     Dihasilkan oleh <b style="color:#64748B">IH Dashboard v5.0</b> &mdash; PT Pertamina Patra Niaga Satuan Kerja Regional III<br>
