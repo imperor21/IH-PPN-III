@@ -311,6 +311,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   updateDashboardAge();
   setInterval(updateDashboardAge,60000);
   document.querySelectorAll('.nav-item[data-menu="summary"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(renderSummaryPage,80));});
+  document.querySelectorAll('.nav-item[data-menu="riskprediction"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(renderRiskPage,80));});
   document.querySelectorAll('.nav-item[data-menu="accesslog"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(loadAccessLog,80));});
   /* Re-apply demo overlay saat pindah halaman */
   document.querySelectorAll(".nav-item").forEach(item=>{
@@ -3533,6 +3534,267 @@ function _ana(col,bg,bdr,label,txt){
 }
 
 /* ── Main: renderSummaryPage ── */
+/* ═══════════════════════════════════════════════════════════
+   HEALTH RISK PREDICTION ENGINE
+   Skor 0–100 per kapal dari 4 dimensi IH data aktual:
+   - HRA Coverage  : 0–30 poin
+   - 5 Hazard NAB  : 0–35 poin
+   - DAT Positif   : 0–20 poin
+   - Biomarker     : 0–15 poin
+   Referensi: Permenaker 05/2018 | ACGIH BEI | ILO MLC 2006
+═══════════════════════════════════════════════════════════ */
+
+/* ── Hitung skor risiko per kapal ── */
+function calcRiskScores(){
+  /* Kumpulkan semua nama kapal dari semua dataset */
+  var kapalSet=new Set();
+  [rawHRA,rawDAT,rawFisika||[],rawKimia||[],rawBiologi||[],rawErgonomi||[],rawPsikososial||[]].forEach(function(arr){
+    (arr||[]).forEach(function(r){var k=r["Nama Kapal"]||r["kapal"]||"";if(k)kapalSet.add(k);});
+  });
+
+  /* Tambahkan kapal dari dummy list jika ada */
+  if(typeof rawBiomarker!=="undefined")rawBiomarker.forEach(function(r){if(r.kapal)kapalSet.add(r.kapal);});
+
+  var results=[];
+  var now=new Date();
+  var BULAN_MAP={Januari:0,Februari:1,Maret:2,April:3,Mei:4,Juni:5,Juli:6,Agustus:7,September:8,Oktober:9,November:10,Desember:11};
+
+  kapalSet.forEach(function(kapal){
+    /* ─ 1. HRA SCORE (0–30) ─ */
+    var hraRecord=(rawHRA||[]).filter(function(r){return(r["Nama Kapal"]||"")=== kapal;});
+    var hraDone=hraRecord.filter(function(r){return(r["Status"]||"").toLowerCase()==="done";});
+    var hraScore=30; // default: belum pernah HRA = max risk
+    var hraInfo="Belum pernah HRA";
+    var hraFleet=hraRecord.length?hraRecord[0]["Jenis Fleet"]||"":
+      (rawDAT||[]).filter(function(r){return r["Nama Kapal"]===kapal;})[0]?.["Jenis Fleet"]||"";
+
+    if(hraDone.length>0){
+      /* Cari HRA terakhir */
+      var lastBulan=hraDone[hraDone.length-1]["Bulan Pelaksanaan"]||"";
+      var bIdx=BULAN_MAP[lastBulan];
+      var bulanLalu=typeof bIdx!=="undefined"?(now.getMonth()-bIdx+12)%12:12;
+      if(bulanLalu<=3){hraScore=0;hraInfo="HRA < 3 bulan lalu";}
+      else if(bulanLalu<=6){hraScore=10;hraInfo="HRA 3–6 bulan lalu";}
+      else if(bulanLalu<=12){hraScore=20;hraInfo="HRA 6–12 bulan lalu";}
+      else{hraScore=25;hraInfo="HRA > 12 bulan lalu";}
+    }
+
+    /* ─ 2. HAZARD SCORE (0–35) ─ */
+    var hazardOver=0;
+    var hazardTotal=0;
+    var hazardDetail=[];
+    [
+      {data:rawFisika||[],label:"Fisika"},
+      {data:rawKimia||[],label:"Kimia"},
+      {data:rawBiologi||[],label:"Biologi"},
+      {data:rawErgonomi||[],label:"Ergonomi"},
+      {data:rawPsikososial||[],label:"Psikososial"}
+    ].forEach(function(h){
+      var kapalData=h.data.filter(function(r){return(r["Nama Kapal"]||r["kapal"]||"")=== kapal;});
+      var over=kapalData.filter(function(r){
+        var s=(r["Status"]||r["Level Risiko"]||"").toLowerCase();
+        return s.includes("melebihi")||s.includes("tinggi")||parseInt(r["Level Risiko (1–4)"]||0)>=3;
+      }).length;
+      if(kapalData.length>0){hazardTotal+=kapalData.length;hazardOver+=over;}
+      if(over>0)hazardDetail.push(h.label+"("+over+")");
+    });
+    var hazardScore=Math.min(35,Math.round((hazardOver/Math.max(hazardTotal,1))*35+(hazardOver*3)));
+    var hazardInfo=hazardOver>0?(hazardOver+" parameter melebihi NAB: "+hazardDetail.join(", ")):"Semua dalam batas NAB";
+
+    /* ─ 3. DAT SCORE (0–20) ─ */
+    var datRecord=(rawDAT||[]).filter(function(r){return(r["Nama Kapal"]||"")=== kapal;});
+    var datPos=datRecord.reduce(function(s,r){return s+parseInt(r["Jumlah Crew Positif"]||0);},0);
+    var datScore=0;
+    var datInfo="Tidak ada hasil positif";
+    if(datPos>0){datScore=20;datInfo=datPos+" awak reaktif";}
+    else if(datRecord.length===0){datScore=10;datInfo="Belum pernah DAT";}
+
+    /* ─ 4. BIOMARKER SCORE (0–15) ─ */
+    var bioRecord=(typeof rawBiomarker!=="undefined"?rawBiomarker:[]).filter(function(r){return(r.kapal||"")=== kapal;});
+    var bioOver=bioRecord.filter(function(r){return parseFloat(r.kreatinin||0)>parseFloat(r.rujukan||25);}).length;
+    var bioScore=Math.min(15,bioOver*8);
+    var bioInfo=bioOver>0?(bioOver+" sampel > BEI"):(bioRecord.length>0?"Normal":"Belum ada data");
+
+    /* ─ TOTAL SKOR ─ */
+    var total=hraScore+hazardScore+datScore+bioScore;
+
+    /* ─ LEVEL ─ */
+    var level,levelColor,levelBg;
+    if(total>75){level="KRITIS";levelColor="#B71C1C";levelBg="#FFEBEE";}
+    else if(total>50){level="TINGGI";levelColor="#E65100";levelBg="#FFF3E0";}
+    else if(total>25){level="SEDANG";levelColor="#F59E0B";levelBg="#FEF3C7";}
+    else{level="RENDAH";levelColor="#2E7D32";levelBg="#E8F5E9";}
+
+    /* ─ REKOMENDASI UTAMA ─ */
+    var reks=[];
+    if(hraScore>=20)reks.push("Jadwalkan HRA segera");
+    if(hazardOver>0)reks.push("Implementasi pengendalian "+hazardDetail[0]);
+    if(datScore===20)reks.push("Tindak lanjut "+datPos+" awak reaktif");
+    if(datScore===10)reks.push("Jadwalkan DAT");
+    if(bioOver>0)reks.push("Pemeriksaan hematologi ABK");
+    if(reks.length===0)reks.push("Pertahankan program IH — status aman");
+
+    results.push({
+      kapal:kapal, fleet:hraFleet||"—",
+      total:total, level:level, levelColor:levelColor, levelBg:levelBg,
+      hraScore:hraScore, hraInfo:hraInfo,
+      hazardScore:hazardScore, hazardInfo:hazardInfo, hazardOver:hazardOver,
+      datScore:datScore, datInfo:datInfo, datPos:datPos,
+      bioScore:bioScore, bioInfo:bioInfo, bioOver:bioOver,
+      rekomendasi:reks[0], rekList:reks
+    });
+  });
+
+  /* Sort: skor tertinggi (paling berisiko) duluan */
+  return results.sort(function(a,b){return b.total-a.total;});
+}
+
+/* ── Render halaman Risk Prediction ── */
+var _rpAllData=[];
+function renderRiskPage(){
+  _rpAllData=calcRiskScores();
+
+  var fleetF=((document.getElementById("rp-filter-fleet")||{}).value)||"";
+  var riskF=((document.getElementById("rp-filter-risk")||{}).value)||"";
+
+  var filtered=_rpAllData.filter(function(r){
+    if(fleetF&&r.fleet!==fleetF)return false;
+    if(riskF&&r.level!==riskF)return false;
+    return true;
+  });
+
+  /* KPI */
+  function setEl(id,v){var el=document.getElementById(id);if(el)el.textContent=v;}
+  setEl("rp-kritis",_rpAllData.filter(function(r){return r.level==="KRITIS";}).length);
+  setEl("rp-tinggi",_rpAllData.filter(function(r){return r.level==="TINGGI";}).length);
+  setEl("rp-sedang",_rpAllData.filter(function(r){return r.level==="SEDANG";}).length);
+  setEl("rp-rendah",_rpAllData.filter(function(r){return r.level==="RENDAH";}).length);
+  setEl("rp-total",_rpAllData.length);
+
+  /* Render tabel */
+  renderRiskTable(filtered);
+
+  /* Render critical cards */
+  renderCriticalCards(_rpAllData.filter(function(r){return r.level==="KRITIS"||r.level==="TINGGI";}).slice(0,3));
+}
+
+function renderRiskTable(data){
+  var tbody=document.getElementById("rpTableBody");
+  var footer=document.getElementById("rpTableFooter");
+  if(!tbody)return;
+  if(!data||!data.length){
+    tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--text-muted)">Tidak ada data kapal yang ditemukan</td></tr>';
+    if(footer)footer.textContent="Tidak ada data";
+    return;
+  }
+
+  function scorePill(score,max,color){
+    var pct=Math.min(100,Math.round(score/max*100));
+    return'<div style="display:flex;align-items:center;gap:5px">'
+      +'<div style="flex:1;background:#E2E8F0;border-radius:3px;height:5px;overflow:hidden;min-width:40px">'
+      +'<div style="width:'+pct+'%;background:'+color+';height:100%;border-radius:3px"></div></div>'
+      +'<span style="font-size:10px;font-weight:700;color:'+color+';min-width:18px">'+score+'</span>'
+      +'</div>';
+  }
+
+  tbody.innerHTML=data.map(function(r,i){
+    /* Skor bar */
+    var barPct=r.total;
+    var barColor=r.levelColor;
+    return'<tr>'
+      +'<td><strong style="color:var(--text)">'+esc(r.kapal)+'</strong></td>'
+      +'<td><span style="background:#E3F2FD;color:#1565C0;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">'+esc(r.fleet)+'</span></td>'
+      +'<td style="text-align:center;min-width:80px">'
+        +'<div style="font-size:18px;font-weight:700;color:'+barColor+'">'+r.total+'</div>'
+        +'<div style="background:#E2E8F0;border-radius:4px;height:6px;overflow:hidden;margin-top:3px">'
+        +'<div style="width:'+barPct+'%;background:'+barColor+';height:100%;border-radius:4px;transition:.3s"></div></div>'
+      +'</td>'
+      +'<td style="text-align:center">'
+        +'<span style="background:'+r.levelBg+';color:'+r.levelColor+';padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700">'+r.level+'</span>'
+      +'</td>'
+      +'<td style="text-align:center" title="'+esc(r.hraInfo)+'">'
+        +scorePill(r.hraScore,30,r.hraScore>20?"#C62828":r.hraScore>10?"#E65100":"#2E7D32")
+      +'</td>'
+      +'<td style="text-align:center" title="'+esc(r.hazardInfo)+'">'
+        +scorePill(r.hazardScore,35,r.hazardScore>25?"#C62828":r.hazardScore>12?"#E65100":"#2E7D32")
+      +'</td>'
+      +'<td style="text-align:center" title="'+esc(r.datInfo)+'">'
+        +scorePill(r.datScore,20,r.datScore>=20?"#C62828":r.datScore>0?"#E65100":"#2E7D32")
+      +'</td>'
+      +'<td style="text-align:center" title="'+esc(r.bioInfo)+'">'
+        +scorePill(r.bioScore,15,r.bioScore>8?"#C62828":r.bioScore>0?"#7B1FA2":"#2E7D32")
+      +'</td>'
+      +'<td style="font-size:11px;color:var(--text-muted);max-width:180px;word-break:break-word">'+esc(r.rekomendasi)+'</td>'
+      +'</tr>';
+  }).join("");
+
+  if(footer)footer.textContent="Menampilkan "+data.length+" dari "+_rpAllData.length+" kapal";
+}
+
+function renderCriticalCards(data){
+  var el=document.getElementById("rpCriticalCards");
+  if(!el||!data.length)return;
+
+  el.innerHTML='<div style="margin:8px 0 6px;font-size:12px;font-weight:700;color:var(--text)">'
+    +'<i class="fas fa-fire-flame-curved" style="color:#C62828;margin-right:6px"></i>'
+    +'Kapal Prioritas Intervensi Segera</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:10px">'
+    +data.map(function(r){
+      return'<div style="background:var(--card);border:1px solid var(--border);border-top:3px solid '+r.levelColor+';border-radius:12px;padding:16px">'
+        /* Header kapal */
+        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
+          +'<div>'
+            +'<div style="font-size:14px;font-weight:700;color:var(--text)"><i class="fas fa-ship" style="margin-right:6px;color:'+r.levelColor+'"></i>'+esc(r.kapal)+'</div>'
+            +'<div style="font-size:11px;color:var(--text-muted);margin-top:2px">'+esc(r.fleet)+'</div>'
+          +'</div>'
+          +'<div style="text-align:center">'
+            +'<div style="font-size:32px;font-weight:700;color:'+r.levelColor+'">'+r.total+'</div>'
+            +'<span style="background:'+r.levelBg+';color:'+r.levelColor+';padding:2px 10px;border-radius:20px;font-size:10px;font-weight:700">'+r.level+'</span>'
+          +'</div>'
+        +'</div>'
+        /* 4 dimensi */
+        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">'
+        +[
+          {label:"HRA",score:r.hraScore,max:30,info:r.hraInfo,c:r.hraScore>20?"#C62828":r.hraScore>10?"#E65100":"#2E7D32"},
+          {label:"5 Hazard",score:r.hazardScore,max:35,info:r.hazardInfo,c:r.hazardScore>25?"#C62828":r.hazardScore>12?"#E65100":"#2E7D32"},
+          {label:"DAT",score:r.datScore,max:20,info:r.datInfo,c:r.datScore>=20?"#C62828":r.datScore>0?"#E65100":"#2E7D32"},
+          {label:"Biomarker",score:r.bioScore,max:15,info:r.bioInfo,c:r.bioScore>8?"#C62828":r.bioScore>0?"#7B1FA2":"#2E7D32"}
+        ].map(function(d){
+          return'<div style="background:var(--bg);border-radius:8px;padding:8px 10px">'
+            +'<div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">'+d.label+'</div>'
+            +'<div style="display:flex;align-items:center;justify-content:space-between">'
+              +'<div style="font-size:14px;font-weight:700;color:'+d.c+'">'+d.score+' <span style="font-size:10px;font-weight:400;color:var(--text-muted)">/ '+d.max+'</span></div>'
+            +'</div>'
+            +'<div style="background:var(--border);border-radius:3px;height:5px;overflow:hidden;margin-top:5px">'
+              +'<div style="width:'+Math.min(100,Math.round(d.score/d.max*100))+'%;background:'+d.c+';height:100%;border-radius:3px"></div>'
+            +'</div>'
+            +'<div style="font-size:9.5px;color:var(--text-muted);margin-top:4px;line-height:1.4">'+esc(d.info)+'</div>'
+          +'</div>';
+        }).join("")
+        +'</div>'
+        /* Rekomendasi */
+        +'<div style="background:'+r.levelBg+';border-radius:8px;padding:10px 12px">'
+          +'<div style="font-size:10px;font-weight:700;color:'+r.levelColor+';margin-bottom:6px"><i class="fas fa-list-check" style="margin-right:4px"></i>Tindak Lanjut</div>'
+          +r.rekList.map(function(rek,j){
+            return'<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:'+(j<r.rekList.length-1?'5px':'0')+'">'
+              +'<div style="width:4px;height:4px;background:'+r.levelColor+';border-radius:50%;flex-shrink:0;margin-top:5px"></div>'
+              +'<div style="font-size:11px;color:'+r.levelColor+';font-weight:600">'+esc(rek)+'</div>'
+            +'</div>';
+          }).join("")
+        +'</div>'
+      +'</div>';
+    }).join("")
+    +'</div>';
+}
+
+function searchRiskTable(){
+  var q=((document.getElementById("rp-search")||{}).value||"").toLowerCase();
+  var filtered=q?_rpAllData.filter(function(r){return r.kapal.toLowerCase().includes(q)||r.fleet.toLowerCase().includes(q);}):_rpAllData;
+  var riskF=((document.getElementById("rp-filter-risk")||{}).value)||"";
+  if(riskF)filtered=filtered.filter(function(r){return r.level===riskF;});
+  renderRiskTable(filtered);
+}
+
 function renderSummaryPage(){
   var el=document.getElementById("summaryReport");
   if(!el)return;
