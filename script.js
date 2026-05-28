@@ -2613,8 +2613,22 @@ async function loadAccessLog(){
       rawAlog=data.logs||[];
       filteredAlog=[...rawAlog];
       applyAlogFilters();
+      if(rawAlog.length===0){
+        if(tbody)tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">'
+          +'<i class="fas fa-inbox" style="font-size:28px;display:block;margin-bottom:8px"></i>'
+          +'Belum ada log akses.<br><small>Log akan tercatat otomatis saat ada user login.</small></td></tr>';
+      }
+    }else if(data&&data.status==="forbidden"){
+      if(tbody)tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:30px;color:#C62828"><i class="fas fa-lock" style="margin-right:8px"></i>Akses ditolak — hanya Admin.</td></tr>';
     }else{
-      if(tbody)tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:30px;color:#C62828">Gagal memuat log: '+esc((data&&data.message)||"Error")+'</td></tr>';
+      /* Error paling umum: GAS belum di-redeploy */
+      var msg=(data&&data.message)||"Gagal memuat";
+      var isDeployError=msg.toLowerCase().includes("tidak dikenal")||msg.toLowerCase().includes("unknown");
+      if(tbody)tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:30px">'
+        +'<i class="fas fa-circle-exclamation" style="color:#E65100;font-size:24px;display:block;margin-bottom:10px"></i>'
+        +'<b style="color:#E65100">'+esc(msg)+'</b><br>'
+        +(isDeployError?'<small style="color:var(--text-muted);margin-top:6px;display:block">Solusi: Buka Google Apps Script → Deploy → Manage deployments → buat deployment baru → copy URL baru ke GAS_URL di script.js</small>':"")
+        +'</td></tr>';
     }
   }catch(err){
     if(tbody)tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:30px;color:#C62828">Error: '+esc(err.message)+'</td></tr>';
