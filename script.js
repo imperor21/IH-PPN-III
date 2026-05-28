@@ -3,7 +3,7 @@
 /* ✅ Pedoman PDF & Foto Dokumentasi → Google Drive (multi-device)    */
 /* ✅ IndexedDB dihapus — data terpusat di GAS/Drive                  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbzOLTVKUaa_aLqabpqHh0FluhEA1YEn903VUUSzzZnpXdPDFs6HOlNXTV-EdrbhLbqiwg/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzqCyLLFs-rLkahFThbzxIDWCpeoCjv_cvRZqw00_28Q96W6BerasPhmCaV8_Qel2lrPQ/exec";
 
 async function gasPost(payload) {
   const controller = new AbortController();
@@ -82,6 +82,10 @@ let loginAttempts=0;
 function getLoginLockedUntil(){return parseInt(localStorage.getItem("ppn_locked_until")||"0");}
 function setLoginLockedUntil(ts){localStorage.setItem("ppn_locked_until",ts.toString());}
 
+/* ── OTP state ── */
+var _otpUsername = "";
+var _otpTimer = null;
+
 async function doLogin(){
   const username=document.getElementById("loginUsername").value.trim();
   const password=document.getElementById("loginPassword").value;
@@ -91,14 +95,153 @@ async function doLogin(){
   if(!username||!password){showLoginError("Username dan password tidak boleh kosong.");return;}
   btn.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Memverifikasi...';btn.disabled=true;
   try{
-    clearSession(); // bersihkan sesi lama sebelum login baru
+    clearSession();
     const data=await gasPost({action:"login",username,password,deviceInfo:getDeviceInfo()});
-    if(data.status==="ok"){loginAttempts=0;localStorage.removeItem("ppn_locked_until");saveSession(data,data.token);document.getElementById("loginError").style.display="none";document.getElementById("loginOverlay").classList.add("hidden");document.getElementById("sidebarUsername").textContent=getMappedName(data.displayName);applyRoleUI();loadData();}
-    else if(data.status==="locked"){setLoginLockedUntil(Date.now()+15*60*1000);showLoginError(data.message||"Akun dikunci sementara.");shakeCard();}
-    else{loginAttempts++;if(loginAttempts>=5){setLoginLockedUntil(Date.now()+15*60*1000);loginAttempts=0;}showLoginError(data.message||"Username atau password salah.");shakeCard();}
+    if(data.status==="ok"){
+      loginAttempts=0;localStorage.removeItem("ppn_locked_until");
+      saveSession(data,data.token);
+      document.getElementById("loginError").style.display="none";
+      document.getElementById("loginOverlay").classList.add("hidden");
+      document.getElementById("sidebarUsername").textContent=getMappedName(data.displayName);
+      applyRoleUI();loadData();
+    }
+    else if(data.status==="otp_required"){
+      /* Tampilkan panel OTP */
+      _otpUsername=username;
+      showOTPPanel(data.message);
+    }
+    else if(data.status==="locked"){
+      setLoginLockedUntil(Date.now()+15*60*1000);
+      showLoginError(data.message||"Akun dikunci sementara.");shakeCard();
+    }
+    else{
+      loginAttempts++;
+      if(loginAttempts>=5){setLoginLockedUntil(Date.now()+15*60*1000);loginAttempts=0;}
+      showLoginError(data.message||"Username atau password salah.");shakeCard();
+    }
   }catch(err){showLoginError("Tidak dapat terhubung ke server: "+err.message);console.error("Login error:",err);}
   btn.innerHTML='<i class="fas fa-right-to-bracket"></i> Masuk';btn.disabled=false;
 }
+
+/* ── Panel OTP ── */
+function showOTPPanel(msg){
+  document.getElementById("panelLogin").style.display="none";
+  document.getElementById("panelOTP").style.display="block";
+  var hint=document.getElementById("otpPhoneHint");
+  if(hint)hint.textContent=msg||"Masukkan kode 6 digit dari WhatsApp Anda";
+  document.getElementById("otpError").style.display="none";
+  /* Kosongkan kotak OTP */
+  for(var i=0;i<6;i++){
+    var box=document.getElementById("otp"+i);
+    if(box){box.value="";box.classList.remove("filled");}
+  }
+  /* Fokus ke kotak pertama */
+  setTimeout(function(){var b=document.getElementById("otp0");if(b)b.focus();},100);
+  /* Mulai countdown 5 menit */
+  startOTPCountdown(120);
+}
+
+function showLoginPanel(){
+  document.getElementById("panelOTP").style.display="none";
+  document.getElementById("panelLogin").style.display="block";
+  if(_otpTimer){clearInterval(_otpTimer);_otpTimer=null;}
+}
+
+function startOTPCountdown(seconds){
+  if(_otpTimer)clearInterval(_otpTimer);
+  var remaining=seconds;
+  var el=document.getElementById("otpCountdown");
+  function tick(){
+    if(!el)return;
+    var m=Math.floor(remaining/60),s=remaining%60;
+    el.textContent=m+":"+(s<10?"0":"")+s;
+    if(remaining<=0){
+      clearInterval(_otpTimer);
+      el.textContent="Kedaluwarsa";
+      el.style.color="var(--red)";
+    }
+    remaining--;
+  }
+  tick();
+  _otpTimer=setInterval(tick,1000);
+}
+
+/* ── Navigasi antar kotak OTP ── */
+function otpNext(el,nextIdx){
+  el.value=el.value.replace(/[^0-9]/g,"");
+  if(el.value){el.classList.add("filled");var next=document.getElementById("otp"+nextIdx);if(next)next.focus();}
+  else el.classList.remove("filled");
+}
+function otpBack(e,el,prevIdx){
+  if(e.key==="Backspace"&&!el.value&&prevIdx!==null){
+    var prev=document.getElementById("otp"+prevIdx);
+    if(prev){prev.value="";prev.classList.remove("filled");prev.focus();}
+  }
+}
+function otpSubmitAuto(){
+  var last=document.getElementById("otp5");
+  if(last)last.classList.add("filled");
+  var code="";
+  for(var i=0;i<6;i++){var b=document.getElementById("otp"+i);if(b)code+=b.value;}
+  if(code.length===6)setTimeout(doVerifyOTP,120);
+}
+
+/* ── Verifikasi OTP ── */
+async function doVerifyOTP(){
+  var code="";
+  for(var i=0;i<6;i++){var b=document.getElementById("otp"+i);if(b)code+=b.value;}
+  if(code.length<6){
+    var errEl=document.getElementById("otpError");
+    var errMsg=document.getElementById("otpErrorMsg");
+    if(errMsg)errMsg.textContent="Masukkan 6 digit kode OTP.";
+    if(errEl)errEl.style.display="flex";
+    return;
+  }
+  var btn=document.getElementById("btnVerifyOTP");
+  if(btn){btn.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Memverifikasi...';btn.disabled=true;}
+  try{
+    const data=await gasPost({action:"verifyOTP",username:_otpUsername,otp:code,deviceInfo:getDeviceInfo()});
+    if(data.status==="ok"){
+      if(_otpTimer)clearInterval(_otpTimer);
+      saveSession(data,data.token);
+      document.getElementById("loginOverlay").classList.add("hidden");
+      document.getElementById("sidebarUsername").textContent=getMappedName(data.displayName);
+      applyRoleUI();loadData();
+    }else{
+      var errEl=document.getElementById("otpError");
+      var errMsg=document.getElementById("otpErrorMsg");
+      if(errMsg)errMsg.textContent=data.message||"Kode OTP salah.";
+      if(errEl)errEl.style.display="flex";
+      /* Kocok kotak OTP */
+      for(var i=0;i<6;i++){var b=document.getElementById("otp"+i);if(b){b.value="";b.classList.remove("filled");}}
+      var b0=document.getElementById("otp0");if(b0)b0.focus();
+    }
+  }catch(err){
+    var errEl=document.getElementById("otpError");
+    var errMsg=document.getElementById("otpErrorMsg");
+    if(errMsg)errMsg.textContent="Error: "+err.message;
+    if(errEl)errEl.style.display="flex";
+  }
+  if(btn){btn.innerHTML='<i class="fas fa-shield-check"></i> Verifikasi OTP';btn.disabled=false;}
+}
+
+/* ── Kirim ulang OTP ── */
+async function doResendOTP(){
+  var btn=document.getElementById("btnResendOTP");
+  if(btn){btn.textContent="Mengirim...";btn.disabled=true;}
+  var pwEl=document.getElementById("loginPassword");
+  var pw=pwEl?pwEl.value:"";
+  try{
+    const data=await gasPost({action:"login",username:_otpUsername,password:pw,deviceInfo:getDeviceInfo()});
+    if(data.status==="otp_required"){
+      startOTPCountdown(120);
+      if(typeof showToast==="function")showToast("Kode OTP baru telah dikirim ke WhatsApp","success");
+    }
+  }catch(e){}
+  setTimeout(function(){if(btn){btn.textContent="Kirim ulang kode OTP";btn.disabled=false;}},3000);
+}
+
+
 function shakeCard(){const card=document.querySelector(".login-card");card.style.animation="shake .4s ease";setTimeout(()=>{card.style.animation="";},400);}
 
 /* ── Kumpulkan info perangkat untuk access log ── */
