@@ -3,7 +3,7 @@
 /* ✅ Pedoman PDF & Foto Dokumentasi → Google Drive (multi-device)    */
 /* ✅ IndexedDB dihapus — data terpusat di GAS/Drive                  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbwdS1WjQqa3Gfq2W3bwj1MWpmwePWpRIHt4D6run536qpIQ34VbBroc-PpbL2zsAzDgIg/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzqCyLLFs-rLkahFThbzxIDWCpeoCjv_cvRZqw00_28Q96W6BerasPhmCaV8_Qel2lrPQ/exec";
 
 async function gasPost(payload) {
   const controller = new AbortController();
@@ -351,6 +351,13 @@ function toggleNavGroup(id){
   if(!grp)return;
   const wasOpen=grp.classList.contains("open");
   grp.classList.toggle("open");
+  /* Auto-scroll ke header grup yang baru dibuka */
+  if(!wasOpen){
+    setTimeout(function(){
+      const hdr=grp.querySelector(".nav-group-hdr");
+      if(hdr)hdr.scrollIntoView({behavior:"smooth",block:"nearest"});
+    },80);
+  }
   /* Save state */
   try{
     const states=JSON.parse(localStorage.getItem("ppn_nav_groups")||"{}");
