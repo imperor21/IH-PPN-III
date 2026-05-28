@@ -3,7 +3,7 @@
 /* ✅ Pedoman PDF & Foto Dokumentasi → Google Drive (multi-device)    */
 /* ✅ IndexedDB dihapus — data terpusat di GAS/Drive                  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbxWscFjKrrqQgNwmeRLAfjBtWi05bnRLkW5ESrtVBWkNlIA5exFlTLhNid8VnGUoWMK2Q/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzqCyLLFs-rLkahFThbzxIDWCpeoCjv_cvRZqw00_28Q96W6BerasPhmCaV8_Qel2lrPQ/exec";
 
 async function gasPost(payload) {
   const controller = new AbortController();
@@ -3962,6 +3962,18 @@ function searchRiskTable(){
 function renderSummaryPage(){
   var el=document.getElementById("summaryReport");
   if(!el)return;
+
+  /* Tampilkan loading dulu agar browser tidak freeze */
+  el.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:320px;gap:16px">'
+    +'<div style="width:48px;height:48px;border:4px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin 0.8s linear infinite"></div>'
+    +'<div style="font-size:13px;color:var(--text-muted)">Memuat data laporan...</div>'
+    +'</div>';
+
+  /* Render di luar main thread agar UI tidak freeze */
+  setTimeout(function(){ _doRenderSummary(el); }, 60);
+}
+
+function _doRenderSummary(el){
   var d=getSummaryData();
   var now=new Date();
   var tgl=now.toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"});
