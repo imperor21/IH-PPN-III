@@ -3,7 +3,7 @@
 /* ✅ Pedoman PDF & Foto Dokumentasi → Google Drive (multi-device)    */
 /* ✅ IndexedDB dihapus — data terpusat di GAS/Drive                  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbxWscFjKrrqQgNwmeRLAfjBtWi05bnRLkW5ESrtVBWkNlIA5exFlTLhNid8VnGUoWMK2Q/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzqCyLLFs-rLkahFThbzxIDWCpeoCjv_cvRZqw00_28Q96W6BerasPhmCaV8_Qel2lrPQ/exec";
 
 async function gasPost(payload) {
   const controller = new AbortController();
@@ -673,6 +673,8 @@ function initMobileNav(){
 
 /* DATA LOAD */
 async function loadData(){
+  /* Reset summary cache agar data terbaru selalu dipakai */
+  _summaryCache=null; _summaryCacheKey="";
   if(!isSessionValid()){
     showError("Sesi habis. Silakan login kembali.");
     const overlay=document.getElementById("loginOverlay");
@@ -3959,21 +3961,36 @@ function searchRiskTable(){
   renderRiskTable(filtered);
 }
 
+var _summaryCache = null;
+var _summaryCacheKey = "";
+
 function renderSummaryPage(){
   var el=document.getElementById("summaryReport");
   if(!el)return;
 
-  /* Tampilkan loading dulu agar browser tidak freeze */
+  var bulan=((document.getElementById("summary-filter-bulan")||{}).value)||"";
+  var fleet=((document.getElementById("summary-filter-fleet")||{}).value)||"";
+  var cacheKey=bulan+"|"+fleet;
+
+  /* Kalau filter sama dan sudah pernah dirender — pakai cache */
+  if(_summaryCache && _summaryCacheKey===cacheKey){
+    el.innerHTML=_summaryCache;
+    return;
+  }
+
+  /* Tampilkan loading spinner */
   el.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:320px;gap:16px">'
-    +'<div style="width:48px;height:48px;border:4px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin 0.8s linear infinite"></div>'
+    +'<div style="width:44px;height:44px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin 0.8s linear infinite"></div>'
     +'<div style="font-size:13px;color:var(--text-muted)">Memuat data laporan...</div>'
     +'</div>';
 
-  /* Render di luar main thread agar UI tidak freeze */
-  setTimeout(function(){ _doRenderSummary(el); }, 60);
+  /* Render async agar spinner terlihat dulu */
+  setTimeout(function(){
+    _doRenderSummary(el, cacheKey);
+  }, 30);
 }
 
-function _doRenderSummary(el){
+function _doRenderSummary(el, cacheKey){
   var d=getSummaryData();
   var now=new Date();
   var tgl=now.toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"});
@@ -4330,7 +4347,7 @@ function _doRenderSummary(el){
     +_pgFooter(pgRekNum,totalPages,tgl);
 
   /* ══ Render semua halaman ══ */
-  el.innerHTML='<div id="summaryPrintArea" style="display:flex;flex-direction:column;gap:0;background:#CBD5E1;padding:0;width:794px">'
+  var html='<div id="summaryPrintArea" style="display:flex;flex-direction:column;gap:0;background:#CBD5E1;padding:0;width:794px">'
     +_a4Page("pg-cover",pg1)
     +_a4Page("pg-hra",pg2)
     +_a4Page("pg-dat",pg3)
@@ -4339,6 +4356,10 @@ function _doRenderSummary(el){
     +(nomBio?_a4Page("pg-bio",pg6bio):"")
     +_a4Page("pg-rek",pgRek)
     +'</div>';
+  el.innerHTML=html;
+  /* Simpan cache agar filter berikutnya tidak re-render */
+  _summaryCache=html;
+  _summaryCacheKey=cacheKey||"";
 }
 
 /* ═══════════════════════════════════════════════════════════
