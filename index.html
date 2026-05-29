@@ -459,8 +459,8 @@ Kirim ulang kode OTP
 <div class="filter-group"><label>Nama Kapal</label><input type="text" id="dat-filter-kapal" placeholder="Cari nama kapal..." oninput="applyDATFilters()"></div>
 <button class="btn-clear" onclick="clearDATFilters()"><i class="fas fa-xmark"></i> Reset</button>
 <button class="btn-export-ppt" onclick="exportDATPPT()" title="Export data saat ini ke PowerPoint"><i class="fas fa-file-powerpoint"></i> Export PPT</button>
-<button class="btn-memo-fleet" onclick="showMemoModal('fleet')" title="Buat Memo DAT ke Manager Fleet"><i class="fas fa-file-word"></i> Memo Fleet</button>
-<button class="btn-memo-klinik" onclick="showMemoModal('klinik')" title="Buat Memo DAT ke Klinik/Vendor"><i class="fas fa-file-word"></i> Memo Klinik</button>
+<button class="btn-memo-fleet admin-only" onclick="showMemoModal('fleet')" title="Buat Memo DAT ke Manager Fleet"><i class="fas fa-file-word"></i> Memo Fleet</button>
+<button class="btn-memo-klinik admin-only" onclick="showMemoModal('klinik')" title="Buat Memo DAT ke Klinik/Vendor"><i class="fas fa-file-word"></i> Memo Klinik</button>
 </div>
 <div class="kpi-grid">
 <div class="kpi-card blue"><a class="kpi-link" href="#">View Detail</a><div class="kpi-icon"><i class="fas fa-ship"></i></div><div class="kpi-body"><div class="kpi-value">85</div><div class="kpi-label">Total Kapal</div></div></div>
@@ -1362,7 +1362,17 @@ Kirim ulang kode OTP
   </button>
 </nav>
 
-<script src="script.js"></script>
+<!-- ═══ JS Modules — urutan WAJIB dipertahankan ═══ -->
+<script src="js/utils.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/data.js"></script>
+<script src="js/modules.js"></script>
+<script src="js/alog.js"></script>
+<script src="js/hazard_ppt.js"></script>
+<script src="js/risk.js"></script>
+<script src="js/summary.js"></script>
+<script src="js/memo.js"></script>
 <script src="ppt_export.js"></script>
 <!-- ══════════ MEMO DAT MODAL ══════════ -->
 <div id="memoModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center">
