@@ -451,6 +451,28 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 /* ═══ ROLE BADGE HIDDEN — nama saja yang tampil ═══ */
 .sidebar-user .user-role{display:none!important}
 
+/* ── Memo DAT Buttons ── */
+.btn-memo-fleet,.btn-memo-klinik{
+  display:inline-flex;align-items:center;gap:7px;
+  color:#fff;border:none;
+  padding:8px 16px;border-radius:var(--radius-sm);
+  font-size:12.5px;font-weight:700;cursor:pointer;
+  font-family:var(--font);transition:all .2s;
+  white-space:nowrap;
+}
+.btn-memo-fleet{background:linear-gradient(135deg,#1565C0,#0F2A4A);box-shadow:0 3px 12px rgba(21,101,192,.35);}
+.btn-memo-fleet:hover{background:linear-gradient(135deg,#0D47A1,#071929);transform:translateY(-1px);}
+.btn-memo-klinik{background:linear-gradient(135deg,#2E7D32,#1B5E20);box-shadow:0 3px 12px rgba(46,125,50,.35);}
+.btn-memo-klinik:hover{background:linear-gradient(135deg,#1B5E20,#0A3D0A);transform:translateY(-1px);}
+.btn-memo-fleet i,.btn-memo-klinik i{font-size:14px}
+
+/* ── Memo form fields ── */
+.memo-field{margin-bottom:14px}
+.memo-field label{display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+.memo-field input,.memo-field select,.memo-field textarea{width:100%;padding:9px 12px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:13px;color:#1E293B;font-family:var(--font);box-sizing:border-box;transition:border-color .18s;}
+.memo-field input:focus,.memo-field select:focus,.memo-field textarea:focus{outline:none;border-color:#1565C0;box-shadow:0 0 0 3px rgba(21,101,192,.1);}
+.memo-field textarea{resize:vertical;min-height:70px}
+
 /* ═══ LOGO IMAGES ═══ */
 .logo-hero{
   width:80px;height:auto;
