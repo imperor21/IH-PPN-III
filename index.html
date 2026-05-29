@@ -13,6 +13,7 @@
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+<script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
 </head>
 <body>
 
@@ -38,8 +39,8 @@
 </div>
 </div>
 <div class="login-hero-text">
-<h1 class="login-hero-title">IH MARITIME<br>MONITORING<br>SYSTEM</h1>
-<p class="login-hero-desc">System Development &mdash; IH Officer PPN</p>
+<h1 class="login-hero-title">IH 2026<br>MONITORING<br>SYSTEM</h1>
+<p class="login-hero-desc">Industrial Hygiene Dashboard &mdash; Pertamina Patra Niaga III</p>
 </div>
 <div class="login-stats-row">
 <div class="login-stat"><span class="ls-num">85</span><span class="ls-lbl">Est Kapal Milik</span></div>
@@ -109,7 +110,7 @@
 <i class="fas fa-mobile-screen" style="font-size:22px;color:#1565C0"></i>
 </div>
 <h2 class="login-heading" style="margin-bottom:4px">Verifikasi OTP</h2>
-<p class="login-sub">Request OTP Code to IH officer</p>
+<p class="login-sub">Kode 6 digit minta ke Admin</p>
 <p style="font-size:11.5px;color:var(--text-muted);margin-top:4px" id="otpPhoneHint"></p>
 </div>
 <div class="login-error" id="otpError" style="display:none">
@@ -458,6 +459,8 @@ Kirim ulang kode OTP
 <div class="filter-group"><label>Nama Kapal</label><input type="text" id="dat-filter-kapal" placeholder="Cari nama kapal..." oninput="applyDATFilters()"></div>
 <button class="btn-clear" onclick="clearDATFilters()"><i class="fas fa-xmark"></i> Reset</button>
 <button class="btn-export-ppt" onclick="exportDATPPT()" title="Export data saat ini ke PowerPoint"><i class="fas fa-file-powerpoint"></i> Export PPT</button>
+<button class="btn-memo-fleet" onclick="showMemoModal('fleet')" title="Buat Memo DAT ke Manager Fleet"><i class="fas fa-file-word"></i> Memo Fleet</button>
+<button class="btn-memo-klinik" onclick="showMemoModal('klinik')" title="Buat Memo DAT ke Klinik/Vendor"><i class="fas fa-file-word"></i> Memo Klinik</button>
 </div>
 <div class="kpi-grid">
 <div class="kpi-card blue"><a class="kpi-link" href="#">View Detail</a><div class="kpi-icon"><i class="fas fa-ship"></i></div><div class="kpi-body"><div class="kpi-value">85</div><div class="kpi-label">Total Kapal</div></div></div>
@@ -1361,5 +1364,34 @@ Kirim ulang kode OTP
 
 <script src="script.js"></script>
 <script src="ppt_export.js"></script>
+<!-- ══════════ MEMO DAT MODAL ══════════ -->
+<div id="memoModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:16px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+    <!-- Header -->
+    <div style="background:#0F2A4A;border-radius:16px 16px 0 0;padding:18px 24px;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div id="memoModalTitle" style="font-size:15px;font-weight:700;color:#fff"></div>
+        <div style="font-size:11px;color:#8899AA;margin-top:2px">Isi data berikut sebelum download</div>
+      </div>
+      <button onclick="closeMemoModal()" style="background:rgba(255,255,255,.15);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">&times;</button>
+    </div>
+    <!-- Form -->
+    <div style="padding:22px 24px">
+      <div id="memoModalFields"></div>
+      <!-- Buttons -->
+      <div style="display:flex;gap:10px;margin-top:20px">
+        <button onclick="downloadMemo()" id="btnDownloadMemo"
+          style="flex:1;background:linear-gradient(135deg,#1565C0,#0F2A4A);color:#fff;border:none;padding:12px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+          <i class="fas fa-file-word"></i> Download .docx
+        </button>
+        <button onclick="closeMemoModal()"
+          style="padding:12px 20px;background:#f4f6fa;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#475569">
+          Batal
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
