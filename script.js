@@ -694,6 +694,7 @@ async function loadData(){
     try{renderHRAPage();}catch(e){}
     try{renderDATPage();}catch(e){}
     try{renderPestPage();}catch(e){}
+    try{renderP3KPage();}catch(e){}
     try{renderFisikaPage();}catch(e){}
     try{renderKimiaPage();}catch(e){}
     try{renderBiologiPage();}catch(e){}
@@ -716,6 +717,7 @@ async function loadData(){
     }
     if(data.status!=="ok")throw new Error(data.message||"Error dari server");
     rawHRA=data.hra||[];rawDAT=data.dat||[];rawPest=data.pest||[];
+    initP3KData(data);
     rawFisika=data.fisika||[];rawKimia=data.kimia||[];rawBiologi=data.biologi||[];
     rawErgonomi=data.ergonomi||[];rawPsikososial=data.psikososial||[];
     filteredHRA=[...rawHRA];filteredDAT=[...rawDAT];filteredPest=[...rawPest];
@@ -4727,4 +4729,398 @@ async function _buildMemoKlinik(){
 
   var doc = _memoDoc(children);
   await _mSave(doc,"Memo_DAT_"+kapal.replace(/[^a-zA-Z0-9]/g,"_")+"_Klinik.docx");
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   P3K & AED OFFICE — Dashboard Module (Form Simple)
+   Sesuai Form_Pengecekan_P3K_AED_2026.xlsx
+   Kolom: Lantai | Fungsi | Bulan | [P3K: Tgl,Status,Temuan,Expired,TL]
+          [AED: Tgl,Status,Temuan,TglExp,TL] | Pemeriksa | Status Overall
+   Regulasi: Permenakertrans No.Per.15/MEN/VIII/2008
+═══════════════════════════════════════════════════════════════ */
+
+/* ── Data lokasi (14 lokasi × 12 bulan = 168 rows) ── */
+var P3K_LOKASI=[
+  {lantai:"GF",   fungsi:"Lobby / Security"},
+  {lantai:"Lt 3", fungsi:"Fungsi HSSE"},
+  {lantai:"Lt 3", fungsi:"Fungsi SSA"},
+  {lantai:"Lt 14",fungsi:"Fungsi HC"},
+  {lantai:"Lt 14",fungsi:"Fungsi Digitalisasi"},
+  {lantai:"Lt 17",fungsi:"Fungsi Aset"},
+  {lantai:"Lt 17",fungsi:"Fungsi Procurement"},
+  {lantai:"Lt 18",fungsi:"Fungsi Legal"},
+  {lantai:"Lt 20",fungsi:"Fungsi ICT"},
+  {lantai:"Lt 20",fungsi:"Fungsi Finance"},
+  {lantai:"Lt 21",fungsi:"Fungsi LPSQ"},
+  {lantai:"Lt 21",fungsi:"Fungsi TOP"},
+  {lantai:"Lt 22",fungsi:"Fungsi Fleet"},
+  {lantai:"Lt 22",fungsi:"Fungsi Crewing"},
+];
+
+var P3K_BULAN=["Januari","Februari","Maret","April","Mei","Juni",
+               "Juli","Agustus","September","Oktober","November","Desember"];
+
+/* ── State ── */
+var rawP3K=[], filteredP3K=[];
+var p3kTab="overview";
+
+/* ── Map kolom sheet ke object key ── */
+function _p3kMap(r){
+  return{
+    no:        r["No"]||"",
+    lantai:    r["Lantai"]||"",
+    fungsi:    r["Fungsi"]||"",
+    bulan:     r["Bulan"]||"",
+    /* P3K */
+    p3kTgl:    r["Tgl Cek P3K"]||r["Tgl Cek\nP3K"]||"",
+    p3kStatus: r["Status Kotak P3K"]||r["Status\nKotak P3K"]||"",
+    p3kTemuan: r["Temuan / Item Kosong"]||r["Temuan / Item\nKosong"]||"",
+    p3kExp:    r["Item Expired"]||r["Item\nExpired"]||"",
+    p3kTL:     r["Tindak Lanjut P3K"]||r["Tindak Lanjut\nP3K"]||"",
+    /* AED */
+    aedTgl:    r["Tgl Cek AED"]||r["Tgl Cek\nAED"]||"",
+    aedStatus: r["Status AED"]||r["Status\nAED"]||"",
+    aedTemuan: r["Temuan AED"]||r["Temuan\nAED"]||"",
+    aedExp:    r["Tgl Exp Elektrode/Batt"]||r["Tgl Exp\nElektrode/Batt"]||"",
+    aedTL:     r["Tindak Lanjut AED"]||r["Tindak Lanjut\nAED"]||"",
+    /* Petugas */
+    pemeriksa: r["Nama Pemeriksa"]||r["Nama\nPemeriksa"]||"",
+    overall:   r["Status Keseluruhan"]||r["Status\nKeseluruhan"]||""
+  };
+}
+
+/* ── Init data (dari server atau generate template kosong) ── */
+function initP3KData(serverData){
+  if(serverData&&serverData.p3k&&serverData.p3k.length){
+    rawP3K=serverData.p3k.map(_p3kMap);
+  } else {
+    /* Template kosong sesuai form — 168 baris */
+    rawP3K=[];
+    var no=1;
+    P3K_BULAN.forEach(function(bln){
+      P3K_LOKASI.forEach(function(lok){
+        rawP3K.push({
+          no:no++,lantai:lok.lantai,fungsi:lok.fungsi,bulan:bln,
+          p3kTgl:"",p3kStatus:"",p3kTemuan:"",p3kExp:"",p3kTL:"",
+          aedTgl:"",aedStatus:"",aedTemuan:"",aedExp:"",aedTL:"",
+          pemeriksa:"",overall:""
+        });
+      });
+    });
+  }
+  filteredP3K=[...rawP3K];
+}
+
+/* ── Status helpers ── */
+function _p3kColor(status){
+  var s=(status||"").toLowerCase();
+  if(s.includes("expired")||s.includes("rusak"))return{c:"#C62828",bg:"#FFEBEE"};
+  if(s.includes("tidak lengkap")||s.includes("perlu restock")||s.includes("perlu servis"))return{c:"#E65100",bg:"#FFF3E0"};
+  if(s.includes("lengkap")||s.includes("siap pakai")||s.includes("baik"))return{c:"#2E7D32",bg:"#E8F5E9"};
+  if(s.includes("tidak diperiksa")||s==="")return{c:"#94A3B8",bg:"#F4F6FA"};
+  return{c:"#1565C0",bg:"#EBF5FF"};
+}
+
+function _p3kIcon(status){
+  var s=(status||"").toLowerCase();
+  if(s.includes("expired")||s.includes("rusak"))return"⚠";
+  if(s.includes("tidak lengkap")||s.includes("perlu restock")||s.includes("perlu servis"))return"⚡";
+  if(s.includes("lengkap")||s.includes("siap pakai"))return"✓";
+  return"—";
+}
+
+/* ═══════════════════════════════════════════════════
+   RENDER HALAMAN P3K
+═══════════════════════════════════════════════════ */
+function renderP3KPage(){
+  if(!rawP3K.length) initP3KData(null);
+  applyP3KFilters();
+}
+
+function applyP3KFilters(){
+  var fLantai=(document.getElementById("p3k-filter-lantai")||{}).value||"";
+  var fBulan =(document.getElementById("p3k-filter-bulan") ||{}).value||"";
+  var fStatus=(document.getElementById("p3k-filter-status")||{}).value||"";
+
+  filteredP3K=rawP3K.filter(function(r){
+    if(fLantai&&r.lantai!==fLantai)return false;
+    if(fBulan &&r.bulan!==fBulan)return false;
+    if(fStatus){
+      if(fStatus==="Belum Diperiksa"&&r.p3kStatus!==""&&r.aedStatus!=="")return false;
+      if(fStatus==="Ada Masalah"){
+        var hasIssue=r.p3kStatus.toLowerCase().includes("tidak")||
+                     r.p3kStatus.toLowerCase().includes("expired")||
+                     r.p3kStatus.toLowerCase().includes("restock")||
+                     r.aedStatus.toLowerCase().includes("rusak")||
+                     r.aedStatus.toLowerCase().includes("servis");
+        if(!hasIssue)return false;
+      }
+    }
+    return true;
+  });
+
+  _renderP3KKPI();
+  _renderP3KContent();
+}
+
+function clearP3KFilters(){
+  ["p3k-filter-lantai","p3k-filter-bulan","p3k-filter-status"].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.value="";
+  });
+  applyP3KFilters();
+}
+
+function switchP3KTab(tab){
+  p3kTab=tab;
+  ["overview","table","masalah"].forEach(function(t){
+    var btn=document.getElementById("p3k-tab-"+t);
+    var con=document.getElementById("p3k-content-"+t);
+    if(btn)btn.classList.toggle("active",t===tab);
+    if(con)con.style.display=t===tab?"block":"none";
+  });
+  _renderP3KContent();
+}
+
+function _renderP3KContent(){
+  if(p3kTab==="overview") _renderP3KOverview();
+  else if(p3kTab==="table")   _renderP3KTable();
+  else                        _renderP3KMasalah();
+}
+
+/* ── KPI Strip ── */
+function _renderP3KKPI(){
+  var el=document.getElementById("p3k-kpi-strip");
+  if(!el)return;
+
+  var total=filteredP3K.length;
+  var sudahCekP3K=filteredP3K.filter(function(r){return r.p3kStatus&&r.p3kStatus!=="Tidak Diperiksa";}).length;
+  var sudahCekAED=filteredP3K.filter(function(r){return r.aedStatus&&r.aedStatus!=="Tidak Diperiksa";}).length;
+  var adaMasalah=filteredP3K.filter(function(r){
+    return r.p3kStatus.toLowerCase().includes("tidak")||r.p3kStatus.toLowerCase().includes("expired")||
+           r.p3kStatus.toLowerCase().includes("restock")||
+           r.aedStatus.toLowerCase().includes("rusak")||r.aedStatus.toLowerCase().includes("servis");
+  }).length;
+  var sembaik=filteredP3K.filter(function(r){
+    return(r.overall||"").toLowerCase().includes("baik");
+  }).length;
+
+  function kpi(icon,val,lbl,col,bg){
+    return'<div style="background:'+bg+';border-radius:12px;padding:16px 18px;border-left:4px solid '+col+'">'
+      +'<div style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">'+lbl+'</div>'
+      +'<div style="display:flex;align-items:center;gap:8px">'
+      +'<i class="fas '+icon+'" style="color:'+col+';font-size:20px"></i>'
+      +'<span style="font-size:30px;font-weight:700;color:'+col+'">'+val+'</span>'
+      +'</div></div>';
+  }
+  el.innerHTML=
+    kpi("fa-location-dot",P3K_LOKASI.length,"Total Lokasi","#1565C0","#EBF5FF")+
+    kpi("fa-kit-medical",sudahCekP3K,"P3K Sudah Dicek",sudahCekP3K===total?"#2E7D32":"#E65100",sudahCekP3K===total?"#E8F5E9":"#FFF3E0")+
+    kpi("fa-heart-pulse",sudahCekAED,"AED Sudah Dicek",sudahCekAED===total?"#2E7D32":"#E65100",sudahCekAED===total?"#E8F5E9":"#FFF3E0")+
+    kpi("fa-triangle-exclamation",adaMasalah,"Ada Masalah",adaMasalah>0?"#C62828":"#2E7D32",adaMasalah>0?"#FFEBEE":"#E8F5E9");
+}
+
+/* ── TAB 1: OVERVIEW — Card per Lantai ── */
+function _renderP3KOverview(){
+  var el=document.getElementById("p3k-content-overview");
+  if(!el)return;
+
+  /* Group per lantai+fungsi, ambil bulan terakhir yang dicek */
+  var lokMap={};
+  filteredP3K.forEach(function(r){
+    var k=r.lantai+"|"+r.fungsi;
+    if(!lokMap[k])lokMap[k]={lantai:r.lantai,fungsi:r.fungsi,rows:[]};
+    lokMap[k].rows.push(r);
+  });
+
+  var cards=Object.values(lokMap).map(function(lok){
+    /* Ambil baris terakhir yang sudah dicek */
+    var dicek=lok.rows.filter(function(r){return r.p3kStatus||r.aedStatus;});
+    var last=dicek.length?dicek[dicek.length-1]:lok.rows[lok.rows.length-1];
+
+    var p3kSt=_p3kColor(last.p3kStatus);
+    var aedSt=_p3kColor(last.aedStatus);
+    var hasIssue=p3kSt.c==="#C62828"||p3kSt.c==="#E65100"||aedSt.c==="#C62828"||aedSt.c==="#E65100";
+    var notChecked=!last.p3kStatus&&!last.aedStatus;
+
+    var topCol=notChecked?"#94A3B8":hasIssue?"#C62828":"#2E7D32";
+
+    /* Progress: berapa bulan sudah dicek */
+    var cekCount=lok.rows.filter(function(r){return r.p3kStatus&&r.p3kStatus!=="Tidak Diperiksa";}).length;
+    var pct=Math.round((cekCount/12)*100);
+
+    return'<div style="background:#fff;border:1px solid #E2E8F0;border-top:4px solid '+topCol+';border-radius:12px;padding:18px">'
+      /* Header card */
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">'
+      +'<div>'
+      +'<div style="font-size:13px;font-weight:700;color:#0F2A4A">'+esc(lok.lantai)+'</div>'
+      +'<div style="font-size:11px;color:#64748B;margin-top:2px">'+esc(lok.fungsi)+'</div>'
+      +'</div>'
+      +'<div style="text-align:right">'
+      +(last.bulan?'<div style="font-size:10px;color:#94A3B8">Terakhir dicek</div><div style="font-size:11px;font-weight:600;color:#475569">'+esc(last.bulan)+'</div>'
+        :'<span style="background:#F4F6FA;color:#94A3B8;padding:3px 8px;border-radius:10px;font-size:10px">Belum dicek</span>')
+      +'</div>'
+      +'</div>'
+      /* Status P3K dan AED berdampingan */
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">'
+      +'<div style="background:'+p3kSt.bg+';border-radius:8px;padding:10px 12px">'
+      +'<div style="font-size:9.5px;font-weight:700;color:'+p3kSt.c+';text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">'
+      +'<i class="fas fa-kit-medical" style="margin-right:4px"></i>Kotak P3K</div>'
+      +'<div style="font-size:13px;font-weight:700;color:'+p3kSt.c+'">'
+      +_p3kIcon(last.p3kStatus)+' '+(last.p3kStatus||"Belum Dicek")+'</div>'
+      +(last.p3kTemuan?'<div style="font-size:10px;color:#64748B;margin-top:3px">'+esc(last.p3kTemuan.slice(0,40))+'</div>':"")
+      +'</div>'
+      +'<div style="background:'+aedSt.bg+';border-radius:8px;padding:10px 12px">'
+      +'<div style="font-size:9.5px;font-weight:700;color:'+aedSt.c+';text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">'
+      +'<i class="fas fa-heart-pulse" style="margin-right:4px"></i>AED</div>'
+      +'<div style="font-size:13px;font-weight:700;color:'+aedSt.c+'">'
+      +_p3kIcon(last.aedStatus)+' '+(last.aedStatus||"Belum Dicek")+'</div>'
+      +(last.aedTemuan?'<div style="font-size:10px;color:#64748B;margin-top:3px">'+esc(last.aedTemuan.slice(0,40))+'</div>':"")
+      +'</div>'
+      +'</div>'
+      /* Item expired jika ada */
+      +(last.p3kExp?'<div style="background:#FFEBEE;border-radius:6px;padding:8px 10px;margin-bottom:10px;font-size:10.5px;color:#C62828">'
+        +'<i class="fas fa-clock" style="margin-right:5px"></i><strong>Item Expired P3K:</strong> '+esc(last.p3kExp)+'</div>':"")
+      /* Progress pengecekan tahunan */
+      +'<div style="border-top:1px solid #E2E8F0;padding-top:10px">'
+      +'<div style="display:flex;justify-content:space-between;font-size:10px;color:#64748B;margin-bottom:5px">'
+      +'<span>Progress pengecekan 2026</span><span>'+cekCount+'/12 bulan ('+pct+'%)</span></div>'
+      +'<div style="background:#E2E8F0;border-radius:4px;height:5px">'
+      +'<div style="width:'+pct+'%;background:'+topCol+';height:5px;border-radius:4px"></div></div>'
+      +(last.pemeriksa?'<div style="font-size:10px;color:#94A3B8;margin-top:6px"><i class="fas fa-user" style="margin-right:4px"></i>'+esc(last.pemeriksa)+'</div>':"")
+      +'</div>'
+      +'</div>';
+  }).join("");
+
+  el.innerHTML=cards||'<div style="text-align:center;padding:60px;color:#94A3B8">Tidak ada data</div>';
+}
+
+/* ── TAB 2: TABEL LENGKAP ── */
+function _renderP3KTable(){
+  var el=document.getElementById("p3k-content-table");
+  if(!el)return;
+
+  var hdrs=["Bulan","Lantai","Fungsi","Tgl Cek P3K","Status P3K","Temuan P3K","Item Expired",
+            "Tgl Cek AED","Status AED","Temuan AED","Tgl Exp Elektrode","Pemeriksa","Status Overall"];
+  var thead=hdrs.map(function(h){
+    return'<th style="padding:8px 10px;background:#0F2A4A;color:#fff;font-size:10px;font-weight:600;text-align:left;border:none;white-space:nowrap">'+h+'</th>';
+  }).join("");
+
+  var tbody=filteredP3K.map(function(r,i){
+    var p3kSt=_p3kColor(r.p3kStatus);
+    var aedSt=_p3kColor(r.aedStatus);
+    var ovSt=_p3kColor(r.overall);
+    var ev=i%2===0?"#fff":"#F8FAFC";
+    function td(v,extra){return'<td style="padding:7px 10px;font-size:10.5px;color:#334155;border-bottom:1px solid #EEF2F7;'+(extra||"")+'">'+esc(v||"—")+'</td>';}
+    return'<tr style="background:'+ev+'">'
+      +td(r.bulan,"font-weight:700;color:#1565C0")
+      +td(r.lantai,"font-weight:700")
+      +td(r.fungsi)
+      +td(r.p3kTgl)
+      +'<td style="padding:7px 10px;border-bottom:1px solid #EEF2F7">'
+      +(r.p3kStatus?'<span style="background:'+p3kSt.bg+';color:'+p3kSt.c+';padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap">'+_p3kIcon(r.p3kStatus)+' '+esc(r.p3kStatus)+'</span>':'<span style="color:#94A3B8;font-size:10px">—</span>')
+      +'</td>'
+      +td(r.p3kTemuan)
+      +'<td style="padding:7px 10px;border-bottom:1px solid #EEF2F7;color:#C62828;font-size:10.5px">'+esc(r.p3kExp||"—")+'</td>'
+      +td(r.aedTgl)
+      +'<td style="padding:7px 10px;border-bottom:1px solid #EEF2F7">'
+      +(r.aedStatus?'<span style="background:'+aedSt.bg+';color:'+aedSt.c+';padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap">'+_p3kIcon(r.aedStatus)+' '+esc(r.aedStatus)+'</span>':'<span style="color:#94A3B8;font-size:10px">—</span>')
+      +'</td>'
+      +td(r.aedTemuan)
+      +td(r.aedExp,"color:#C62828")
+      +td(r.pemeriksa)
+      +'<td style="padding:7px 10px;border-bottom:1px solid #EEF2F7">'
+      +(r.overall?'<span style="background:'+ovSt.bg+';color:'+ovSt.c+';padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700">'+esc(r.overall)+'</span>':'<span style="color:#94A3B8;font-size:10px">—</span>')
+      +'</td>'
+      +'</tr>';
+  }).join("");
+
+  el.innerHTML='<div style="overflow-x:auto;border-radius:10px;border:1px solid #E2E8F0">'
+    +'<table style="width:100%;border-collapse:collapse;min-width:900px">'
+    +'<thead><tr>'+thead+'</tr></thead>'
+    +'<tbody>'+tbody+'</tbody></table></div>'
+    +'<div style="font-size:11px;color:#94A3B8;margin-top:8px">Menampilkan '+filteredP3K.length+' dari '+rawP3K.length+' data</div>';
+}
+
+/* ── TAB 3: MASALAH & TINDAK LANJUT ── */
+function _renderP3KMasalah(){
+  var el=document.getElementById("p3k-content-masalah");
+  if(!el)return;
+
+  var masalah=filteredP3K.filter(function(r){
+    return r.p3kStatus.toLowerCase().includes("tidak")||
+           r.p3kStatus.toLowerCase().includes("expired")||
+           r.p3kStatus.toLowerCase().includes("restock")||
+           r.aedStatus.toLowerCase().includes("rusak")||
+           r.aedStatus.toLowerCase().includes("servis")||
+           r.p3kExp||r.aedExp;
+  });
+
+  var belumCek=filteredP3K.filter(function(r){
+    return(!r.p3kStatus||r.p3kStatus==="Tidak Diperiksa")&&(!r.aedStatus||r.aedStatus==="Tidak Diperiksa");
+  });
+
+  if(!masalah.length&&!belumCek.length){
+    el.innerHTML='<div style="text-align:center;padding:60px;background:#E8F5E9;border-radius:12px;border:2px solid #A5D6A7">'
+      +'<i class="fas fa-circle-check" style="font-size:48px;color:#2E7D32;margin-bottom:12px;display:block"></i>'
+      +'<div style="font-size:16px;font-weight:700;color:#2E7D32">Semua Lokasi dalam Kondisi Baik</div>'
+      +'<div style="font-size:12px;color:#64748B;margin-top:6px">Tidak ada temuan bermasalah pada periode yang dipilih</div>'
+      +'</div>';
+    return;
+  }
+
+  /* Regulasi box */
+  var regBox='<div style="background:#EBF5FF;border-left:4px solid #1565C0;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:11px;color:#334155;line-height:1.75">'
+    +'<strong style="color:#1565C0"><i class="fas fa-scale-balanced" style="margin-right:6px"></i>Regulasi Acuan:</strong> '
+    +'<strong>Permenakertrans No.Per.15/MEN/VIII/2008 Pasal 8</strong> — Pengusaha wajib memastikan kotak P3K selalu dalam kondisi lengkap dan siap pakai. '
+    +'Item kedaluwarsa wajib segera diganti. '
+    +'AED wajib diperiksa setiap bulan sesuai panduan <strong>PERKI 2023</strong> dan <strong>AHA Guidelines 2020</strong>.'
+    +'</div>';
+
+  function masalahSection(items,title,col,bg,icon){
+    if(!items.length)return"";
+    return'<div style="margin-bottom:20px">'
+      +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:12px 16px;background:'+bg+';border-radius:8px;border-left:4px solid '+col+'">'
+      +'<i class="fas '+icon+'" style="color:'+col+';font-size:18px"></i>'
+      +'<div><div style="font-size:13px;font-weight:700;color:'+col+'">'+title+'</div>'
+      +'<div style="font-size:11px;color:#64748B">'+items.length+' lokasi memerlukan tindakan</div>'
+      +'</div></div>'
+      +'<div style="display:flex;flex-direction:column;gap:8px">'
+      +items.map(function(r){
+        var p3kSt=_p3kColor(r.p3kStatus);
+        var aedSt=_p3kColor(r.aedStatus);
+        return'<div style="background:#fff;border:1px solid #E2E8F0;border-radius:10px;padding:14px 16px;display:flex;gap:16px;align-items:flex-start">'
+          +'<div style="flex-shrink:0;text-align:center">'
+          +'<div style="font-size:12px;font-weight:700;color:#0F2A4A">'+esc(r.lantai)+'</div>'
+          +'<div style="font-size:10px;color:#64748B">'+esc(r.fungsi)+'</div>'
+          +'<div style="font-size:10px;font-weight:600;color:#1565C0;margin-top:2px">'+esc(r.bulan)+'</div>'
+          +'</div>'
+          +'<div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+          +'<div>'
+          +'<div style="font-size:9.5px;font-weight:700;color:#94A3B8;text-transform:uppercase;margin-bottom:4px"><i class="fas fa-kit-medical" style="margin-right:3px"></i>P3K</div>'
+          +(r.p3kStatus?'<span style="background:'+p3kSt.bg+';color:'+p3kSt.c+';padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700">'+esc(r.p3kStatus)+'</span>':'')
+          +(r.p3kTemuan?'<div style="font-size:10.5px;color:#475569;margin-top:4px">Temuan: '+esc(r.p3kTemuan)+'</div>':"")
+          +(r.p3kExp?'<div style="font-size:10.5px;color:#C62828;margin-top:3px"><i class="fas fa-clock" style="margin-right:3px"></i>Expired: '+esc(r.p3kExp)+'</div>':"")
+          +(r.p3kTL?'<div style="font-size:10.5px;color:#2E7D32;margin-top:3px"><i class="fas fa-arrow-right" style="margin-right:3px"></i>'+esc(r.p3kTL)+'</div>':"")
+          +'</div>'
+          +'<div>'
+          +'<div style="font-size:9.5px;font-weight:700;color:#94A3B8;text-transform:uppercase;margin-bottom:4px"><i class="fas fa-heart-pulse" style="margin-right:3px"></i>AED</div>'
+          +(r.aedStatus?'<span style="background:'+aedSt.bg+';color:'+aedSt.c+';padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700">'+esc(r.aedStatus)+'</span>':'')
+          +(r.aedTemuan?'<div style="font-size:10.5px;color:#475569;margin-top:4px">Temuan: '+esc(r.aedTemuan)+'</div>':"")
+          +(r.aedExp?'<div style="font-size:10.5px;color:#C62828;margin-top:3px"><i class="fas fa-clock" style="margin-right:3px"></i>Exp: '+esc(r.aedExp)+'</div>':"")
+          +(r.aedTL?'<div style="font-size:10.5px;color:#2E7D32;margin-top:3px"><i class="fas fa-arrow-right" style="margin-right:3px"></i>'+esc(r.aedTL)+'</div>':"")
+          +'</div>'
+          +'</div>'
+          +(r.pemeriksa?'<div style="flex-shrink:0;font-size:10px;color:#94A3B8;text-align:right"><i class="fas fa-user" style="margin-right:3px"></i>'+esc(r.pemeriksa)+'</div>':"")
+          +'</div>';
+      }).join("")
+      +'</div></div>';
+  }
+
+  el.innerHTML=regBox
+    +masalahSection(masalah,"Temuan Bermasalah — Perlu Tindak Lanjut","#C62828","#FFEBEE","fa-triangle-exclamation")
+    +(belumCek.length?masalahSection(belumCek,"Belum Diperiksa Bulan Ini","#E65100","#FFF3E0","fa-clock"):"");
+}
+
+function exportP3KPPT(){
+  showToast("Export PPT P3K & AED akan segera hadir.","info");
 }
