@@ -4349,6 +4349,7 @@ var _memoType = "";
 
 /* ── Buka modal ── */
 function showMemoModal(type){
+  if(!isAdmin()||isDemo()){showToast("Fitur ini hanya dapat diakses oleh Admin.","warning");return;}
   _memoType = type;
   var modal  = document.getElementById("memoModal");
   var title  = document.getElementById("memoModalTitle");
