@@ -3751,9 +3751,29 @@ function getSummaryData(){
   var pestBiaya=pestD.reduce(function(s,r){return s+parseFloat(r["Est Biaya"]||0);},0);
   var pestBulanMap2={};
   BULAN_ORDER.forEach(function(b){pestBulanMap2[b]={count:0,lokasi:new Set(),biaya:0,temuan:[]};});
-  pestD.forEach(function(r){var b=r["Bulan"]||"";if(b&&pestBulanMap2[b]){pestBulanMap2[b].count++;pestBulanMap2[b].lokasi.add(r["Lokasi"]||"");pestBulanMap2[b].biaya+=parseFloat(r["Est Biaya"]||0);if(r["Temuan / Keluhan"])pestBulanMap2[b].temuan.push(r["Temuan / Keluhan"]);}});
+  pestD.forEach(function(r){
+    /* Normalisasi bulan: "April 2026" → "April" */
+    var raw=(r["Bulan"]||r["Bulan Pelaksanaan"]||"").trim();
+    var b=raw.split(" ")[0];
+    if(b&&pestBulanMap2[b]){
+      pestBulanMap2[b].count++;
+      pestBulanMap2[b].lokasi.add((r["Lokasi"]||"").trim());
+      pestBulanMap2[b].biaya+=parseFloat(r["Est Biaya"]||0);
+      if(r["Temuan / Keluhan"])pestBulanMap2[b].temuan.push(r["Temuan / Keluhan"]);
+    }
+  });
+  /* Hanya tampilkan bulan yang benar-benar ada kegiatannya */
   var pestBulanList=[];
-  BULAN_ORDER.forEach(function(b){if(pestBulanMap2[b].count>0)pestBulanList.push({bulan:b,count:pestBulanMap2[b].count,lokasi:pestBulanMap2[b].lokasi.size,biaya:pestBulanMap2[b].biaya,temuan:[...new Set(pestBulanMap2[b].temuan)].slice(0,2).join("; ")||"—"});});
+  BULAN_ORDER.forEach(function(b){
+    if(pestBulanMap2[b].count>0){
+      pestBulanList.push({
+        bulan:b,count:pestBulanMap2[b].count,
+        lokasi:pestBulanMap2[b].lokasi.size,
+        biaya:pestBulanMap2[b].biaya,
+        temuan:[...new Set(pestBulanMap2[b].temuan)].slice(0,2).join("; ")||"—"
+      });
+    }
+  });
 
   /* 5 Hazard */
   var fisD=rawFisika||[],fisMel=fisD.filter(function(r){return(r["Status"]||"").toLowerCase().includes("melebihi");}).length;
