@@ -3805,29 +3805,16 @@ function _buildSummary(el,cKey){
   var datPct=d.dat.crew>0?(((d.dat.crew-d.dat.positif)/d.dat.crew)*100).toFixed(1):"100.0";
   var nomBio=d.bio&&d.bio.total>0;
 
-  /* ── STATUS helpers ── */
+  /* ── Helpers ── */
   function stC(v,good,warn){return parseFloat(v)>=good?"#2E7D32":parseFloat(v)>=warn?"#E65100":"#C62828";}
   function stBg(v,good,warn){return parseFloat(v)>=good?"#E8F5E9":parseFloat(v)>=warn?"#FFF3E0":"#FFEBEE";}
   function stLbl(v,good,warn){return parseFloat(v)>=good?"BAIK":parseFloat(v)>=warn?"PERHATIAN":"KRITIS";}
   function bar(pct,col){return'<div style="background:#E2E8F0;border-radius:4px;height:6px;margin-top:4px"><div style="width:'+Math.min(pct,100)+'%;background:'+col+';height:6px;border-radius:4px"></div></div>';}
 
-  /* ── AI REKOMENDASI ── */
-  function aiReks(){
-    var reks=[];
-    if(parseFloat(d.hra.coverage)<80)reks.push({p:"HRA",t:"Akselerasi Coverage HRA",b:"Coverage HRA "+d.hra.coverage+"% dari "+d.hra.total+" unit armada berada di bawah threshold kepatuhan 80% sesuai Permenaker 05/2018. Diperlukan percepatan penjadwalan HRA untuk "+(d.hra.total-d.hra.done)+" unit yang belum terlaksana.",c:"#C62828",bg:"#FFEBEE",ic:"fa-lungs"});
-    else reks.push({p:"HRA",t:"Pertahankan Coverage HRA",b:"Coverage HRA "+d.hra.coverage+"% menunjukkan kepatuhan substansial. Jadwalkan siklus HRA berikutnya secara berkala dan integrasikan temuan ke Ship Safety Management System.",c:"#2E7D32",bg:"#E8F5E9",ic:"fa-lungs"});
-    if(d.dat.positif>0)reks.push({p:"DAT",t:"Tindak Lanjut "+d.dat.positif+" ABK Reaktif",b:"Ditemukan "+d.dat.positif+" ABK reaktif (prevalensi "+d.dat.rate+"%) dari "+d.dat.crew.toLocaleString("id-ID")+" awak terperiksa. Protokol medis dan administratif wajib segera dilaksanakan sesuai MLC 2006 Reg.4.3.",c:"#C62828",bg:"#FFEBEE",ic:"fa-vial"});
-    else reks.push({p:"DAT",t:"Zero Positive — Pertahankan Program",b:"Program DAT mencatat zero positive rate dari "+d.dat.crew.toLocaleString("id-ID")+" awak di "+d.dat.kapal+" kapal. Pertahankan dengan penerapan random unannounced testing minimal 25% per semester.",c:"#2E7D32",bg:"#E8F5E9",ic:"fa-vial"});
-    if(d.hazard.melebihi>0)reks.push({p:"5 Hazard",t:"Pengendalian "+d.hazard.melebihi+" Parameter Melebihi NAB",b:d.hazard.melebihi+" parameter ("+Math.round((d.hazard.melebihi/d.hazard.total)*100)+"%) dari "+d.hazard.total+" pengukuran melampaui NAB. Implementasi segera 5 hierarki pengendalian risiko sesuai ISO 45001:2018 diperlukan.",c:"#E65100",bg:"#FFF3E0",ic:"fa-triangle-exclamation"});
-    else reks.push({p:"5 Hazard",t:"Seluruh Parameter dalam Batas NAB",b:"Semua "+d.hazard.total+" parameter hazard memenuhi NAB sesuai Permenaker 05/2018. Pertahankan program monitoring dan pengukuran berkala minimum satu kali per semester.",c:"#2E7D32",bg:"#E8F5E9",ic:"fa-shield-halved"});
-    if(nomBio&&d.bio.melebihi>0)reks.push({p:"Biomarker",t:"Medical Surveillance "+d.bio.melebihi+" ABK",b:d.bio.melebihi+" sampel melebihi BEI ACGIH 2024. Benzene IARC Group 1 — wajib pemeriksaan hematologi dan evaluasi SpOK. Perbaiki ventilasi LEV dan terapkan APD full-face respirator.",c:"#7B1FA2",bg:"#F3E5F5",ic:"fa-flask"});
-    return reks;
-  }
-
   /* ── KPI box ── */
   function kpi(lbl,val,unit,col,bg,pct){
     return'<div style="background:'+bg+';border-radius:12px;padding:16px 18px;border-left:4px solid '+col+'">'
-      +'<div style="font-size:11px;color:#64748B;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">'+lbl+'</div>'
+      +'<div style="font-size:10.5px;color:#64748B;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">'+lbl+'</div>'
       +'<div style="font-size:28px;font-weight:700;color:'+col+';line-height:1">'+val+'</div>'
       +'<div style="font-size:11px;color:#64748B;margin-top:3px">'+unit+'</div>'
       +(pct!==undefined?bar(pct,col):"")
@@ -3840,259 +3827,447 @@ function _buildSummary(el,cKey){
       +'<i class="fas '+icon+'" style="color:#fff;font-size:14px"></i></div>'
       +'<div style="font-size:16px;font-weight:700;color:#0F2A4A">'+title+'</div></div>';
   }
-  /* ── Mini table ── */
-  function tbl(hdrs,rows,cols){
-    var hw=cols.map(function(c){return'<th style="padding:8px 10px;background:#0F2A4A;color:#fff;font-size:10.5px;font-weight:600;text-align:left;border:none">'+c+'</th>';}).join("");
+  /* ── Analisis box ── */
+  function anaBox(col,bg,bdr,lbl,txt){
+    return'<div style="background:'+bg+';border:1px solid '+bdr+';border-left:4px solid '+col+';border-radius:8px;padding:12px 16px;font-size:11px;color:#334155;line-height:1.75">'
+      +'<strong style="color:'+col+'">'+lbl+':</strong> '+txt+'</div>';
+  }
+  /* ── Rekomendasi box 3 kolom ── */
+  function rekBox(items){
+    var clrs=[["#C62828","#FFEBEE","Segera (0–30 Hari)"],["#E65100","#FFF3E0","Jangka Pendek (1–3 Bln)"],["#1565C0","#EBF5FF","Jangka Panjang (3–12 Bln)"]];
+    return'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px">'
+      +items.map(function(its,i){
+        return'<div style="background:'+clrs[i][1]+';border-radius:10px;padding:14px;border-top:3px solid '+clrs[i][0]+'">'
+          +'<div style="font-size:10px;font-weight:700;color:'+clrs[i][0]+';text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">'+clrs[i][2]+'</div>'
+          +its.map(function(it){
+            return'<div style="display:flex;gap:7px;margin-bottom:8px">'
+              +'<div style="width:5px;height:5px;background:'+clrs[i][0]+';border-radius:50%;flex-shrink:0;margin-top:6px"></div>'
+              +'<div style="font-size:11px;color:#334155;line-height:1.65">'+it+'</div></div>';
+          }).join("")+'</div>';
+      }).join("")+'</div>';
+  }
+  /* ── Regulasi strip ── */
+  function regStrip(refs){
+    return'<div style="background:#F0F4F8;border-radius:8px;padding:10px 14px;margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">'
+      +'<span style="font-size:9.5px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.5px;margin-right:4px">Dasar Hukum:</span>'
+      +refs.map(function(r){
+        return'<span style="background:#fff;border:1px solid #CBD5E1;border-radius:20px;padding:3px 10px;font-size:9.5px;color:#475569;font-weight:600">'+r+'</span>';
+      }).join("")+'</div>';
+  }
+  /* ── Info card horizontal ── */
+  function infoCard(icon,title,body,col){
+    return'<div style="background:#fff;border:1px solid #E2E8F0;border-radius:10px;padding:14px 16px;display:flex;gap:12px;align-items:flex-start">'
+      +'<div style="width:36px;height:36px;background:'+col+';border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">'
+      +'<i class="fas '+icon+'" style="color:#fff;font-size:14px"></i></div>'
+      +'<div><div style="font-size:12px;font-weight:700;color:#1E293B;margin-bottom:4px">'+title+'</div>'
+      +'<div style="font-size:11px;color:#475569;line-height:1.7">'+body+'</div></div></div>';
+  }
+  /* ── Tabel mini ── */
+  function tbl(hdrs,rows){
+    var hw=hdrs.map(function(h){return'<th style="padding:8px 10px;background:#0F2A4A;color:#fff;font-size:10.5px;font-weight:600;text-align:left;border:none;white-space:nowrap">'+h+'</th>';}).join("");
     var rw=rows.map(function(r,i){return'<tr style="background:'+(i%2===0?"#fff":"#F8FAFC")+'">'
-      +r.map(function(c){return'<td style="padding:7px 10px;font-size:10.5px;color:#334155;border-bottom:1px solid #EEF2F7;border:none">'+c+'</td>';}).join("")+'</tr>';}).join("");
+      +r.map(function(c){return'<td style="padding:7px 10px;font-size:10.5px;color:#334155;border-bottom:1px solid #EEF2F7;border-left:none;border-right:none;border-top:none">'+c+'</td>';}).join("")+'</tr>';}).join("");
     return'<div style="overflow:hidden;border-radius:8px;border:1px solid #E2E8F0">'
       +'<table style="width:100%;border-collapse:collapse"><thead><tr>'+hw+'</tr></thead>'
       +'<tbody>'+rw+'</tbody></table></div>';
   }
-  /* ── A4 page wrapper ── */
+  /* ── A4 page ── */
   function pg(id,html){
     return'<div id="'+id+'" style="width:794px;min-height:1123px;background:#fff;'
       +'font-family:Arial,Helvetica,sans-serif;color:#1E293B;box-sizing:border-box;'
-      +'padding:40px 44px 44px;position:relative;page-break-after:always">'
-      +html+'</div>';
+      +'padding:40px 44px 44px;position:relative;page-break-after:always">'+html+'</div>';
   }
   /* ── Page header ── */
-  function phdr(pg_n,tot){
-    return'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:16px;border-bottom:3px solid #0F2A4A">'
+  function phdr(pgN,tot){
+    return'<div style="display:flex;justify-content:space-between;align-items:flex-start;'
+      +'margin-bottom:24px;padding-bottom:14px;border-bottom:3px solid #0F2A4A">'
       +'<div>'
-      +'<div style="font-size:9px;font-weight:700;color:#C9973A;letter-spacing:2px;text-transform:uppercase;margin-bottom:3px">PT PERTAMINA PATRA NIAGA · SATUAN KERJA REGIONAL III</div>'
+      +'<div style="font-size:9px;font-weight:700;color:#C9973A;letter-spacing:2px;text-transform:uppercase;margin-bottom:2px">PT PERTAMINA PATRA NIAGA · SATUAN KERJA REGIONAL III</div>'
       +'<div style="font-size:9px;color:#94A3B8">Divisi Industrial Hygiene & Occupational Health · IH Dashboard v5.0</div>'
       +'</div>'
       +'<div style="text-align:right">'
       +'<div style="font-size:9.5px;font-weight:700;color:#0F2A4A">'+tgl+'</div>'
-      +'<div style="font-size:9px;color:#94A3B8">Hal '+pg_n+' / '+tot+'</div>'
+      +'<div style="font-size:9px;color:#94A3B8">Hal '+pgN+' / '+tot+'</div>'
       +'</div></div>';
   }
   /* ── Page footer ── */
-  var pftr='<div style="position:absolute;bottom:20px;left:44px;right:44px;padding-top:10px;border-top:1px solid #E2E8F0;display:flex;justify-content:space-between">'
+  var pftr='<div style="position:absolute;bottom:20px;left:44px;right:44px;padding-top:10px;'
+    +'border-top:1px solid #E2E8F0;display:flex;justify-content:space-between">'
     +'<div style="font-size:8px;color:#94A3B8">Permenaker 05/2018 · ACGIH BEI 2024 · ILO MLC 2006 · ISO 45001:2018 · IMO MSC/Circ.1351</div>'
     +'<div style="font-size:8px;color:#94A3B8">Konfidensial — Penggunaan Internal</div></div>';
 
-  var totalPages=nomBio?6:5;
-  var reks=aiReks();
+  var stOvr=d.dat.positif>0||d.hazard.melebihi>0
+    ?{l:"PERHATIAN",c:"#E65100",bg:"#FFF3E0"}
+    :(parseFloat(d.hra.coverage)<50?{l:"KRITIS",c:"#C62828",bg:"#FFEBEE"}:{l:"BAIK",c:"#2E7D32",bg:"#E8F5E9"});
+  var totalPages=nomBio?7:6;
 
-  /* ══════════════════ HALAMAN 1: COVER ══════════════════ */
-  var stOvr=d.dat.positif>0||d.hazard.melebihi>0?{l:"PERHATIAN",c:"#E65100",bg:"#FFF3E0"}:(parseFloat(d.hra.coverage)<50?{l:"KRITIS",c:"#C62828",bg:"#FFEBEE"}:{l:"BAIK",c:"#2E7D32",bg:"#E8F5E9"});
-  var pg1='<div style="background:linear-gradient(150deg,#071929 0%,#0F2A4A 50%,#1A3A5C 100%);min-height:1123px;margin:-40px -44px -44px;padding:52px 52px 44px;box-sizing:border-box;position:relative;overflow:hidden">'
-    // deco
-    +'<div style="position:absolute;right:-60px;top:-60px;width:320px;height:320px;border-radius:50%;background:rgba(255,255,255,.04)"></div>'
+  /* ══════════════ HALAMAN 1: COVER ══════════════ */
+  var pg1='<div style="background:linear-gradient(150deg,#071929 0%,#0F2A4A 50%,#1A3A5C 100%);'
+    +'min-height:1123px;margin:-40px -44px -44px;padding:52px 52px 44px;box-sizing:border-box;position:relative;overflow:hidden">'
+    +'<div style="position:absolute;right:-60px;top:-60px;width:340px;height:340px;border-radius:50%;background:rgba(255,255,255,.04)"></div>'
     +'<div style="position:absolute;left:-40px;bottom:-40px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.03)"></div>'
     +'<div style="position:absolute;left:0;top:0;width:6px;height:100%;background:linear-gradient(180deg,#C9973A,#3B82F6)"></div>'
-    // kop
-    +'<div style="font-size:9px;font-weight:700;color:rgba(255,255,255,.5);letter-spacing:2.5px;text-transform:uppercase;margin-bottom:6px">Laporan Komprehensif Industrial Hygiene</div>'
-    +'<div style="font-size:9px;color:rgba(255,255,255,.35);margin-bottom:32px">PT Pertamina Patra Niaga · Satuan Kerja Regional III · '+tgl+'</div>'
-    // judul
-    +'<div style="font-size:42px;font-weight:700;color:#fff;line-height:1.1;margin-bottom:8px">Monitoring, Assessment</div>'
-    +'<div style="font-size:42px;font-weight:700;color:#60B4F4;line-height:1.1;margin-bottom:24px">&amp; Hazard Management</div>'
-    +'<div style="width:72px;height:3px;background:#C9973A;border-radius:2px;margin-bottom:20px"></div>'
-    +'<div style="font-size:13px;color:rgba(255,255,255,.7);line-height:2;margin-bottom:28px">'
+    +'<div style="font-size:9px;font-weight:700;color:rgba(255,255,255,.5);letter-spacing:2.5px;text-transform:uppercase;margin-bottom:5px">Laporan Komprehensif Industrial Hygiene</div>'
+    +'<div style="font-size:9px;color:rgba(255,255,255,.35);margin-bottom:28px">PT Pertamina Patra Niaga · Satuan Kerja Regional III · '+tgl+'</div>'
+    +'<div style="font-size:48px;font-weight:700;color:#fff;line-height:1.1;margin-bottom:8px">Monitoring, Assessment</div>'
+    +'<div style="font-size:48px;font-weight:700;color:#60B4F4;line-height:1.1;margin-bottom:20px">&amp; Hazard Management</div>'
+    +'<div style="width:72px;height:3px;background:#C9973A;border-radius:2px;margin-bottom:18px"></div>'
+    +'<div style="font-size:13px;color:rgba(255,255,255,.7);line-height:2;margin-bottom:24px">'
     +'Armada: <strong style="color:#fff">'+fleetLbl+'</strong> &nbsp;·&nbsp; Periode: <strong style="color:#fff">'+periode+'</strong></div>'
-    // 4 KPI mini
-    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px">'
+    /* 4 KPI Cover */
+    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">'
     +[
-      {l:"Coverage HRA",v:d.hra.coverage+"%",s:d.hra.done+"/"+d.hra.total+" kapal",c:stC(d.hra.coverage,80,50)},
-      {l:"DAT Compliance",v:datPct+"%",s:d.dat.positif+" positif",c:stC(datPct,99,95)},
-      {l:"Hazard NAB",v:hazPct+"%",s:d.hazard.melebihi+" melebihi",c:stC(hazPct,100,80)},
-      {l:"Pest Control",v:d.pest.count>0?"Aktif":"—",s:d.pest.count+"x / "+d.pest.lokasi+" lok.",c:d.pest.count>0?"#2E7D32":"#C62828"}
+      {l:"COVERAGE HRA",v:d.hra.coverage+"%",s:d.hra.done+"/"+d.hra.total+" kapal",c:stC(d.hra.coverage,80,50)},
+      {l:"DAT COMPLIANCE",v:datPct+"%",s:d.dat.positif+" positif",c:stC(datPct,99,95)},
+      {l:"HAZARD NAB",v:hazPct+"%",s:d.hazard.melebihi+" melebihi",c:stC(hazPct,100,80)},
+      {l:"PEST CONTROL",v:d.pest.count>0?"Aktif":"—",s:d.pest.count+"x / "+d.pest.lokasi+" lok.",c:d.pest.count>0?"#2E7D32":"#C62828"}
     ].map(function(k){
-      return'<div style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-top:3px solid '+k.c+';border-radius:10px;padding:14px 12px">'
-        +'<div style="font-size:9px;color:rgba(255,255,255,.45);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">'+k.l+'</div>'
+      return'<div style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);'
+        +'border-top:3px solid '+k.c+';border-radius:10px;padding:14px 12px">'
+        +'<div style="font-size:9px;color:rgba(255,255,255,.45);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">'+k.l+'</div>'
         +'<div style="font-size:26px;font-weight:700;color:'+k.c+'">'+k.v+'</div>'
         +'<div style="font-size:10px;color:rgba(255,255,255,.45);margin-top:3px">'+k.s+'</div>'
         +'</div>';
     }).join("")
     +'</div>'
-    // status overall
-    +'<div style="background:'+stOvr.bg+';border:2px solid '+stOvr.c+';border-radius:12px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">'
-    +'<div>'
-    +'<div style="font-size:10px;font-weight:700;color:'+stOvr.c+';letter-spacing:1px;text-transform:uppercase;margin-bottom:3px">Status Keseluruhan</div>'
-    +'<div style="font-size:22px;font-weight:700;color:'+stOvr.c+'">'+stOvr.l+'</div>'
-    +'</div>'
+    /* Status Overall */
+    +'<div style="background:'+stOvr.bg+';border:2px solid '+stOvr.c+';border-radius:12px;padding:14px 20px;'
+    +'display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">'
+    +'<div><div style="font-size:10px;font-weight:700;color:'+stOvr.c+';letter-spacing:1px;text-transform:uppercase;margin-bottom:3px">Status Keseluruhan</div>'
+    +'<div style="font-size:22px;font-weight:700;color:'+stOvr.c+'">'+stOvr.l+'</div></div>'
     +'<div style="text-align:right;font-size:10px;color:#64748B">IH Dashboard v5.0<br>'+tgl+'</div>'
     +'</div>'
-    // regulasi tags
-    +'<div style="font-size:9px;color:rgba(255,255,255,.35);margin-bottom:8px;letter-spacing:1px;text-transform:uppercase">Kerangka Regulasi & Standar</div>'
+    /* Ringkasan singkat cover */
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">'
+    +'<div style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:14px 16px">'
+    +'<div style="font-size:10px;font-weight:700;color:#60B4F4;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Ruang Lingkup Laporan</div>'
+    +'<div style="font-size:11px;color:rgba(255,255,255,.65);line-height:1.8">'
+    +'✦ Hazard Recognition &amp; Assessment (HRA)<br>'
+    +'✦ Drugs &amp; Alcohol Test (DAT) Awak Kapal<br>'
+    +'✦ Pest &amp; Rodent Control Kantor<br>'
+    +'✦ Pemantauan 5 Hazard Utama (Fisika, Kimia, Biologi, Ergonomi, Psikososial)'
+    +(nomBio?'<br>✦ Biomonitoring Benzene (ACGIH BEI 2024)':"")
+    +'</div></div>'
+    +'<div style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:14px 16px">'
+    +'<div style="font-size:10px;font-weight:700;color:#60B4F4;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Temuan Utama</div>'
+    +'<div style="font-size:11px;color:rgba(255,255,255,.65);line-height:1.9">'
+    +(parseFloat(d.hra.coverage)<80?'⚠ Coverage HRA '+d.hra.coverage+'% — '+d.hra.done+'/'+d.hra.total+' armada':'✓ Coverage HRA '+d.hra.coverage+'% — '+d.hra.done+' armada HRA')+'<br>'
+    +(d.dat.positif>0?'⚠ '+d.dat.positif+' ABK reaktif ('+d.dat.rate+'%) dari '+d.dat.crew.toLocaleString("id-ID")+' terperiksa':'✓ Zero positive DAT — '+d.dat.crew.toLocaleString("id-ID")+' awak negatif')+'<br>'
+    +(d.hazard.melebihi>0?'⚠ '+d.hazard.melebihi+' parameter hazard melebihi NAB':'✓ Semua '+d.hazard.total+' parameter dalam batas NAB')+'<br>'
+    +(d.pest.count>0?'✓ Pest Control aktif — '+d.pest.count+'x di '+d.pest.lokasi+' lokasi':'⚠ Belum ada data Pest Control')
+    +(nomBio&&d.bio.melebihi>0?'<br>⚠ '+d.bio.melebihi+' sampel benzene melebihi BEI':"")
+    +'</div></div></div>'
+    /* Regulasi Tags */
+    +'<div style="font-size:9px;color:rgba(255,255,255,.35);margin-bottom:7px;letter-spacing:1px;text-transform:uppercase">Kerangka Regulasi &amp; Standar</div>'
     +'<div style="display:flex;flex-wrap:wrap;gap:6px">'
     +["Permenaker 05/2018","ACGIH TLV &amp; BEI 2024","ILO MLC 2006","IMO MSC/Circ.1351","ISO 45001:2018","IHR 2005 WHO"].map(function(s){
       return'<span style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.65);padding:4px 12px;border-radius:20px;font-size:9px;font-weight:600;border:1px solid rgba(255,255,255,.15)">'+s+'</span>';
-    }).join("")
-    +'</div>'
-    // footer
+    }).join("")+'</div>'
     +'<div style="position:absolute;bottom:28px;left:52px;right:52px;display:flex;justify-content:space-between;font-size:8px;color:rgba(255,255,255,.25)">'
-    +'<span>KONFIDENSIAL — HANYA UNTUK PENGGUNAAN INTERNAL</span>'
-    +'<span>Hal 1 / '+totalPages+'</span>'
-    +'</div>'
-    +'</div>';
+    +'<span>KONFIDENSIAL — HANYA UNTUK PENGGUNAAN INTERNAL</span><span>Hal 1 / '+totalPages+'</span>'
+    +'</div></div>';
 
-  /* ══════════════════ HALAMAN 2: HRA ══════════════════ */
+  /* ══════════════ HALAMAN 2: HRA ══════════════ */
+  var hraCovNum=parseFloat(d.hra.coverage);
   var pg2=phdr(2,totalPages)
-    +shdr("fa-lungs","I.  Hazard Recognition & Assessment (HRA)","#1565C0")
-    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">'
+    +shdr("fa-lungs","I. Hazard Recognition &amp; Assessment (HRA)","#1565C0")
+    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">'
     +kpi("Kapal Telah HRA",d.hra.done,"unit armada","#1565C0","#EBF5FF")
-    +kpi("Belum HRA",d.hra.total-d.hra.done,"unit",(d.hra.total-d.hra.done>0?"#C62828":"#2E7D32"),(d.hra.total-d.hra.done>0?"#FFEBEE":"#E8F5E9"))
-    +kpi("Coverage",d.hra.coverage+"%","dari total armada",stC(d.hra.coverage,80,50),stBg(d.hra.coverage,80,50),parseFloat(d.hra.coverage))
+    +kpi("Belum HRA",d.hra.total-d.hra.done,"unit",hraCovNum<100?"#C62828":"#2E7D32",hraCovNum<100?"#FFEBEE":"#E8F5E9")
+    +kpi("Coverage",d.hra.coverage+"%","dari total armada",stC(d.hra.coverage,80,50),stBg(d.hra.coverage,80,50),hraCovNum)
     +kpi("Est. Anggaran",formatRupiah(d.hra.budget),"total HRA","#6A1B9A","#F3E5F5")
     +'</div>'
-    +'<div style="background:#EBF5FF;border:1px solid #BFDBFE;border-left:4px solid #1565C0;border-radius:8px;padding:12px 14px;margin-bottom:18px;font-size:11px;color:#334155;line-height:1.7">'
-    +'<strong style="color:#1565C0">Analisis:</strong> '
-    +(parseFloat(d.hra.coverage)>=80?'Coverage HRA <strong>'+d.hra.coverage+'%</strong> menunjukkan kepatuhan <strong>baik</strong> terhadap Permenaker No.05/2018 Pasal 6 Ayat (1). Pertahankan siklus HRA berkala dan dokumentasikan seluruh temuan hazard.'
-    :'Coverage HRA <strong>'+d.hra.coverage+'%</strong> mengindikasikan <strong>'+(d.hra.total-d.hra.done)+' unit armada</strong> belum menjalani HRA — berpotensi blind spot manajemen risiko. Percepatan jadwal HRA diperlukan.')
-    +'</div>'
-    +(d.hra.data&&d.hra.data.length?
-      tbl([],d.hra.data.slice(0,10).map(function(r){var ok=(r["Status"]||"").toLowerCase()==="done";return[
-        '<strong>'+esc(r["Nama Kapal"]||"—")+'</strong>',
-        esc(r["Jenis Fleet"]||"—"),
-        esc(r["Bulan Pelaksanaan"]||"—"),
-        esc(r["Vendor Pelaksana"]||"—"),
-        '<span style="color:'+(ok?"#2E7D32":"#C62828")+';font-weight:700">'+(ok?"✓ Done":"Belum")+'</span>'
-      ];}),[]):'<div style="text-align:center;padding:20px;color:#94A3B8;font-size:12px">Belum ada data HRA</div>')
+    +anaBox("#1565C0","#EBF5FF","#BFDBFE","Analisis",
+      hraCovNum>=80?
+      'Coverage HRA <strong>'+d.hra.coverage+'%</strong> mencerminkan kepatuhan <strong>baik</strong> terhadap Permenaker No.05/2018 Pasal 6 Ayat (1). Dari <strong>'+d.hra.done+' unit</strong> yang telah HRA, seluruh proses dilaksanakan oleh vendor IH tersertifikasi dengan estimasi anggaran <strong>'+formatRupiah(d.hra.budget)+'</strong>. Pertahankan siklus HRA berkala minimal satu kali per tahun.':
+      'Coverage HRA <strong>'+d.hra.coverage+'%</strong> mengindikasikan <strong>'+(d.hra.total-d.hra.done)+' unit armada</strong> belum menjalani proses identifikasi hazard secara sistematis. Kondisi ini berpotensi menimbulkan blind spot manajemen risiko kesehatan kerja ABK. Percepatan jadwal HRA diperlukan sesuai Permenaker No.05/2018 Pasal 6 Ayat (1).')
+    +(d.hra.data&&d.hra.data.length?'<div style="margin-top:14px">'+tbl(
+      ["Nama Kapal","Fleet","Bulan","Vendor","Status"],
+      d.hra.data.slice(0,8).map(function(r){
+        var ok=(r["Status"]||"").toLowerCase()==="done";
+        return[
+          '<strong>'+esc(r["Nama Kapal"]||"—")+'</strong>',
+          esc(r["Jenis Fleet"]||"—"),
+          esc(r["Bulan Pelaksanaan"]||"—"),
+          esc(r["Vendor Pelaksana"]||"—"),
+          '<span style="color:'+(ok?"#2E7D32":"#C62828")+';font-weight:700">'+(ok?"✓ Done":"⏳ Belum")+'</span>'
+        ];
+      }))+'</div>':"")
+    +rekBox([
+      [hraCovNum<80?"Susun jadwal HRA prioritas untuk "+(d.hra.total-d.hra.done)+" unit yang belum, koordinasi vendor IH":"Lakukan verifikasi dokumentasi HRA seluruh unit armada yang sudah selesai",
+       "Update status HRA di IH Dashboard segera setelah setiap pelaksanaan selesai",
+       "Pastikan seluruh temuan hazard di lapangan terdokumentasi dalam HIRARC"],
+      ["Review dan validasi laporan HRA yang sudah selesai — pastikan kualitas temuan hazard",
+       "Tindaklanjuti setiap temuan hazard dengan rencana pengendalian berbasis hierarki ISO 45001",
+       "Jadwalkan medical surveillance ABK sesuai jenis hazard yang teridentifikasi"],
+      ["Target coverage HRA 100% sebelum akhir tahun — tetapkan KPI bulanan",
+       "Integrasikan temuan HRA ke Ship Safety Management System (SMS) sesuai ISM Code",
+       "Siapkan laporan HRA tahunan komprehensif untuk audit biro klasifikasi &amp; PSC"]
+    ])
+    +regStrip(["Permenaker No.05/2018 Pasal 6","ISO 45001:2018 Klausul 8","ISM Code Reg.7","IMO MSC/Circ.1351"])
     +pftr;
 
-  /* ══════════════════ HALAMAN 3: DAT ══════════════════ */
+  /* ══════════════ HALAMAN 3: DAT ══════════════ */
   var pg3=phdr(3,totalPages)
-    +shdr("fa-vial","II.  Drugs & Alcohol Test (DAT)","#2E7D32")
-    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">'
+    +shdr("fa-vial","II. Drugs &amp; Alcohol Test (DAT)","#2E7D32")
+    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">'
     +kpi("Kapal Terperiksa",d.dat.kapal,"unit armada","#2E7D32","#E8F5E9")
     +kpi("Total Crew",d.dat.crew.toLocaleString("id-ID"),"awak kapal","#0F2A4A","#F0F4F8")
-    +kpi("Hasil Reaktif",d.dat.positif,(d.dat.positif>0?"perlu tindak lanjut":"zero positive"),(d.dat.positif>0?"#C62828":"#2E7D32"),(d.dat.positif>0?"#FFEBEE":"#E8F5E9"))
-    +kpi("Prevalensi",d.dat.rate+"%","dari terperiksa",(parseFloat(d.dat.rate)>0?"#E65100":"#2E7D32"),(parseFloat(d.dat.rate)>0?"#FFF3E0":"#E8F5E9"),100-parseFloat(d.dat.rate)*10)
+    +kpi("Hasil Reaktif",d.dat.positif,d.dat.positif>0?"perlu tindak lanjut":"zero positive",d.dat.positif>0?"#C62828":"#2E7D32",d.dat.positif>0?"#FFEBEE":"#E8F5E9")
+    +kpi("Prevalensi",d.dat.rate+"%","dari terperiksa",parseFloat(d.dat.rate)>0?"#E65100":"#2E7D32",parseFloat(d.dat.rate)>0?"#FFF3E0":"#E8F5E9")
     +'</div>'
-    +'<div style="background:'+(d.dat.positif===0?"#E8F5E9":"#FFEBEE")+';border:1px solid '+(d.dat.positif===0?"#A5D6A7":"#EF9A9A")+';border-left:4px solid '+(d.dat.positif===0?"#2E7D32":"#C62828")+';border-radius:8px;padding:12px 14px;margin-bottom:18px;font-size:11px;color:#334155;line-height:1.7">'
-    +'<strong style="color:'+(d.dat.positif===0?"#2E7D32":"#C62828")+'">Analisis:</strong> '
-    +(d.dat.positif===0?'Zero positive rate dari <strong>'+d.dat.crew.toLocaleString("id-ID")+'</strong> awak di <strong>'+d.dat.kapal+'</strong> unit armada. Kepatuhan penuh MLC 2006 Regulation 4.3. Pertahankan program DAT unannounced.'
-    :'Ditemukan <strong>'+d.dat.positif+' ABK reaktif</strong> (prevalensi <strong>'+d.dat.rate+'%</strong>) dari '+d.dat.crew.toLocaleString("id-ID")+' terperiksa. Protokol medis & administratif wajib segera sesuai MLC 2006 Reg.4.3.')
+    +anaBox(d.dat.positif===0?"#2E7D32":"#C62828",d.dat.positif===0?"#E8F5E9":"#FFEBEE",d.dat.positif===0?"#A5D6A7":"#EF9A9A","Analisis",
+      d.dat.positif===0?
+      'Program DAT mencatat <strong>zero positive rate</strong> dari <strong>'+d.dat.crew.toLocaleString("id-ID")+'</strong> awak di <strong>'+d.dat.kapal+' unit armada</strong>. Kepatuhan penuh terhadap MLC 2006 Regulation 4.3 — pertahankan dengan penerapan random unannounced testing minimal 25% per semester.':
+      'Teridentifikasi <strong>'+d.dat.positif+' ABK reaktif</strong> (prevalensi <strong>'+d.dat.rate+'%</strong>) dari '+d.dat.crew.toLocaleString("id-ID")+' awak terperiksa di '+d.dat.kapal+' unit armada. Diperlukan protokol medis dan administratif segera sesuai MLC 2006 Reg.4.3 dan STCW Manila 2010.')
+    +(d.dat.bulanList&&d.dat.bulanList.length?'<div style="margin-top:14px">'+tbl(
+      ["Bulan","Kapal","Crew","Positif","Prevalensi","Est. Biaya","Status"],
+      d.dat.bulanList.map(function(r){
+        var ok=r.positif===0;
+        return[
+          '<strong>'+r.bulan+'</strong>',
+          r.kapal+' kapal',
+          r.crew.toLocaleString("id-ID"),
+          '<span style="color:'+(ok?"#2E7D32":"#C62828")+';font-weight:700">'+r.positif+'</span>',
+          '<span style="color:'+(ok?"#2E7D32":"#C62828")+'">'+r.rate+'%</span>',
+          formatRupiah(r.biaya),
+          '<span style="color:'+(ok?"#2E7D32":"#C62828")+';font-weight:700">'+(ok?"✓ Negatif":"⚠ Temuan")+'</span>'
+        ];
+      }))+'</div>':"")
+    /* Info cards DAT */
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">'
+    +infoCard("fa-shield-halved","Standar Compliance DAT",
+      "MLC 2006 Reg.4.3 mewajibkan program pencegahan penyalahgunaan alkohol dan narkotika di atas kapal. Benchmark internasional ILO menetapkan threshold prevalensi &lt;1% untuk armada tanker.",
+      "#2E7D32")
+    +infoCard("fa-flask","Metode Pemeriksaan",
+      "Pemeriksaan wajib mencakup urine drug test (UDT) dan alcohol breathalyzer test (ABT). Spesimen harus ditangani dengan chain-of-custody oleh laboratorium terakreditasi KAN.",
+      "#1565C0")
     +'</div>'
-    +(d.dat.bulanList.length?
-      tbl([],d.dat.bulanList.map(function(r){var ok=r.positif===0;return[
-        '<strong>'+r.bulan+'</strong>',
-        r.kapal+' kapal',
-        r.crew.toLocaleString("id-ID"),
-        '<span style="color:'+(ok?"#2E7D32":"#C62828")+';font-weight:700">'+r.positif+'</span>',
-        '<span style="color:'+(ok?"#2E7D32":"#C62828")+'">'+r.rate+'%</span>',
-        formatRupiah(r.biaya),
-        '<span style="color:'+(ok?"#2E7D32":"#C62828")+';font-weight:700">'+(ok?"✓ Negatif":"⚠ Temuan")+'</span>'
-      ];}),["Bulan","Kapal","Crew","Positif","Prevalensi","Est. Biaya","Status"]):"")
+    +rekBox([
+      [d.dat.positif>0?"Protokol medis segera untuk "+d.dat.positif+" ABK reaktif — evaluasi SpOK, fitness-to-work":"Pertahankan zero positive — tingkatkan frekuensi random testing",
+       "Notifikasi nakhoda &amp; manajemen dalam 24 jam sesuai prosedur ISM Code",
+       "Update status tindak lanjut di IH Dashboard untuk monitoring real-time"],
+      ["Implementasikan random unannounced DAT min 25% crew per semester",
+       "Audit vendor laboratorium — validasi akreditasi KAN dan metode pemeriksaan",
+       "Sosialisasi kebijakan zero tolerance kepada seluruh ABK setiap kapal"],
+      ["Dokumentasikan statistik DAT tahunan untuk PSC inspection dan audit ISM",
+       "Kembangkan Substance Abuse Prevention Program (SAPP) yang komprehensif",
+       "Integrasikan data DAT ke Health Record individual ABK secara berkala"]
+    ])
+    +regStrip(["MLC 2006 Reg.4.3","STCW 2010 Manila","Permenhub KM.5/2016","ISM Code Reg.4"])
     +pftr;
 
-  /* ══════════════════ HALAMAN 4: PEST ══════════════════ */
+  /* ══════════════ HALAMAN 4: PEST ══════════════ */
   var pg4=phdr(4,totalPages)
-    +shdr("fa-bug","III.  Pest & Rodent Control","#6A1B9A")
-    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">'
+    +shdr("fa-bug","III. Pest &amp; Rodent Control","#6A1B9A")
+    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">'
     +kpi("Total Kegiatan",d.pest.count,"pelaksanaan","#6A1B9A","#F3E5F5")
     +kpi("Lokasi",d.pest.lokasi,"lokasi kantor","#4527A0","#EDE7F6")
     +kpi("Est. Anggaran",formatRupiah(d.pest.biaya),"total program","#6A1B9A","#F3E5F5")
-    +kpi("Status",d.pest.count>0?"Terlaksana":"Belum Ada","data periode ini",(d.pest.count>0?"#2E7D32":"#E65100"),(d.pest.count>0?"#E8F5E9":"#FFF3E0"))
+    +kpi("Status",d.pest.count>0?"Terlaksana":"Belum Ada",d.pest.count>0?"sesuai jadwal":"perlu percepatan",d.pest.count>0?"#2E7D32":"#E65100",d.pest.count>0?"#E8F5E9":"#FFF3E0")
     +'</div>'
-    +'<div style="background:#EDE7F6;border:1px solid #CE93D8;border-left:4px solid #6A1B9A;border-radius:8px;padding:12px 14px;margin-bottom:18px;font-size:11px;color:#334155;line-height:1.7">'
-    +'<strong style="color:#6A1B9A">Analisis:</strong> '
-    +(d.pest.count>0?'Program Pest & Rodent Control terlaksana <strong>'+d.pest.count+' kegiatan</strong> di <strong>'+d.pest.lokasi+' lokasi</strong> dengan estimasi anggaran '+formatRupiah(d.pest.biaya)+'. Memenuhi kewajiban sanitasi IHR 2005 WHO.'
-    :'Belum ada data Pest Control untuk periode ini. Program pengendalian vektor wajib dilaksanakan periodik sesuai IHR 2005 WHO.')
+    +anaBox("#6A1B9A","#EDE7F6","#B39DDB","Analisis",
+      d.pest.count>0?
+      'Program Pest &amp; Rodent Control telah terlaksana <strong>'+d.pest.count+' kegiatan</strong> di <strong>'+d.pest.lokasi+' lokasi</strong> fasilitas perkantoran dengan estimasi anggaran <strong>'+formatRupiah(d.pest.biaya)+'</strong>. Program memenuhi kewajiban sanitasi dan pengendalian vektor penyakit sesuai International Health Regulations (IHR) 2005 WHO.':
+      'Belum terdapat data Pest Control pada periode ini. Program pengendalian vektor dan hama wajib dilaksanakan secara periodik sesuai IHR 2005 WHO untuk menjaga sanitasi lingkungan kerja yang sehat.')
+    +(d.pest.bulanList&&d.pest.bulanList.length?'<div style="margin-top:14px">'+tbl(
+      ["Bulan","Kegiatan","Lokasi","Temuan Utama","Est. Biaya"],
+      d.pest.bulanList.map(function(r){
+        return['<strong>'+r.bulan+'</strong>',r.count+'x',r.lokasi+' lokasi',esc(r.temuan),formatRupiah(r.biaya)];
+      }))+'</div>':"")
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">'
+    +infoCard("fa-house-medical","Vektor Penyakit &amp; Risiko Kesehatan",
+      "Tikus merupakan reservoir Leptospirosis, Salmonellosis, dan Hantavirus. Kecoa menjadi vektor diare, Salmonella, dan alergen respiratorik. Nyamuk berpotensi transmisi DBD dan Malaria di area tropis.",
+      "#6A1B9A")
+    +infoCard("fa-calendar-check","Frekuensi Pengendalian yang Direkomendasikan",
+      "Fogging dan fumigasi minimal 1x per 3 bulan per lokasi. Pasang perangkap rodensia permanen. Inspeksi sanitasi bulanan di area dapur, gudang, dan saluran air terbuka sesuai Permenkes No.50/2017.",
+      "#4527A0")
     +'</div>'
-    +(d.pest.bulanList.length?
-      tbl([],d.pest.bulanList.map(function(r){return['<strong>'+r.bulan+'</strong>',r.count+'x',r.lokasi+' lokasi',r.temuan,formatRupiah(r.biaya)];}),[]):"")
+    +rekBox([
+      ["Fogging &amp; fumigasi terjadwal min 1x/3 bulan untuk semua "+d.pest.lokasi+" lokasi aktif",
+       "Pasang perangkap tikus permanen di titik strategis: dapur, gudang, saluran air",
+       "Perbaiki celah struktural gedung yang menjadi titik masuk hama"],
+      ["Review vendor pest control — pastikan sertifikat masih aktif dan metode sesuai standar",
+       "Sosialisasi kebersihan lingkungan kerja kepada seluruh karyawan per semester",
+       "Koordinasi dengan pengelola gedung untuk maintenance saluran pembuangan"],
+      ["Arsipkan laporan Pest Control untuk keperluan audit K3 tahunan dan sertifikasi",
+       "Integrasikan data temuan hama ke penilaian risiko kesehatan lingkungan kerja",
+       "Siapkan laporan sanitasi tahunan sesuai persyaratan IHR 2005 WHO"]
+    ])
+    +regStrip(["IHR 2005 WHO","Permenkes No.50/2017","PP No.66/2014 Kesehatan Lingkungan","SNI 8151:2015"])
     +pftr;
 
-  /* ══════════════════ HALAMAN 5: 5 HAZARD ══════════════════ */
+  /* ══════════════ HALAMAN 5: 5 HAZARD ══════════════ */
   var hRows=[
-    {l:"Faktor Fisika",t:d.hazard.fisika.total,m:d.hazard.fisika.melebihi,c:"#1565C0"},
-    {l:"Faktor Kimia",t:d.hazard.kimia.total,m:d.hazard.kimia.melebihi,c:"#7B1FA2"},
-    {l:"Faktor Biologi",t:d.hazard.biologi.total,m:d.hazard.biologi.melebihi,c:"#2E7D32"},
-    {l:"Faktor Ergonomi",t:d.hazard.ergonomi.total,m:d.hazard.ergonomi.tinggi,c:"#E65100"},
-    {l:"Faktor Psikososial",t:d.hazard.psiko.total,m:d.hazard.psiko.tinggi,c:"#AD1457"}
+    {l:"Faktor Fisika",t:d.hazard.fisika.total,m:d.hazard.fisika.melebihi,c:"#1565C0",icon:"Kebisingan, Getaran, Suhu, Radiasi, Pencahayaan"},
+    {l:"Faktor Kimia",t:d.hazard.kimia.total,m:d.hazard.kimia.melebihi,c:"#7B1FA2",icon:"VOC, H₂S, CO, Benzene, Debu B3"},
+    {l:"Faktor Biologi",t:d.hazard.biologi.total,m:d.hazard.biologi.melebihi,c:"#2E7D32",icon:"Bakteri, Virus, Jamur, Protozoa"},
+    {l:"Faktor Ergonomi",t:d.hazard.ergonomi.total,m:d.hazard.ergonomi.tinggi,c:"#E65100",icon:"Postur, Manual Handling, Repetitif, Vibrasi"},
+    {l:"Faktor Psikososial",t:d.hazard.psiko.total,m:d.hazard.psiko.tinggi,c:"#AD1457",icon:"Beban Kerja, Isolasi, Fatigue, Konflik Peran"}
   ];
   var pg5=phdr(5,totalPages)
-    +shdr("fa-triangle-exclamation","IV.  Pemantauan 5 Hazard Utama (Permenaker 05/2018)","#E65100")
-    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">'
+    +shdr("fa-triangle-exclamation","IV. Pemantauan 5 Hazard Utama (Permenaker 05/2018)","#E65100")
+    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">'
     +kpi("Total Pengukuran",d.hazard.total,"parameter","#0F2A4A","#F0F4F8")
-    +kpi("Melebihi NAB",d.hazard.melebihi,(d.hazard.melebihi>0?"perlu pengendalian":"semua aman"),(d.hazard.melebihi>0?"#C62828":"#2E7D32"),(d.hazard.melebihi>0?"#FFEBEE":"#E8F5E9"))
+    +kpi("Melebihi NAB",d.hazard.melebihi,d.hazard.melebihi>0?"perlu pengendalian":"semua aman",d.hazard.melebihi>0?"#C62828":"#2E7D32",d.hazard.melebihi>0?"#FFEBEE":"#E8F5E9")
     +kpi("Compliance",hazPct+"%","dalam batas NAB",stC(hazPct,100,80),stBg(hazPct,100,80),parseFloat(hazPct))
     +'</div>'
-    // 5 hazard bars
-    +'<div style="margin-bottom:20px">'
+    +'<div style="margin-bottom:16px">'
     +hRows.map(function(h){
       var pct=h.t>0?Math.round((h.m/h.t)*100):0;
       var okC=h.m===0?"#2E7D32":"#C62828";
-      return'<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">'
-        +'<div style="width:130px;font-size:11px;font-weight:600;color:#334155;flex-shrink:0">'+h.l+'</div>'
-        +'<div style="flex:1;background:#E2E8F0;border-radius:4px;height:10px;overflow:hidden">'
-        +'<div style="width:'+(h.t>0?(h.m/h.t*100).toFixed(0):0)+'%;background:'+h.c+';height:10px"></div></div>'
-        +'<div style="width:80px;text-align:right;font-size:11px;font-weight:700;color:'+okC+'">'+h.m+' / '+h.t+'</div>'
-        +'<div style="width:50px;text-align:right;font-size:10px;color:'+h.c+'">'+pct+'%</div>'
+      return'<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;background:#F8FAFC;'
+        +'border-radius:8px;padding:10px 14px;border-left:3px solid '+h.c+'">'
+        +'<div style="width:120px;font-size:11px;font-weight:700;color:#334155;flex-shrink:0">'+h.l+'</div>'
+        +'<div style="width:220px;font-size:9.5px;color:#94A3B8;flex-shrink:0">'+h.icon+'</div>'
+        +'<div style="flex:1;background:#E2E8F0;border-radius:3px;height:8px;overflow:hidden">'
+        +'<div style="width:'+(h.t>0?(h.m/h.t*100).toFixed(0):0)+'%;background:'+h.c+';height:8px"></div></div>'
+        +'<div style="width:70px;text-align:right;font-size:11px;font-weight:700;color:'+okC+'">'+h.m+' / '+h.t+'</div>'
+        +'<div style="width:38px;text-align:right;font-size:10px;color:'+h.c+'">'+pct+'%</div>'
         +'</div>';
-    }).join("")
+    }).join("")+'</div>'
+    +anaBox(d.hazard.melebihi===0?"#2E7D32":"#C62828",d.hazard.melebihi===0?"#E8F5E9":"#FFEBEE",d.hazard.melebihi===0?"#A5D6A7":"#EF9A9A","Analisis",
+      d.hazard.melebihi===0?
+      'Seluruh <strong>'+d.hazard.total+' parameter</strong> hazard berada dalam batas Nilai Ambang Batas (NAB) yang ditetapkan. Efektivitas program pengendalian hazard terjaga sesuai Permenaker No.05/2018. Pertahankan monitoring berkala setiap semester.':
+      '<strong>'+d.hazard.melebihi+' parameter ('+Math.round((d.hazard.melebihi/d.hazard.total)*100)+'%)</strong> melampaui NAB dari '+d.hazard.total+' pengukuran. Implementasi segera 5 hierarki pengendalian risiko (Eliminasi → Substitusi → Rekayasa Teknik → Administratif → APD) sesuai Permenaker 05/2018 dan ISO 45001:2018.')
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">'
+    +infoCard("fa-layer-group","5 Hierarki Pengendalian (ISO 45001:2018)",
+      "<strong>1. Eliminasi</strong> — hilangkan sumber bahaya<br><strong>2. Substitusi</strong> — ganti dengan yang lebih aman<br><strong>3. Rekayasa Teknik</strong> — engineering control<br><strong>4. Administratif</strong> — SOP &amp; prosedur<br><strong>5. APD</strong> — alat pelindung diri",
+      "#E65100")
+    +infoCard("fa-stethoscope","Medical Surveillance Wajib",
+      "ABK yang terpapar hazard di atas NAB wajib mengikuti medical surveillance berkala sesuai Permenaker 05/2018 Lampiran IV. Periode pemeriksaan: setiap 6 bulan untuk hazard risiko tinggi, setiap 12 bulan untuk risiko sedang.",
+      "#1565C0")
     +'</div>'
-    +'<div style="background:'+(d.hazard.melebihi===0?"#E8F5E9":"#FFEBEE")+';border-left:4px solid '+(d.hazard.melebihi===0?"#2E7D32":"#C62828")+';border-radius:8px;padding:12px 14px;font-size:11px;color:#334155;line-height:1.7">'
-    +'<strong style="color:'+(d.hazard.melebihi===0?"#2E7D32":"#C62828")+'">Analisis:</strong> '
-    +(d.hazard.melebihi===0?'Seluruh '+d.hazard.total+' parameter hazard berada dalam batas NAB — program pengendalian berjalan efektif sesuai Permenaker 05/2018.'
-    :d.hazard.melebihi+' parameter ('+Math.round((d.hazard.melebihi/d.hazard.total)*100)+'%) melampaui NAB dari '+d.hazard.total+' pengukuran. Implementasi hierarki pengendalian ISO 45001:2018 diperlukan segera.')
-    +'</div>'
+    +rekBox([
+      [d.hazard.melebihi>0?"Pengendalian teknis segera untuk "+d.hazard.melebihi+" parameter melebihi NAB":"Pertahankan program pengendalian yang sudah efektif",
+       "Evaluasi kesesuaian APD yang digunakan dengan jenis paparan yang terukur",
+       "Pastikan seluruh temuan terdokumentasi di IH Dashboard untuk tracking"],
+      ["Review JSA dan HIRARC area dengan temuan melebihi NAB",
+       "Re-measurement setelah implementasi pengendalian untuk verifikasi efektivitas",
+       "Medical surveillance untuk ABK terpapar di atas NAB setiap 6 bulan"],
+      ["Integrasikan temuan 5 Hazard ke SMS kapal sebagai HIRARC permanen",
+       "Monitoring berkala — jadwal pengukuran rutin minimal 1x per semester",
+       "Laporan tahunan 5 Hazard untuk audit ISM Code &amp; biro klasifikasi"]
+    ])
+    +regStrip(["Permenaker 05/2018 Pasal 7-11","ACGIH TLV 2024","ISO 45001:2018 Klausul 8.1.2","PP No.88/2019 Kesehatan Kerja"])
     +pftr;
 
-  /* ══════════════════ HALAMAN 6 (opsional): BIOMARKER ══════════════════ */
+  /* ══════════════ HALAMAN 6 (opsional): BIOMARKER ══════════════ */
   var pg6bio="";
   if(nomBio){
     pg6bio=phdr(6,totalPages)
-      +shdr("fa-flask","V.  Biomonitoring Benzene (ACGIH BEI 2024)","#7B1FA2")
-      +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">'
+      +shdr("fa-flask","V. Biomonitoring Benzene (ACGIH BEI 2024)","#7B1FA2")
+      +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">'
       +kpi("Total Sampel",d.bio.total,"sampel urin","#7B1FA2","#F3E5F5")
-      +kpi("Melebihi BEI",d.bio.melebihi,"(>25 µg/g kreat)",(d.bio.melebihi>0?"#C62828":"#2E7D32"),(d.bio.melebihi>0?"#FFEBEE":"#E8F5E9"))
+      +kpi("Melebihi BEI",d.bio.melebihi,"(>25 µg/g kreat)",d.bio.melebihi>0?"#C62828":"#2E7D32",d.bio.melebihi>0?"#FFEBEE":"#E8F5E9")
       +kpi("Dalam Batas",d.bio.total-d.bio.melebihi,"BEI ACGIH 2024","#7B1FA2","#F3E5F5")
       +'</div>'
-      +'<div style="background:#F3E5F5;border-left:4px solid #7B1FA2;border-radius:8px;padding:12px 14px;font-size:11px;color:#334155;line-height:1.7">'
-      +'<strong style="color:#7B1FA2">Analisis:</strong> '
-      +(d.bio.melebihi>0?d.bio.melebihi+' sampel ('+Math.round((d.bio.melebihi/d.bio.total)*100)+'%) melebihi BEI ACGIH 2024. Benzene IARC Group 1 — wajib medical surveillance dan pengendalian sumber segera.'
-      :'Seluruh '+d.bio.total+' sampel dalam batas BEI ACGIH 2024 (25 µg/g kreat). Prinsip ALARA tetap diterapkan mengingat benzene IARC Group 1.')
+      +anaBox("#7B1FA2","#F3E5F5","#CE93D8","Analisis",
+        d.bio.melebihi>0?
+        '<strong>'+d.bio.melebihi+' sampel ('+Math.round((d.bio.melebihi/d.bio.total)*100)+'%)</strong> melebihi BEI ACGIH 2024 (25 µg/g kreatinin). Benzene terklasifikasi IARC Group 1 — meningkatkan risiko leukemia mieloid akut (AML) secara dose-dependent. Diperlukan medical surveillance intensif dan pengendalian sumber segera.':
+        'Seluruh <strong>'+d.bio.total+' sampel</strong> berada dalam batas BEI ACGIH 2024. Mengingat benzene sebagai karsinogen IARC Group 1 tanpa threshold aman, prinsip ALARA (As Low As Reasonably Achievable) tetap diterapkan. Monitoring berkala wajib dipertahankan.')
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">'
+      +infoCard("fa-biohazard","Klasifikasi Bahaya Benzene",
+        "Benzene (C₆H₆) diklasifikasikan sebagai <strong>Karsinogen IARC Group 1</strong> (terbukti karsinogenik pada manusia). Paparan kronik menyebabkan leukemia mieloid akut (AML), aplastik anemia, dan gangguan hematopoiesis. <strong>Tidak ada nilai paparan yang dianggap aman secara absolut.</strong>",
+        "#7B1FA2")
+      +infoCard("fa-vial","Biomarker &amp; Batas BEI ACGIH 2024",
+        "<strong>S-Phenylmercapturic Acid (S-PMA):</strong> BEI 25 µg/g kreatinin (urin akhir shift)<br><strong>t,t-Muconic Acid (ttMA):</strong> BEI 500 µg/g kreatinin<br><strong>TLV-TWA udara:</strong> 0.5 ppm (ACGIH 2024)<br>Pemeriksaan wajib pre-shift dan post-shift untuk akurasi optimal.",
+        "#6A1B9A")
       +'</div>'
+      +rekBox([
+        [d.bio.melebihi>0?"Medical surveillance segera: hematologi lengkap untuk "+d.bio.melebihi+" ABK":"Pertahankan program biomonitoring rutin setiap 6 bulan",
+         "Audit sumber paparan benzene: cargo tank, pump room, manifold area",
+         "Pastikan APD full-face respirator OV/P100 digunakan di semua area berisiko"],
+        ["Perbaiki sistem Local Exhaust Ventilation (LEV) di pump room dan manifold",
+         "Review SOP bunkering &amp; cargo handling — terapkan closed-loop system",
+         "Re-sampling dalam 3 bulan untuk ABK dengan kadar di atas BEI"],
+        ["Jadwalkan biomonitoring benzene rutin setiap 6 bulan untuk ABK berisiko",
+         "Daftarkan ABK riwayat paparan tinggi dalam program medical surveillance jangka panjang",
+         "Laporan biomonitoring tahunan untuk PSC inspection &amp; biro klasifikasi"]
+      ])
+      +regStrip(["ACGIH BEI 2024","IARC Monograph Vol.100F","Permenaker 05/2018 Lampiran IV","IMO MARPOL Annex VI"])
       +pftr;
   }
 
-  /* ══════════════════ HALAMAN TERAKHIR: REKOMENDASI AI ══════════════════ */
+  /* ══════════════ HALAMAN TERAKHIR: REKOMENDASI AI ══════════════ */
   var pgRekN=nomBio?7:6;
+  var reks=[];
+  if(parseFloat(d.hra.coverage)<80)
+    reks.push({p:"HRA",t:"Akselerasi Coverage HRA",
+      b:'Coverage HRA <strong>'+d.hra.coverage+'%</strong> dari '+d.hra.total+' unit armada berada di bawah threshold kepatuhan 80% sesuai Permenaker 05/2018. Diperlukan percepatan penjadwalan HRA untuk <strong>'+(d.hra.total-d.hra.done)+' unit</strong> yang belum terlaksana.',
+      c:"#C62828",bg:"#FFEBEE",ic:"fa-lungs"});
+  else reks.push({p:"HRA",t:"Pertahankan Coverage HRA",
+    b:'Coverage HRA <strong>'+d.hra.coverage+'%</strong> menunjukkan kepatuhan substansial. Jadwalkan siklus HRA berikutnya dan integrasikan temuan ke Ship Safety Management System.',
+    c:"#2E7D32",bg:"#E8F5E9",ic:"fa-lungs"});
+  if(d.dat.positif>0) reks.push({p:"DAT",t:"Tindak Lanjut "+d.dat.positif+" ABK Reaktif",
+    b:'Ditemukan <strong>'+d.dat.positif+' ABK reaktif</strong> (prevalensi <strong>'+d.dat.rate+'%</strong>) dari '+d.dat.crew.toLocaleString("id-ID")+' awak terperiksa. Protokol medis dan administratif wajib segera dilaksanakan sesuai MLC 2006 Reg.4.3.',
+    c:"#C62828",bg:"#FFEBEE",ic:"fa-vial"});
+  else reks.push({p:"DAT",t:"Zero Positive — Pertahankan Program",
+    b:'Program DAT mencatat <strong>zero positive rate</strong> dari <strong>'+d.dat.crew.toLocaleString("id-ID")+'</strong> awak di '+d.dat.kapal+' kapal. Pertahankan dengan random unannounced testing minimal 25% per semester.',
+    c:"#2E7D32",bg:"#E8F5E9",ic:"fa-vial"});
+  if(d.hazard.melebihi>0) reks.push({p:"5 HAZARD",t:"Pengendalian "+d.hazard.melebihi+" Parameter Melebihi NAB",
+    b:'<strong>'+d.hazard.melebihi+' parameter ('+Math.round((d.hazard.melebihi/d.hazard.total)*100)+'%)</strong> dari '+d.hazard.total+' pengukuran melampaui NAB. Implementasi segera 5 hierarki pengendalian risiko sesuai ISO 45001:2018.',
+    c:"#E65100",bg:"#FFF3E0",ic:"fa-triangle-exclamation"});
+  else reks.push({p:"5 HAZARD",t:"Seluruh Parameter dalam Batas NAB",
+    b:'Semua <strong>'+d.hazard.total+' parameter</strong> hazard memenuhi NAB sesuai Permenaker 05/2018. Pertahankan monitoring berkala minimum satu kali per semester.',
+    c:"#2E7D32",bg:"#E8F5E9",ic:"fa-shield-halved"});
+  if(nomBio&&d.bio.melebihi>0) reks.push({p:"BIOMARKER",t:"Medical Surveillance "+d.bio.melebihi+" ABK",
+    b:'<strong>'+d.bio.melebihi+' sampel</strong> melebihi BEI ACGIH 2024. Benzene IARC Group 1 — wajib pemeriksaan hematologi dan evaluasi SpOK. Perbaiki ventilasi LEV dan terapkan APD full-face respirator.',
+    c:"#7B1FA2",bg:"#F3E5F5",ic:"fa-flask"});
+
   var pgRek=phdr(pgRekN,totalPages+(nomBio?1:0))
-    +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid #0F2A4A">'
+    +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;padding-bottom:12px;border-bottom:2px solid #0F2A4A">'
     +'<div style="width:32px;height:32px;background:linear-gradient(135deg,#6A1B9A,#1565C0);border-radius:8px;display:flex;align-items:center;justify-content:center">'
     +'<i class="fas fa-brain" style="color:#fff;font-size:14px"></i></div>'
     +'<div style="font-size:16px;font-weight:700;color:#0F2A4A">Rekomendasi AI — Berbasis Data Aktual Dashboard</div>'
     +'<div style="margin-left:auto"><span style="background:linear-gradient(135deg,#6A1B9A,#1565C0);color:#fff;padding:3px 10px;border-radius:20px;font-size:9px;font-weight:700">AI Generated</span></div>'
     +'</div>'
-    // 3 rekomendasi prioritas
-    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px">'
+    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px">'
     +reks.slice(0,3).map(function(r){
-      return'<div style="background:'+r.bg+';border-radius:12px;padding:16px;border-top:3px solid '+r.c+'">'
-        +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
-        +'<i class="fas '+r.ic+'" style="color:'+r.c+';font-size:16px"></i>'
+      return'<div style="background:'+r.bg+';border-radius:12px;padding:14px;border-top:3px solid '+r.c+'">'
+        +'<div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">'
+        +'<i class="fas '+r.ic+'" style="color:'+r.c+';font-size:15px"></i>'
         +'<span style="font-size:9px;font-weight:700;color:'+r.c+';text-transform:uppercase;letter-spacing:.5px">'+r.p+'</span>'
         +'</div>'
-        +'<div style="font-size:12px;font-weight:700;color:#1E293B;margin-bottom:8px;line-height:1.4">'+r.t+'</div>'
+        +'<div style="font-size:12px;font-weight:700;color:#1E293B;margin-bottom:7px;line-height:1.4">'+r.t+'</div>'
         +'<div style="font-size:10.5px;color:#475569;line-height:1.65">'+r.b+'</div>'
         +'</div>';
-    }).join("")
-    +'</div>'
+    }).join("")+'</div>'
     +(reks.length>3?
-      '<div style="display:grid;grid-template-columns:repeat('+(reks.length-3)+',1fr);gap:14px;margin-bottom:20px">'
+      '<div style="display:grid;grid-template-columns:repeat('+(reks.length-3)+',1fr);gap:12px;margin-bottom:14px">'
       +reks.slice(3).map(function(r){
-        return'<div style="background:'+r.bg+';border-radius:12px;padding:16px;border-top:3px solid '+r.c+'">'
-          +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
-          +'<i class="fas '+r.ic+'" style="color:'+r.c+';font-size:16px"></i>'
+        return'<div style="background:'+r.bg+';border-radius:12px;padding:14px;border-top:3px solid '+r.c+'">'
+          +'<div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">'
+          +'<i class="fas '+r.ic+'" style="color:'+r.c+';font-size:15px"></i>'
           +'<span style="font-size:9px;font-weight:700;color:'+r.c+';text-transform:uppercase;letter-spacing:.5px">'+r.p+'</span>'
           +'</div>'
-          +'<div style="font-size:12px;font-weight:700;color:#1E293B;margin-bottom:8px;line-height:1.4">'+r.t+'</div>'
+          +'<div style="font-size:12px;font-weight:700;color:#1E293B;margin-bottom:7px;line-height:1.4">'+r.t+'</div>'
           +'<div style="font-size:10.5px;color:#475569;line-height:1.65">'+r.b+'</div>'
           +'</div>';
-      }).join("")+'</div>'
-    :"")
-    // closing box
-    +'<div style="background:#0F2A4A;border-radius:12px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between">'
+      }).join("")+'</div>':"")
+    /* Program prioritas */
+    +'<div style="background:#F0F4F8;border-radius:12px;padding:14px 18px;margin-bottom:14px">'
+    +'<div style="font-size:12px;font-weight:700;color:#0F2A4A;margin-bottom:10px">📋 Program Prioritas Periode Berikutnya</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'
+    +[
+      {no:"1",aksi:hraCovNum<80?"Akselerasi HRA — "+Math.ceil(d.hra.total*0.8-d.hra.done)+" unit target":"Verifikasi dokumentasi HRA seluruh armada",by:"IH Officer",when:"Bulan depan"},
+      {no:"2",aksi:d.dat.positif>0?"Follow-up medis "+d.dat.positif+" ABK reaktif":"Jadwalkan DAT unannounced berikutnya",by:"Manager Health",when:"Segera"},
+      {no:"3",aksi:d.hazard.melebihi>0?"Engineering control "+d.hazard.melebihi+" hazard melebihi NAB":"Jadwal pengukuran hazard semester berikutnya",by:"IH Tim",when:"1–3 bulan"}
+    ].map(function(item){
+      return'<div style="background:#fff;border:1px solid #E2E8F0;border-radius:8px;padding:10px 12px">'
+        +'<div style="font-size:10px;font-weight:700;color:#1565C0;margin-bottom:5px">No.'+item.no+'</div>'
+        +'<div style="font-size:11px;color:#334155;font-weight:600;margin-bottom:4px;line-height:1.4">'+item.aksi+'</div>'
+        +'<div style="font-size:9.5px;color:#64748B">PIC: '+item.by+' · '+item.when+'</div>'
+        +'</div>';
+    }).join("")
+    +'</div></div>'
+    /* Closing box */
+    +'<div style="background:#0F2A4A;border-radius:12px;padding:14px 20px;display:flex;align-items:center;justify-content:space-between">'
     +'<div>'
     +'<div style="font-size:12px;font-weight:700;color:#fff;margin-bottom:3px">Dihasilkan oleh IH Dashboard v5.0 — PT Pertamina Patra Niaga SK Regional III</div>'
     +'<div style="font-size:10px;color:rgba(255,255,255,.5)">Data aktual real-time · '+tgl+' · Konfidensial — Penggunaan Internal</div>'
     +'</div>'
-    +'<div style="font-size:10px;color:#C9973A;font-weight:700">ihhealth3.com</div>'
+    +'<div style="font-size:11px;color:#C9973A;font-weight:700">ihhealth3.com</div>'
     +'</div>'
     +pftr;
 
@@ -4106,7 +4281,6 @@ function _buildSummary(el,cKey){
     +(nomBio?pg("pg-bio",pg6bio):"")
     +pg("pg-rek",pgRek)
     +'</div>';
-
   el.innerHTML=html;
   _summaryCache=html;
   _summaryCacheKey=cKey||"";
