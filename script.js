@@ -4143,3 +4143,393 @@ async function exportSummaryPDF(){
   }catch(e){console.error(e);showToast("Gagal export PDF: "+e.message,"error");}
   if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-file-pdf"></i> Export PDF';}
 }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   MEMO DAT — Annual External Drugs & Alcohol Test
+   Output: .docx via window.docx (browser)
+   Tipe 1: Manager Fleet  |  Tipe 2: Klinik/Vendor Pelaksana
+═══════════════════════════════════════════════════════════════ */
+
+var _memoType = "";
+
+/* ── Buka modal ── */
+function showMemoModal(type){
+  _memoType = type;
+  var modal  = document.getElementById("memoModal");
+  var title  = document.getElementById("memoModalTitle");
+  var fields = document.getElementById("memoModalFields");
+  if(!modal) return;
+
+  /* Default dari data DAT yang sedang difilter */
+  var kapalDef = "", crewDef = "";
+  if(typeof filteredDAT !== "undefined" && filteredDAT.length){
+    var fk = (document.getElementById("dat-filter-kapal")||{}).value||"";
+    if(fk) kapalDef = fk;
+    var tc = filteredDAT.reduce(function(s,r){return s+parseInt(r["Total Crew Diperiksa"]||0);},0);
+    if(tc>0) crewDef = String(tc);
+  }
+  var now = new Date();
+  var tglDef = "Jakarta, "+now.toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"});
+
+  function field(id,label,type,val,ph){
+    type = type||"text";
+    return '<div class="memo-field"><label>'+label+'</label>'
+      +'<input id="'+id+'" type="'+type+'" value="'+esc(val||'')+'" placeholder="'+esc(ph||'')+'"></div>';
+  }
+
+  if(type === "fleet"){
+    title.textContent = "📄 Memo DAT — Manager Fleet Product";
+    fields.innerHTML =
+      field("mf_tgl","Tanggal Surat","text",tglDef,"Jakarta, 10 Mei 2026")+
+      field("mf_tujuan","Ditujukan Kepada","text","Manager Fleet Product I","Manager Fleet Product I")+
+      field("mf_kapal","Nama Kapal","text",kapalDef,"MT. Pasaman")+
+      field("mf_crew","Jumlah Crew","number",crewDef,"12")+
+      field("mf_lokasi","Lokasi Pelaksanaan","text","","Port Tanjung Priok")+
+      field("mf_tglpel","Tanggal Pelaksanaan","text","","13 Mei 2026")+
+      field("mf_vendor","Nama Klinik/Vendor Pelaksana","text","","Klinik IHC Yos Sudarso")+
+      field("mf_ttd","Nama Penandatangan","text","Diyon Indarto","Nama Manager Health")+
+      field("mf_jabatan","Jabatan Penandatangan","text","Manager Health","Manager Health");
+  } else {
+    title.textContent = "📄 Memo DAT — Klinik / Vendor Pelaksana";
+    fields.innerHTML =
+      field("mf_tgl","Tanggal Surat","text",tglDef,"Jakarta, 12 Mei 2026")+
+      field("mf_klinik","Nama Klinik/Vendor","text","","Klinik Pertamina IHC Yos Sudarso")+
+      field("mf_instansi","Nama Instansi Klinik","text","","PT Pertamina Bina Medika")+
+      field("mf_kapal","Nama Kapal","text",kapalDef,"MT. Pasaman")+
+      field("mf_crew","Jumlah Crew","number",crewDef,"12")+
+      field("mf_lokasi","Lokasi Pelaksanaan","text","","Port Tanjung Priok")+
+      field("mf_tglpel","Tanggal Pelaksanaan","text","","13 Mei 2026")+
+      field("mf_ttd","Nama Penandatangan","text","Diyon Indarto","Nama Manager Health")+
+      field("mf_jabatan","Jabatan Penandatangan","text","Manager Health","Manager Health");
+  }
+  modal.style.display = "flex";
+}
+
+function closeMemoModal(){
+  var m = document.getElementById("memoModal");
+  if(m) m.style.display = "none";
+}
+
+function _mv(id){
+  var el = document.getElementById(id);
+  return el ? el.value.trim() : "";
+}
+
+async function downloadMemo(){
+  var btn = document.getElementById("btnDownloadMemo");
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Membuat dokumen...';}
+  try{
+    if(!window.docx){ showToast("Library docx belum dimuat, tunggu sebentar.","warning"); return; }
+    if(_memoType === "fleet") await _buildMemoFleet();
+    else await _buildMemoKlinik();
+    closeMemoModal();
+    showToast("Memo berhasil didownload!","success");
+  }catch(e){
+    console.error(e);
+    showToast("Gagal membuat memo: "+e.message,"error");
+  }finally{
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-file-word"></i> Download .docx';}
+  }
+}
+
+/* ════════════════════════════════════════════════════
+   Builder helpers — pakai window.docx
+════════════════════════════════════════════════════ */
+function _memoDoc(children){
+  var D = window.docx;
+  return new D.Document({
+    sections:[{
+      properties:{
+        page:{
+          size:{width:11906,height:16838},
+          margin:{top:1680,right:1134,bottom:1814,left:1134}
+        }
+      },
+      children: children
+    }]
+  });
+}
+
+function _mp(runs,opts){
+  var D = window.docx;
+  opts = opts||{};
+  return new D.Paragraph({
+    children: Array.isArray(runs)?runs:[runs],
+    alignment: opts.align || D.AlignmentType.JUSTIFIED,
+    spacing:{before:opts.b||0, after:opts.a||100, line:opts.line||276},
+    indent: opts.ind?{left:opts.ind}:undefined
+  });
+}
+
+function _mt(text,opts){
+  opts = opts||{};
+  return new (window.docx.TextRun)({
+    text:text, font:"Arial", size:opts.s||22,
+    bold:opts.bold||false, italics:opts.it||false, color:opts.c||"000000"
+  });
+}
+
+function _mblank(n){
+  return new (window.docx.Paragraph)({spacing:{before:0,after:(n||1)*100}});
+}
+
+function _mNoBord(){
+  var b = window.docx.BorderStyle.NONE;
+  var nb = {style:b,size:0,color:"FFFFFF"};
+  return {top:nb,bottom:nb,left:nb,right:nb,insideH:nb,insideV:nb};
+}
+
+/* Tabel 3 kolom untuk detail kegiatan */
+function _mDetailTable(rows){
+  var D = window.docx;
+  var nb = _mNoBord();
+  return new D.Table({
+    width:{size:9360,type:D.WidthType.DXA},
+    columnWidths:[2000,220,7140],
+    borders: nb,
+    rows: rows.map(function(r){
+      /* Kolom 3: build runs dulu sebelum masuk TableCell */
+      var col3runs;
+      if(r[0]==="Pelaksanaan"){
+        col3runs = [
+          _mt("Dilakukan di atas kapal ("),
+          new D.TextRun({text:"onboard",font:"Arial",size:22,italics:true}),
+          _mt(")")
+        ];
+      } else {
+        col3runs = [_mt(r[1]||"—",{s:22})];
+      }
+      return new D.TableRow({children:[
+        new D.TableCell({
+          children:[_mp([_mt(r[0],{s:22})],{a:60,align:D.AlignmentType.LEFT})],
+          borders:nb, width:{size:2000,type:D.WidthType.DXA}
+        }),
+        new D.TableCell({
+          children:[_mp([_mt(":",{s:22})],{a:60,align:D.AlignmentType.LEFT})],
+          borders:nb, width:{size:220,type:D.WidthType.DXA}
+        }),
+        new D.TableCell({
+          children:[_mp(col3runs,{a:60,align:D.AlignmentType.LEFT})],
+          borders:nb, width:{size:7140,type:D.WidthType.DXA}
+        })
+      ]});
+    })
+  });
+}
+
+/* Tabel 3 kolom untuk Lampiran / Perihal */
+function _mHeaderTable(perihal){
+  var D = window.docx;
+  var nb = _mNoBord();
+  return new D.Table({
+    width:{size:9360,type:D.WidthType.DXA},
+    columnWidths:[1600,220,7540],
+    borders:nb,
+    rows:[
+      new D.TableRow({children:[
+        new D.TableCell({children:[_mp([_mt("Lampiran",{s:22})],{a:60,align:D.AlignmentType.LEFT})],borders:nb,width:{size:1600,type:D.WidthType.DXA}}),
+        new D.TableCell({children:[_mp([_mt(":  -",{s:22})],{a:60,align:D.AlignmentType.LEFT})],borders:nb,width:{size:220,type:D.WidthType.DXA}}),
+        new D.TableCell({children:[_mblank(0)],borders:nb,width:{size:7540,type:D.WidthType.DXA}})
+      ]}),
+      new D.TableRow({children:[
+        new D.TableCell({children:[_mp([_mt("Perihal",{s:22})],{a:60,align:D.AlignmentType.LEFT})],borders:nb,width:{size:1600,type:D.WidthType.DXA}}),
+        new D.TableCell({children:[_mp([_mt(":  ",{s:22})],{a:60,align:D.AlignmentType.LEFT})],borders:nb,width:{size:220,type:D.WidthType.DXA}}),
+        new D.TableCell({children:[_mp([_mt(perihal,{s:22,bold:true})],{a:60,align:D.AlignmentType.LEFT})],borders:nb,width:{size:7540,type:D.WidthType.DXA}})
+      ]})
+    ]
+  });
+}
+
+function _mSave(doc, filename){
+  return window.docx.Packer.toBuffer(doc).then(function(buf){
+    var blob = new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement("a");
+    a.href   = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+}
+
+/* ════════════════════════════════════════════════════
+   MEMO 1 — Manager Fleet Product
+════════════════════════════════════════════════════ */
+async function _buildMemoFleet(){
+  var D       = window.docx;
+  var tgl     = _mv("mf_tgl")     || "Jakarta, ___________";
+  var tujuan  = _mv("mf_tujuan")  || "Manager Fleet Product I";
+  var kapal   = _mv("mf_kapal")   || "_______________";
+  var crew    = _mv("mf_crew")    || "___";
+  var lokasi  = _mv("mf_lokasi")  || "_______________";
+  var tglpel  = _mv("mf_tglpel")  || "_______________";
+  var vendor  = _mv("mf_vendor")  || "_______________";
+  var ttd     = _mv("mf_ttd")     || "_______________";
+  var jabatan = _mv("mf_jabatan") || "Manager Health";
+
+  var children = [
+    /* Baris tanggal & nomor surat */
+    _mp([_mt(tgl,{s:22})],{a:40,align:D.AlignmentType.LEFT}),
+    _mp([_mt("No.      /PIS0440/2023-S8C00000",{s:22})],{a:0,align:D.AlignmentType.LEFT}),
+    _mblank(1),
+    /* Lampiran & Perihal */
+    _mHeaderTable("Annual External Drugs & Alcohol Test"),
+    _mblank(1),
+    /* Kepada */
+    _mp([_mt("Yang terhormat",{s:22})],{a:40,align:D.AlignmentType.LEFT}),
+    _mp([_mt(tujuan,{s:22,bold:true})],{a:0,align:D.AlignmentType.LEFT}),
+    _mblank(1),
+    /* Pembuka */
+    _mp([_mt("Dengan Hormat,",{s:22})],{a:100,align:D.AlignmentType.JUSTIFIED}),
+    /* Paragraf 1 */
+    _mp([_mt(
+      "Dalam rangka memastikan lingkungan kerja pelayaran yang aman, sehat, "+
+      "dan bebas dari pengaruh narkotika, psikotropika, serta alkohol, perusahaan "+
+      "berkomitmen untuk mencegah pengoperasian kapal oleh individu yang berada di "+
+      "bawah pengaruh zat terlarang.",
+    {s:22})],{a:100,align:D.AlignmentType.JUSTIFIED}),
+    /* Paragraf 2 */
+    _mp([
+      _mt("Sejalan dengan persyaratan dan rekomendasi dari ",{s:22}),
+      _mt("Oil Companies International Marine Forum (OCIMF)",{s:22,it:true}),
+      _mt(", khususnya dalam mendukung kepatuhan terhadap standar inspeksi ",{s:22}),
+      _mt("Ship Inspection Report Programme (SIRE)",{s:22,it:true}),
+      _mt(", HSSE Fungsi Health berencana melaksanakan ",{s:22}),
+      _mt("Annual External Drug and Alcohol Test",{s:22,bold:true}),
+      _mt(" terhadap awak kapal berikut:",{s:22})
+    ],{a:100,align:D.AlignmentType.JUSTIFIED}),
+    _mblank(0),
+    /* Tabel detail kegiatan */
+    _mDetailTable([
+      ["Kapal",      kapal],
+      ["Jumlah Crew",crew+" orang"],
+      ["Lokasi",     lokasi],
+      ["Tanggal",    tglpel],
+      ["Pelaksanaan",""]
+    ]),
+    _mblank(0),
+    /* Paragraf penutup */
+    _mp([
+      _mt("Kegiatan ini akan dilaksanakan oleh ",{s:22}),
+      _mt(vendor,{s:22,bold:true}),
+      _mt(" selaku pelaksana di lapangan.",{s:22})
+    ],{a:100,align:D.AlignmentType.JUSTIFIED}),
+    _mp([_mt(
+      "Demikian kami sampaikan. Atas perhatian dan kerja sama yang "+
+      "diberikan, kami ucapkan terima kasih.",
+    {s:22})],{a:100,align:D.AlignmentType.JUSTIFIED}),
+    _mblank(1),
+    /* Tanda tangan */
+    _mp([_mt(jabatan+",",{s:22})],{a:60,align:D.AlignmentType.LEFT}),
+    _mblank(4),
+    _mp([_mt(ttd,{s:22,bold:true})],{a:60,align:D.AlignmentType.LEFT}),
+    _mblank(1),
+    /* Tembusan */
+    _mp([_mt("Tembusan:",{s:22})],{a:40,align:D.AlignmentType.LEFT}),
+    _mp([_mt("VP HSSE PT Pertamina International Shipping",{s:22})],
+      {a:0,align:D.AlignmentType.LEFT})
+  ];
+
+  var doc = _memoDoc(children);
+  await _mSave(doc,"Memo_DAT_"+kapal.replace(/[^a-zA-Z0-9]/g,"_")+"_Fleet.docx");
+}
+
+/* ════════════════════════════════════════════════════
+   MEMO 2 — Klinik / Vendor Pelaksana
+════════════════════════════════════════════════════ */
+async function _buildMemoKlinik(){
+  var D        = window.docx;
+  var tgl      = _mv("mf_tgl")      || "Jakarta, ___________";
+  var klinik   = _mv("mf_klinik")   || "_______________";
+  var instansi = _mv("mf_instansi") || "";
+  var kapal    = _mv("mf_kapal")    || "_______________";
+  var crew     = _mv("mf_crew")     || "___";
+  var lokasi   = _mv("mf_lokasi")   || "_______________";
+  var tglpel   = _mv("mf_tglpel")   || "_______________";
+  var ttd      = _mv("mf_ttd")      || "_______________";
+  var jabatan  = _mv("mf_jabatan")  || "Manager Health";
+
+  var kepada = [
+    _mp([_mt("Yang terhormat",{s:22})],{a:40,align:D.AlignmentType.LEFT}),
+    _mp([_mt("Direktur "+klinik,{s:22})],{a:0,align:D.AlignmentType.LEFT})
+  ];
+  if(instansi){
+    kepada.push(_mp([_mt(instansi,{s:22})],{a:0,align:D.AlignmentType.LEFT}));
+  }
+
+  var children = [
+    _mp([_mt(tgl,{s:22})],{a:40,align:D.AlignmentType.LEFT}),
+    _mp([_mt("No.      /PIS0440/2023-S8C00000",{s:22})],{a:0,align:D.AlignmentType.LEFT}),
+    _mblank(1),
+    _mHeaderTable("Annual External Drugs and Alcohol Test"),
+    _mblank(1)
+  ].concat(kepada).concat([
+    _mblank(1),
+    _mp([_mt("Dengan Hormat,",{s:22})],{a:100,align:D.AlignmentType.JUSTIFIED}),
+    /* Paragraf 1 */
+    _mp([
+      _mt("Sehubungan dengan pelaksanaan kegiatan ",{s:22}),
+      _mt("Annual External Drugs and Alcohol Test",{s:22,bold:true,it:true}),
+      _mt(" pada armada kapal milik PT Pertamina International Shipping, "+
+          "dengan ini kami mohon bantuan ",{s:22}),
+      _mt(klinik,{s:22,bold:true}),
+      _mt(" sebagai pelaksana di lapangan. "+
+          "Adapun detail kegiatan adalah sebagai berikut:",{s:22})
+    ],{a:100,align:D.AlignmentType.JUSTIFIED}),
+    _mblank(0),
+    _mDetailTable([
+      ["Kapal",      kapal],
+      ["Jumlah Crew",crew+" orang"],
+      ["Lokasi",     lokasi],
+      ["Tanggal",    tglpel],
+      ["Pelaksanaan",""]
+    ]),
+    _mblank(0),
+    /* Biaya */
+    _mp([
+      _mt("Seluruh biaya yang timbul sehubungan dengan pelaksanaan kegiatan ini "+
+          "menjadi beban ",{s:22}),
+      _mt("PT Pertamina International Shipping c.q. Health-HSSE",{s:22,bold:true}),
+      _mt(". Apabila terdapat perubahan data, jumlah crew yang diperiksa dapat "+
+          "disesuaikan.",{s:22})
+    ],{a:100,align:D.AlignmentType.JUSTIFIED}),
+    /* Pengiriman dokumen */
+    _mp([
+      _mt("Hasil pemeriksaan beserta dokumen administrasi agar disampaikan kepada ",{s:22}),
+      _mt("Manager Health HSSE",{s:22,it:true}),
+      _mt(" PT Pertamina International Shipping, Gedung Patra Jasa ",{s:22}),
+      _mt("Office Tower",{s:22,it:true}),
+      _mt(" Lantai 3, Jl. Gatot Subroto Kav. 32–34, Jakarta Selatan 12950, "+
+          "dengan melampirkan dokumen berikut:",{s:22})
+    ],{a:80,align:D.AlignmentType.JUSTIFIED}),
+    /* List dokumen */
+    _mp([_mt("1.  Surat pengantar permintaan pembayaran;",{s:22})],
+      {a:50,align:D.AlignmentType.LEFT,ind:400}),
+    _mp([_mt("2.  ",{s:22}),_mt("Invoice",{s:22,it:true}),_mt(" atau Debet Nota;",{s:22})],
+      {a:50,align:D.AlignmentType.LEFT,ind:400}),
+    _mp([_mt("3.  Kwitansi bermaterai cukup;",{s:22})],
+      {a:50,align:D.AlignmentType.LEFT,ind:400}),
+    _mp([_mt("4.  Billing/Rincian pemeriksaan ",{s:22}),
+         _mt("Drug & Alcohol Test",{s:22,it:true}),_mt(".",{s:22})],
+      {a:80,align:D.AlignmentType.LEFT,ind:400}),
+    /* Penutup */
+    _mp([_mt(
+      "Demikian kami sampaikan. Atas perhatian dan kerja sama yang "+
+      "diberikan, kami ucapkan terima kasih.",
+    {s:22})],{a:100,align:D.AlignmentType.JUSTIFIED}),
+    _mblank(1),
+    _mp([_mt(jabatan+",",{s:22})],{a:60,align:D.AlignmentType.LEFT}),
+    _mblank(4),
+    _mp([_mt(ttd,{s:22,bold:true})],{a:60,align:D.AlignmentType.LEFT}),
+    _mblank(1),
+    _mp([_mt("Tembusan:",{s:22})],{a:40,align:D.AlignmentType.LEFT}),
+    _mp([_mt("VP HSSE PT Pertamina International Shipping",{s:22})],
+      {a:0,align:D.AlignmentType.LEFT})
+  ]);
+
+  var doc = _memoDoc(children);
+  await _mSave(doc,"Memo_DAT_"+kapal.replace(/[^a-zA-Z0-9]/g,"_")+"_Klinik.docx");
+}
