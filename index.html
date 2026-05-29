@@ -195,7 +195,7 @@ Kirim ulang kode OTP
       <span class="nav-icon"><i class="fas fa-bug"></i></span>
       <span class="nav-text">Pest & Rodent Control</span>
     </a>
-    <a href="#" class="nav-item placeholder" data-menu="p3k" data-title="P3K & AED Office" data-group="monitoring">
+    <a href="#" class="nav-item" data-menu="p3k" data-title="P3K & AED Office" data-group="monitoring">
       <span class="nav-icon"><i class="fas fa-kit-medical"></i></span>
       <span class="nav-text">P3K & AED Office</span>
       <span class="nav-badge">Soon</span>
@@ -533,7 +533,48 @@ Kirim ulang kode OTP
 </div>
 </section>
 
-<section class="page-content" id="page-p3k"><div class="placeholder-page"><div class="placeholder-icon"><i class="fas fa-kit-medical"></i></div><h2>P3K & AED Office</h2><p>Dashboard ini sedang dalam pengembangan.</p><div class="placeholder-tag">Coming Soon</div></div></section>
+<section class="page-content" id="page-p3k">
+  <div class="filter-bar">
+    <select id="p3k-filter-lantai" onchange="applyP3KFilters()">
+      <option value="">Semua Lantai</option>
+      <option>GF</option><option>Lt 3</option><option>Lt 14</option>
+      <option>Lt 17</option><option>Lt 18</option><option>Lt 20</option>
+      <option>Lt 21</option><option>Lt 22</option>
+    </select>
+    <select id="p3k-filter-bulan" onchange="applyP3KFilters()">
+      <option value="">Semua Bulan</option>
+      <option>Januari</option><option>Februari</option><option>Maret</option>
+      <option>April</option><option>Mei</option><option>Juni</option>
+      <option>Juli</option><option>Agustus</option><option>September</option>
+      <option>Oktober</option><option>November</option><option>Desember</option>
+    </select>
+    <select id="p3k-filter-status" onchange="applyP3KFilters()">
+      <option value="">Semua Status</option>
+      <option value="Ada Masalah">Ada Masalah</option>
+      <option value="Belum Diperiksa">Belum Diperiksa</option>
+    </select>
+    <button class="btn-clear" onclick="clearP3KFilters()"><i class="fas fa-rotate-left"></i> Reset</button>
+    <button class="btn-export-ppt" onclick="exportP3KPPT()"><i class="fas fa-file-powerpoint"></i> Export PPT</button>
+  </div>
+  <!-- KPI -->
+  <div id="p3k-kpi-strip" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px"></div>
+  <!-- Tabs -->
+  <div style="display:flex;gap:0;border-bottom:2px solid #E2E8F0;margin-bottom:18px">
+    <button id="p3k-tab-overview" class="tab-btn active" onclick="switchP3KTab('overview')">
+      <i class="fas fa-grid-2"></i> Status per Lokasi
+    </button>
+    <button id="p3k-tab-table" class="tab-btn" onclick="switchP3KTab('table')">
+      <i class="fas fa-table-list"></i> Tabel Pengecekan
+    </button>
+    <button id="p3k-tab-masalah" class="tab-btn" onclick="switchP3KTab('masalah')">
+      <i class="fas fa-triangle-exclamation"></i> Temuan &amp; Tindak Lanjut
+    </button>
+  </div>
+  <!-- Content -->
+  <div id="p3k-content-overview" style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px"></div>
+  <div id="p3k-content-table"    style="display:none"></div>
+  <div id="p3k-content-masalah"  style="display:none"></div>
+</section>
 <section class="page-content" id="page-menu5"><div class="placeholder-page"><div class="placeholder-icon"><i class="fas fa-chart-pie"></i></div><h2>Sebaran Alkes Kapal</h2><p>Modul belum tersedia.</p><div class="placeholder-tag">Coming Soon</div></div></section>
 
 <!-- ===== PAGE PEDOMAN IH ===== -->
