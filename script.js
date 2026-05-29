@@ -2877,668 +2877,615 @@ function searchAlogTable(){
 
 
 /* ═══════════════════════════════════════════════════════════════
-   EXPORT PPT — 5 HAZARD UTAMA
-   5 Hirarki Pengendalian Risiko (Permenaker 05/2018 + IMO MSC)
-   Eliminasi → Substitusi → Rekayasa Teknik → Administratif → APD
+/* ═══════════════════════════════════════════════════════════════
+   EXPORT PPT — 5 HAZARD UTAMA (Premium Design)
+   Permenaker 05/2018 — 5 Hirarki Pengendalian Risiko
+   Navy-Gold Professional — Siap Presentasi Direksi
 ═══════════════════════════════════════════════════════════════ */
 
-/* ── Konfigurasi warna per hazard ── */
 var HAZARD_CONFIG={
   fisika:{
-    label:"Faktor Fisika",
-    icon:"🔊",
-    color:"1565C0",
-    colorLight:"EBF5FF",
-    data:function(){return filteredFisika;},
-    temuanKey:"Jenis Parameter",
-    lokasiKey:"Area / Titik Ukur",
-    kapalKey:"Nama Kapal",
-    fleetKey:"Fleet",
-    hasilKey:"Hasil Pengukuran",
-    satuanKey:"Satuan",
-    nabKey:"NAB / TLV",
-    statusKey:"Status",
-    tindakKey:"Status TL",
-    pctKey:"% terhadap NAB"
+    label:"Faktor Fisika",icon:"⚡",color:"1565C0",
+    data:function(){return typeof filteredFaktorFisika!=="undefined"?filteredFaktorFisika:
+      (typeof rawFaktorFisika!=="undefined"?rawFaktorFisika:[]);},
+    cols:["Nama Kapal","Parameter","Nilai Ukur","Satuan","NAB","Status"],
+    statusKey:"Status",valKey:"Nilai Ukur",paramKey:"Parameter",shipKey:"Nama Kapal"
   },
   kimia:{
-    label:"Faktor Kimia",
-    icon:"⚗",
-    color:"7B1FA2",
-    colorLight:"F3E5F5",
-    data:function(){return filteredKimia;},
-    temuanKey:"Nama Bahan Kimia",
-    lokasiKey:"Nama Laboratorium",
-    kapalKey:"Nama Kapal",
-    fleetKey:"Fleet",
-    hasilKey:"Hasil Pengukuran",
-    satuanKey:"Satuan",
-    nabKey:"TLV-TWA ACGIH",
-    statusKey:"Status",
-    tindakKey:"Nama Laboratorium",
-    pctKey:"% terhadap TLV/BEI"
+    label:"Faktor Kimia",icon:"⚗",color:"7B1FA2",
+    data:function(){return typeof filteredFaktorKimia!=="undefined"?filteredFaktorKimia:
+      (typeof rawFaktorKimia!=="undefined"?rawFaktorKimia:[]);},
+    cols:["Nama Kapal","Zat Kimia","Nilai Ukur","Satuan","NAB","Status"],
+    statusKey:"Status",valKey:"Nilai Ukur",paramKey:"Zat Kimia",shipKey:"Nama Kapal"
   },
   biologi:{
-    label:"Faktor Biologi",
-    icon:"🦠",
-    color:"2E7D32",
-    colorLight:"E8F5E9",
-    data:function(){return filteredBiologi;},
-    temuanKey:"Nama Agen / Spesies",
-    lokasiKey:"Area / Lokasi",
-    kapalKey:"Nama Kapal",
-    fleetKey:"Fleet",
-    hasilKey:"Hasil Pengukuran",
-    satuanKey:"Satuan",
-    nabKey:"Baku Mutu / Referensi",
-    statusKey:"Status",
-    tindakKey:"Nama Laboratorium",
-    pctKey:""
+    label:"Faktor Biologi",icon:"🦠",color:"2E7D32",
+    data:function(){return typeof filteredFaktorBiologi!=="undefined"?filteredFaktorBiologi:
+      (typeof rawFaktorBiologi!=="undefined"?rawFaktorBiologi:[]);},
+    cols:["Nama Kapal","Agen Biologi","Risiko","Tipe","Lokasi","Status"],
+    statusKey:"Status",valKey:"Risiko",paramKey:"Agen Biologi",shipKey:"Nama Kapal"
   },
   ergonomi:{
-    label:"Faktor Ergonomi",
-    icon:"🏋",
-    color:"E65100",
-    colorLight:"FFF3E0",
-    data:function(){return filteredErgonomi;},
-    temuanKey:"Jenis Pekerjaan / Tugas",
-    lokasiKey:"Area / Unit Kerja",
-    kapalKey:"Nama Kapal",
-    fleetKey:"Fleet",
-    hasilKey:"Skor",
-    satuanKey:"Level Risiko (1–4)",
-    nabKey:"",
-    statusKey:"Level Risiko (1–4)",
-    tindakKey:"Rekomendasi Teknis",
-    pctKey:""
+    label:"Faktor Ergonomi",icon:"🦴",color:"E65100",
+    data:function(){return typeof filteredFaktorErgonomi!=="undefined"?filteredFaktorErgonomi:
+      (typeof rawFaktorErgonomi!=="undefined"?rawFaktorErgonomi:[]);},
+    cols:["Nama Kapal","Jenis Pekerjaan","Skor REBA","Kategori","Bagian Tubuh","Status"],
+    statusKey:"Status",valKey:"Skor REBA",paramKey:"Jenis Pekerjaan",shipKey:"Nama Kapal"
   },
   psikososial:{
-    label:"Faktor Psikososial",
-    icon:"🧠",
-    color:"AD1457",
-    colorLight:"FCE4EC",
-    data:function(){return filteredPsikososial;},
-    temuanKey:"Instrumen",
-    lokasiKey:"Departemen / Jabatan",
-    kapalKey:"Nama Kapal",
-    fleetKey:"Fleet",
-    hasilKey:"Total Skor",
-    satuanKey:"",
-    nabKey:"",
-    statusKey:"Level Risiko",
-    tindakKey:"Program Intervensi",
-    pctKey:""
+    label:"Faktor Psikososial",icon:"🧠",color:"AD1457",
+    data:function(){return typeof filteredFaktorPsiko!=="undefined"?filteredFaktorPsiko:
+      (typeof rawFaktorPsiko!=="undefined"?rawFaktorPsiko:[]);},
+    cols:["Nama Kapal","Dimensi Stres","Skor","Kategori","Jabatan","Status"],
+    statusKey:"Status",valKey:"Skor",paramKey:"Dimensi Stres",shipKey:"Nama Kapal"
   }
 };
 
-/* ── 5 Hirarki Pengendalian per hazard ── */
 var HIRARKI_DB={
   fisika:{
-    kebisingan:{
-      E:"Eliminasi sumber bising: ganti atau hilangkan mesin/pompa penyebab kebisingan jika secara teknis memungkinkan. Pertimbangkan redesign layout engine room untuk menjauhkan sumber bising dari area kerja.",
-      S:"Substitusi: ganti mesin diesel dengan motor listrik yang lebih senyap. Gunakan coupling anti-vibrasi dan mounting isolator pada pompa cargo.",
-      R:"Rekayasa Teknik: pasang akustik enclosure pada mesin utama, panel peredam di bulkhead engine room, double-glazed window pada control room. Pasang vibration damper pada fondasi mesin.",
-      A:"Administratif: rotasi kerja maksimal 4 jam di area >85 dB. Jadwal maintenance berkala. Posting tanda wajib APD. Audiometric test tahunan. Job Hazard Analysis (JHA) sebelum masuk engine room.",
-      P:"APD: earplug (NRR ≥25 dB) wajib >85 dB, earmuff (NRR ≥30 dB) wajib >95 dB. Double protection >105 dB. Sesuai IMO MSC/Circ.1351 dan SNI ISO 4869."
-    },
-    getaran:{
-      E:"Eliminasi: hilangkan operasi yang menyebabkan getaran berlebih. Redesign alur kerja untuk menghindari hand-arm vibration saat berlayar.",
-      S:"Substitusi: ganti peralatan hand tool bergetar tinggi dengan versi low-vibration. Gunakan material anti-vibration pada mounting mesin.",
-      R:"Rekayasa Teknik: pasang vibration isolator pada pondasi mesin, anti-vibration mounting, flexible coupling. Pasang peredam getaran pada hull.",
-      A:"Administratif: batasi waktu paparan sesuai HAV Action Value 2.5 m/s² (4 jam) atau WBV 0.5 m/s². Rotasi kerja, istirahat wajib setiap 1 jam. Medical surveillance tangan dan tulang belakang.",
-      P:"APD: sarung tangan anti-vibrasi (ISO 10819), sepatu anti-vibrasi untuk WBV. Pakaian hangat untuk mencegah Raynaud's phenomenon."
-    },
-    default:{
-      E:"Eliminasi sumber faktor fisika berbahaya dari area kerja kapal jika memungkinkan secara teknis dan operasional.",
-      S:"Substitusi: ganti peralatan/proses yang menghasilkan paparan fisika berbahaya dengan alternatif yang lebih aman.",
-      R:"Rekayasa Teknik: pasang barrier fisik, shielding, isolasi atau ventilasi mekanis untuk mengurangi paparan di titik sumber.",
-      A:"Administratif: SOP paparan fisika, rotasi kerja, jadwal monitoring berkala, safety sign, training crew tentang bahaya faktor fisika di kapal. Sesuai Permenaker 05/2018.",
-      P:"APD sesuai jenis paparan fisika: earplug/earmuff, kacamata UV, pakaian tahan panas, sepatu isolasi. Wajib sesuai SOLAS Ch. II-1 dan ILO Maritime Labour Convention 2006."
-    }
+    kebisingan:["Pasang enclosure mesin & silencer","Ganti peralatan less-noise","Pasang peredam getaran & vibration isolator","Rotasi jadwal kerja & batas paparan","Ear plug + ear muff SNR ≥25 dB"],
+    suhu:["Hilangkan sumber panas berlebih","Ganti peralatan efisiensi tinggi","AC/ventilasi mekanis & heat shield","Jadwal kerja shift & istirahat teratur","Baju anti panas & face shield"]
   },
   kimia:{
-    benzene:{
-      E:"Eliminasi: hentikan penggunaan benzene murni. Ganti bahan bakar / solvent yang mengandung benzene tinggi dengan alternatif bebas benzene.",
-      S:"Substitusi: gunakan bahan bakar ultra-low benzene (<0.1%). Ganti solvent benzene dengan cyclohexane, heptane, atau produk berbasis aqueous.",
-      R:"Rekayasa Teknik: pasang vapor recovery system pada manifold cargo, LEV (Local Exhaust Ventilation) di pump room dan cargo tank. Enclosed loading system. Continuous gas detector terpasang permanen.",
-      A:"Administratif: permit-to-work untuk entry cargo tank dan pump room. Monitoring udara sebelum dan selama kerja di confined space. Biomonitoring urin (muconic acid) setiap 6 bulan untuk ABK terpapar. Rotasi kerja maks 2 jam tanpa break di area >0.1 ppm.",
-      P:"APD: full-face respirator dengan cartridge organic vapor (NIOSH-approved) untuk >0.5 ppm. Chemical-resistant gloves (nitrile). Coverall anti-static. Emergency escape SCBA. Sesuai ACGIH TLV 0.5 ppm."
-    },
-    default:{
-      E:"Eliminasi: hentikan penggunaan bahan kimia berbahaya jika ada alternatif proses yang tidak membutuhkannya.",
-      S:"Substitusi: ganti bahan kimia berbahaya dengan versi lebih aman, konsentrasi lebih rendah, atau bentuk fisik lebih aman (granul vs. serbuk).",
-      R:"Rekayasa Teknik: pasang LEV (Local Exhaust Ventilation), enclosed handling system, scrubber gas, dan continuous gas detector di area cargo dan pump room.",
-      A:"Administratif: SDS (Safety Data Sheet) tersedia di kapal dalam Bahasa Indonesia. Permit-to-work untuk pekerjaan melibatkan bahan kimia. Training HAZMAT. Monitoring udara rutin. Sesuai IMDG Code dan Permenaker 05/2018.",
-      P:"APD: respirator sesuai TLV bahan kimia, chemical-resistant gloves dan boots, face shield, coverall. Emergency SCBA tersedia di kapal sesuai SOLAS."
-    }
+    benzene:["Eliminasi penggunaan benzene","Substitusi dengan bahan non-karsinogenik","Ventilasi lokal exhaust & closed system","SOP handling B3 & MSDS awareness","Respirator full-face + coverall Tyvek"],
+    gas:["Eliminasi sumber gas berbahaya","Ganti dengan bahan gas aman","Gas detector fixed & portable","Izin kerja confined space","SCBA + gas mask filter khusus"]
   },
-  biologi:{
-    default:{
-      E:"Eliminasi: desinfeksi dan sterilisasi total area yang terkontaminasi agen biologis. Buang media yang terkontaminasi sesuai prosedur limbah medis.",
-      S:"Substitusi: ganti metode kerja yang berisiko kontak dengan agen biologi dengan metode tertutup atau remote handling.",
-      R:"Rekayasa Teknik: pasang sistem ventilasi bertekanan positif di area medis kapal, HEPA filter, UV-C sterilizer di ruang isolasi, shower dekontaminasi. Fasilitas cuci tangan memadai di seluruh kapal.",
-      A:"Administratif: SOP dekontaminasi dan isolasi kasus penyakit menular di kapal. Vaksinasi wajib: hepatitis A&B, typhoid, yellow fever sesuai rute pelayaran. Pemeriksaan kesehatan pra-embarkasiasi. Pelaporan Ship Sanitation sesuai IHR 2005. Rodent & pest control berkala.",
-      P:"APD: sarung tangan nitril sekali pakai, masker N95 untuk penyakit airborne, gown/apron, eye protection saat penanganan specimen. Sesuai WHO International Health Regulations 2005."
-    }
-  },
-  ergonomi:{
-    default:{
-      E:"Eliminasi tugas dengan risiko ergonomi tinggi: redesign pekerjaan untuk menghilangkan postur janggal, angkat manual berulang, dan gerakan repetitif di lingkungan kapal yang bergerak.",
-      S:"Substitusi: ganti pekerjaan manual berisiko tinggi dengan peralatan mekanis (crane, forklift, conveyor). Gunakan alat bantu angkat untuk beban >23 kg.",
-      R:"Rekayasa Teknik: redesign workstation di engine room, bridge, galley sesuai prinsip ergonomi. Pasang anti-slip flooring, pegangan (handrail) di seluruh deck. Kursi bridge dengan lumbar support. Peralatan dengan grip ergonomis.",
-      A:"Administratif: SOP manual handling untuk ABK. Batas berat angkat maksimal 23 kg (sendirian) sesuai ILO C185. Rotasi tugas untuk mengurangi repetisi. Stretching/warm-up sebelum tugas berat. REBA/RULA assessment tahunan. Training ergonomi untuk perwira.",
-      P:"APD: sabuk angkat untuk pekerjaan manual handling berat. Knee pad untuk pekerjaan berlutut. Back support belt untuk ABK bagian deck dan mesin. Anti-vibration gloves."
-    }
-  },
-  psikososial:{
-    default:{
-      E:"Eliminasi stressor psikososial struktural: kurangi jam kerja berlebih, sesuaikan workload dengan jumlah ABK yang cukup. Hapus kebijakan yang menciptakan konflik peran.",
-      S:"Substitusi: ganti sistem shift yang tidak manusiawi dengan pola rotasi yang memperhatikan recovery time. Rotasi jabatan untuk menghindari kelelahan peran.",
-      R:"Rekayasa Teknik (Lingkungan): perbaiki akomodasi ABK (ruang istirahat nyaman, pencahayaan kamar yang baik, koneksi internet untuk komunikasi keluarga). Pasang ruang relaksasi. Fasilitas olahraga di kapal. Sesuai MLC 2006 Reg. 3.1.",
-      A:"Administratif: program Employee Assistance Program (EAP) untuk ABK. Buddy system dan peer support. Pelatihan stress management dan resiliensi untuk perwira. Survei iklim keselamatan berkala. SOP anti-bullying dan harassment. Pemeriksaan psikologi pra-embarkasi. Akses layanan telemedis psikologi.",
-      P:"APD (Perlindungan Psikologis): sistem pelaporan anonim untuk pelanggaran HAM di kapal. Jaminan perlindungan whistleblower. Kunjungan seafarer welfare di pelabuhan."
-    }
-  }
+  biologi:{default:["Eliminasi media pertumbuhan","Substitusi bahan anti-mikroba","Ventilasi & UV sterilizer","SOP higiene & cuci tangan","Masker N95 + sarung tangan nitrile"]},
+  ergonomi:{default:["Redesain stasiun kerja ergonomis","Ganti dengan peralatan bantu lifting","Kursi adjustable & meja ergonomis","Rotasi kerja & micro-break schedule","Back support brace & knee pad"]},
+  psikososial:{default:["Redesain beban kerja berlebih","Ganti sistem kerja tidak manusiawi","Ruang istirahat & dukungan sosial","Konseling rutin & stress management","Program EAP & psikolog industri"]}
 };
 
-/* ── Dapatkan hirarki berdasarkan jenis hazard dan temuan ── */
-function getHirarki(hazardType,tipe){
-  var db=HIRARKI_DB[hazardType]||{};
-  var t=(tipe||"").toLowerCase();
-  /* Match spesifik */
-  if(hazardType==="fisika"){
-    if(t.includes("bising")||t.includes("noise"))return db.kebisingan||db.default;
-    if(t.includes("getaran")||t.includes("vibr"))return db.getaran||db.default;
-    return db.default||{};
-  }
-  if(hazardType==="kimia"){
-    if(t.includes("benzene")||t.includes("benzen"))return db.benzene||db.default;
-    return db.default||{};
-  }
-  return db.default||{};
+function _pptPC(){return{navy:"0F2A4A",navyD:"0A1929",navyL:"1C3A5A",
+  white:"FFFFFF",gray:"F4F6FA",lgray:"E2E8F0",
+  text:"1E293B",muted:"64748B",gold:"C9973A",
+  green:"2E7D32",red:"C62828",amber:"F59E0B"};}
+
+function _hzLighten(col){
+  var m={"1565C0":"EBF5FF","7B1FA2":"F3E5F5","2E7D32":"E8F5E9",
+    "E65100":"FFF3E0","AD1457":"FCE4EC","C62828":"FFEBEE",
+    "F59E0B":"FEF3C7","C9973A":"FEF9E7"};
+  return m[col]||"F4F6FA";
 }
 
-/* ── MAIN EXPORT FUNCTION ── */
 function exportHazardPPT(hazardType){
-  if(typeof PptxGenJS==="undefined"){showToast("Library PPT sedang dimuat, coba lagi dalam beberapa detik.","warning");return;}
+  if(typeof PptxGenJS==="undefined"){showToast("Library PPT sedang dimuat, coba lagi.","warning");return;}
   var cfg=HAZARD_CONFIG[hazardType];
   if(!cfg){showToast("Konfigurasi hazard tidak ditemukan.","error");return;}
   var data=cfg.data();
-  if(!data||!data.length){showToast("Tidak ada data "+cfg.label+" untuk diexport.","warning");return;}
-
+  if(!data||!data.length){showToast("Tidak ada data "+cfg.label+".","warning");return;}
   showToast("Membuat PPT "+cfg.label+"...","info");
+
+  var M=_pptPC();
+  var AC=cfg.color;
+  var tgl=new Date().toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"});
+  var total=data.length;
+  var melebihi=data.filter(function(r){
+    var s=(r[cfg.statusKey]||"").toLowerCase();
+    return s.includes("melebihi")||s.includes("tinggi")||s.includes("kritis");
+  }).length;
+  var normal=total-melebihi;
+  var pctOK=total>0?(((normal)/total)*100).toFixed(0):100;
 
   var pres=new PptxGenJS();
   pres.layout="LAYOUT_WIDE";
   pres.author="IH Dashboard — Pertamina Patra Niaga III";
-  pres.title="5 Hirarki Pengendalian — "+cfg.label;
-  pres.subject="Industrial Hygiene Maritime Report";
+  pres.title=cfg.icon+" "+cfg.label+" — 5 Hirarki Pengendalian Risiko";
 
-  var MC="0F2A4A";   /* Main color dark navy */
-  var AC=cfg.color;  /* Accent color per hazard */
-  var WH="FFFFFF";
-  var GR="F4F6FA";
-  var TX="1E293B";
-  var MU="64748B";
-  var RED="C62828";
-  var GRN="2E7D32";
-  var YEL="F59E0B";
-
-  /* ══════════════════════════════════════════
-     SLIDE 1 — Cover
-  ══════════════════════════════════════════ */
+  /* ─────── SLIDE 1: COVER ─────── */
   var s1=pres.addSlide();
-  s1.background={color:MC};
-  /* Gradient strip kiri */
-  s1.addShape(pres.ShapeType.rect,{x:0,y:0,w:0.06,h:7.5,fill:{color:AC}});
-  /* Judul besar */
-  s1.addText("5 HIRARKI PENGENDALIAN RISIKO",{
-    x:0.3,y:0.7,w:12.7,h:0.8,
-    fontSize:28,bold:true,color:WH,fontFace:"Calibri",charSpacing:3
-  });
-  s1.addText(cfg.icon+" "+cfg.label.toUpperCase(),{
-    x:0.3,y:1.55,w:12.7,h:0.7,
-    fontSize:22,bold:true,color:AC,fontFace:"Calibri"
-  });
-  /* Garis pemisah */
-  s1.addShape(pres.ShapeType.rect,{x:0.3,y:2.4,w:5,h:0.04,fill:{color:AC}});
-  /* Info deck */
-  var now=new Date();
-  var tgl=now.toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"});
-  var totalData=data.length;
-  var melebihi=data.filter(function(r){var s=(r[cfg.statusKey]||"").toLowerCase();return s.includes("melebihi")||s.includes("tinggi")||s.includes("kritis");}).length;
+  s1.background={color:M.navyD};
+  s1.addShape(pres.ShapeType.rect,{x:0,y:0,w:0.08,h:7.5,fill:{color:AC},line:{color:AC,width:0}});
+  s1.addShape(pres.ShapeType.rect,{x:0,y:0,w:13.3,h:0.04,fill:{color:AC},line:{color:AC,width:0}});
+  s1.addShape(pres.ShapeType.ellipse,{x:9.2,y:-1.5,w:6,h:6,fill:{color:M.navyL},line:{color:M.navyL,width:0}});
+  s1.addShape(pres.ShapeType.ellipse,{x:10.5,y:4.8,w:3.5,h:3.5,fill:{color:"162E42"},line:{color:"162E42",width:0}});
+  s1.addText("PT PERTAMINA PATRA NIAGA  ·  SATUAN KERJA REGIONAL III",
+    {x:0.28,y:0.22,w:9,h:0.3,fontSize:8.5,bold:true,color:"CADCFC",charSpacing:2,fontFace:"Calibri"});
+  s1.addText("Divisi Industrial Hygiene & Occupational Health",
+    {x:0.28,y:0.55,w:9,h:0.28,fontSize:10,color:"8899AA",fontFace:"Calibri"});
+  s1.addShape(pres.ShapeType.rect,{x:0.28,y:0.92,w:4.5,h:0.04,fill:{color:M.gold},line:{color:M.gold,width:0}});
+  s1.addText("5 HIRARKI PENGENDALIAN RISIKO",
+    {x:0.28,y:1.08,w:9,h:0.75,fontSize:32,bold:true,color:M.white,charSpacing:2,fontFace:"Calibri"});
+  s1.addText(cfg.icon+"  "+cfg.label.toUpperCase(),
+    {x:0.28,y:1.88,w:9,h:0.68,fontSize:26,bold:true,color:AC,fontFace:"Calibri"});
+  s1.addShape(pres.ShapeType.rect,{x:0.28,y:2.62,w:5,h:0.04,fill:{color:AC},line:{color:AC,width:0}});
   s1.addText([
-    {text:"Total Pengukuran / Temuan : ",options:{bold:false,color:"CADCFC"}},
-    {text:String(totalData),options:{bold:true,color:WH}},
-    {text:"    |    Melebihi Standar : ",options:{bold:false,color:"CADCFC"}},
-    {text:String(melebihi)+" temuan",options:{bold:true,color:melebihi>0?"FF6B6B":WH}}
-  ],{x:0.3,y:2.6,w:12,h:0.45,fontSize:13,fontFace:"Calibri"});
-  /* Pilar 5 hirarki */
+    {text:"Total Data: ",options:{color:"CADCFC",fontSize:13}},
+    {text:String(total),options:{bold:true,color:M.white,fontSize:13}},
+    {text:"    Melebihi Standar: ",options:{color:"CADCFC",fontSize:13}},
+    {text:String(melebihi)+(melebihi>0?" ⚠":""),options:{bold:true,color:melebihi>0?"FF6B6B":M.white,fontSize:13}},
+    {text:"    Dihasilkan: "+tgl,options:{color:"8899AA",fontSize:11}}
+  ],{x:0.28,y:2.72,w:12.7,h:0.45,fontFace:"Calibri"});
+  /* 5 Pilar Hirarki */
   var pilars=[
-    {no:"1",label:"ELIMINASI",sub:"Hilangkan sumber bahaya",col:"C62828"},
-    {no:"2",label:"SUBSTITUSI",sub:"Ganti dengan lebih aman",col:"E65100"},
-    {no:"3",label:"REC. TEKNIK",sub:"Kontrol teknik & engineering",col:"1565C0"},
-    {no:"4",label:"ADMINISTRATIF",sub:"SOP & prosedur kerja",col:"2E7D32"},
-    {no:"5",label:"APD",sub:"Alat Pelindung Diri",col:"6A1B9A"}
+    {no:"1",l:"ELIMINASI",s:"Hilangkan sumber bahaya",c:"C62828"},
+    {no:"2",l:"SUBSTITUSI",s:"Ganti yang lebih aman",c:"E65100"},
+    {no:"3",l:"REC. TEKNIK",s:"Engineering control",c:"1565C0"},
+    {no:"4",l:"ADMINISTRATIF",s:"SOP & prosedur kerja",c:"2E7D32"},
+    {no:"5",l:"APD",s:"Alat Pelindung Diri",c:"6A1B9A"}
   ];
   pilars.forEach(function(p,i){
-    var bx=0.3+i*2.56;
-    s1.addShape(pres.ShapeType.roundRect,{x:bx,y:3.4,w:2.4,h:3.0,fill:{color:p.col},line:{color:WH,width:1},rectRadius:0.08});
-    s1.addText(p.no,{x:bx,y:3.45,w:2.4,h:0.55,fontSize:28,bold:true,color:"FFFFFF99",align:"center",fontFace:"Calibri"});
-    s1.addText(p.label,{x:bx+0.08,y:4.05,w:2.24,h:0.55,fontSize:11,bold:true,color:WH,align:"center",fontFace:"Calibri"});
-    s1.addText(p.sub,{x:bx+0.08,y:4.65,w:2.24,h:0.8,fontSize:9,color:"FFFFFFCC",align:"center",fontFace:"Calibri",wrap:true});
+    var bx=0.28+i*2.56;
+    s1.addShape(pres.ShapeType.roundRect,{x:bx,y:3.4,w:2.42,h:3.0,
+      fill:{color:p.c},line:{color:M.white,width:1},rectRadius:0.08});
+    s1.addShape(pres.ShapeType.rect,{x:bx,y:3.4,w:2.42,h:0.06,
+      fill:{color:M.white},line:{color:M.white,width:0}});
+    s1.addText(p.no,{x:bx,y:3.48,w:2.42,h:0.6,fontSize:30,bold:true,
+      color:"CCCCCC",align:"center",fontFace:"Calibri"});
+    s1.addText(p.l,{x:bx+0.08,y:4.12,w:2.26,h:0.55,fontSize:11,bold:true,
+      color:M.white,align:"center",fontFace:"Calibri"});
+    s1.addText(p.s,{x:bx+0.08,y:4.7,w:2.26,h:0.9,fontSize:9,
+      color:"DDDDDD",align:"center",fontFace:"Calibri",wrap:true});
   });
-  /* Footer */
-  s1.addText("IH Dashboard v5.0  |  Pertamina Patra Niaga III  |  "+tgl,{
-    x:0,y:7.1,w:13.3,h:0.35,
-    fontSize:9,color:"CADCFC",align:"center",fontFace:"Calibri"
-  });
+  s1.addText("Ref: Permenaker 05/2018  •  ISO 45001:2018  •  IH Dashboard v5.0  •  "+tgl,
+    {x:0,y:7.15,w:13.3,h:0.28,fontSize:8,color:"8899AA",align:"center",fontFace:"Calibri"});
 
-  /* ══════════════════════════════════════════
-     SLIDE 2 — Ringkasan KPI & Data Summary
-  ══════════════════════════════════════════ */
+  /* ─────── SLIDE 2: EXECUTIVE SUMMARY ─────── */
   var s2=pres.addSlide();
-  s2.background={color:GR};
-  /* Header */
-  s2.addShape(pres.ShapeType.rect,{x:0,y:0,w:13.3,h:1.0,fill:{color:MC}});
-  s2.addText(cfg.icon+" RINGKASAN DATA — "+cfg.label.toUpperCase(),{
-    x:0.4,y:0.15,w:11,h:0.7,fontSize:18,bold:true,color:WH,fontFace:"Calibri"
-  });
-  s2.addText("Dasar: Permenaker No.05/2018 | ACGIH TLV 2024 | ILO MLC 2006",{
-    x:0.4,y:6.9,w:12,h:0.35,fontSize:9,color:MU,fontFace:"Calibri"
-  });
-  /* KPI cards */
-  var aman=totalData-melebihi;
-  var kpiData=[
-    {label:"Total Data",val:String(totalData),col:"1565C0",icon:"📊"},
-    {label:"Melebihi Standar",val:String(melebihi),col:RED,icon:"⚠"},
-    {label:"Dalam Batas",val:String(aman),col:GRN,icon:"✅"},
-    {label:"Kapal Terdampak",val:String(new Set(data.map(function(r){return r[cfg.kapalKey]||"";}).filter(Boolean)).size),col:"7B1FA2",icon:"🚢"}
+  s2.background={color:M.white};
+  s2.addShape(pres.ShapeType.rect,{x:0,y:0,w:13.3,h:1.12,fill:{color:M.navy},line:{color:M.navy,width:0}});
+  s2.addShape(pres.ShapeType.rect,{x:0,y:0,w:0.07,h:7.5,fill:{color:AC},line:{color:AC,width:0}});
+  s2.addText(cfg.icon+" "+cfg.label.toUpperCase()+"  ·  EXECUTIVE SUMMARY",
+    {x:0.24,y:0.08,w:12.5,h:0.38,fontSize:9,bold:true,color:"CADCFC",charSpacing:1.5,fontFace:"Calibri"});
+  s2.addText("Ringkasan Eksekutif — Hasil Pengukuran & Status Kepatuhan NAB",
+    {x:0.24,y:0.52,w:12.5,h:0.46,fontSize:14.5,bold:true,color:M.white,fontFace:"Calibri"});
+  /* 4 KPI */
+  var kpis=[
+    {l:"Total Pengukuran",v:total,c:AC},
+    {l:"Normal / Aman",v:normal+(parseFloat(pctOK)>=80?" ✓":""),c:"2E7D32"},
+    {l:"Melebihi NAB",v:melebihi+(melebihi>0?" ⚠":""),c:melebihi>0?"C62828":"2E7D32"},
+    {l:"Compliance Rate",v:pctOK+"%",c:parseFloat(pctOK)>=80?"2E7D32":parseFloat(pctOK)>=60?"F59E0B":"C62828"}
   ];
-  kpiData.forEach(function(k,i){
-    var bx=0.3+i*3.2;
-    s2.addShape(pres.ShapeType.roundRect,{x:bx,y:1.15,w:3.0,h:1.5,fill:{color:WH},line:{color:k.col,width:2},rectRadius:0.1});
-    s2.addText(k.icon,{x:bx,y:1.2,w:3.0,h:0.5,fontSize:20,align:"center"});
-    s2.addText(k.val,{x:bx,y:1.7,w:3.0,h:0.55,fontSize:28,bold:true,color:k.col,align:"center",fontFace:"Calibri"});
-    s2.addText(k.label,{x:bx,y:2.25,w:3.0,h:0.35,fontSize:10,color:MU,align:"center",fontFace:"Calibri"});
+  kpis.forEach(function(k,i){
+    var bx=0.3+i*3.27;
+    var bg=_hzLighten(k.c);
+    s2.addShape(pres.ShapeType.roundRect,{x:bx,y:1.28,w:3.12,h:1.6,
+      fill:{color:bg},line:{color:k.c,width:1.5},rectRadius:0.08});
+    s2.addShape(pres.ShapeType.rect,{x:bx,y:2.82,w:3.12,h:0.06,fill:{color:k.c},line:{color:k.c,width:0}});
+    var fs=String(k.v).length>7?16:String(k.v).length>4?22:30;
+    s2.addText(String(k.v),{x:bx,y:1.35,w:3.12,h:0.9,fontSize:fs,bold:true,color:k.c,align:"center",fontFace:"Calibri"});
+    s2.addText(k.l,{x:bx+0.08,y:2.28,w:2.96,h:0.5,fontSize:9.5,color:M.muted,align:"center",fontFace:"Calibri",wrap:true});
   });
-  /* Tabel top temuan melebihi */
-  var overList=data.filter(function(r){var s=(r[cfg.statusKey]||"").toLowerCase();return s.includes("melebihi")||s.includes("tinggi")||s.includes("kritis");}).slice(0,8);
-  if(overList.length){
-    s2.addText("⚠  TEMUAN MELEBIHI STANDAR / RISIKO TINGGI",{
-      x:0.3,y:2.85,w:12.7,h:0.4,fontSize:12,bold:true,color:RED,fontFace:"Calibri"
-    });
-    var rows=[
-      [{text:"No",options:{bold:true,color:WH}},{text:"Kapal",options:{bold:true,color:WH}},{text:"Fleet",options:{bold:true,color:WH}},{text:"Temuan",options:{bold:true,color:WH}},{text:"Nilai",options:{bold:true,color:WH}},{text:"Status",options:{bold:true,color:WH}}]
-    ];
-    overList.forEach(function(r,i){
-      rows.push([
-        {text:String(i+1)},{text:String(r[cfg.kapalKey]||"—")},{text:String(r[cfg.fleetKey]||"—")},
-        {text:String(r[cfg.temuanKey]||"—")},
-        {text:String(r[cfg.hasilKey]||"—")+(r[cfg.satuanKey]?" "+r[cfg.satuanKey]:"")},
-        {text:String(r[cfg.statusKey]||"—")}
-      ]);
-    });
-    s2.addTable(rows,{
-      x:0.3,y:3.3,w:12.7,h:Math.min(overList.length*0.42+0.42,3.2),
-      fontSize:10,fontFace:"Calibri",
-      align:"left",valign:"middle",
-      fill:{color:WH},
-      border:{pt:0.5,color:"E2E8F0"},
-      colW:[0.4,2.4,1.0,3.2,1.5,1.5],
-      rowH:0.38,
-      autoPage:false,
-      color:TX,
-      thead:{fill:{color:MC},color:WH}
-    });
-  }
-
-  /* ══════════════════════════════════════════
-     SLIDE 3–N — Per temuan unik: 5 Hirarki
-  ══════════════════════════════════════════ */
-  /* Grup temuan unik */
-  var grupMap={};
+  /* Compliance progress bar */
+  s2.addShape(pres.ShapeType.rect,{x:0.3,y:3.1,w:12.7,h:0.25,fill:{color:M.lgray},line:{color:M.lgray,width:0}});
+  s2.addShape(pres.ShapeType.rect,{x:0.3,y:3.1,w:(parseFloat(pctOK)/100)*12.7,h:0.25,
+    fill:{color:parseFloat(pctOK)>=80?"2E7D32":parseFloat(pctOK)>=60?"F59E0B":"C62828"},line:{color:M.white,width:0}});
+  s2.addText("Compliance Rate: "+pctOK+"% ("+normal+" dari "+total+" pengukuran dalam batas NAB)",
+    {x:0.3,y:3.4,w:12.7,h:0.3,fontSize:11,bold:true,
+    color:parseFloat(pctOK)>=80?"2E7D32":parseFloat(pctOK)>=60?"F59E0B":"C62828",fontFace:"Calibri"});
+  /* Analisis box */
+  var anaT=melebihi===0?
+    "Seluruh "+total+" pengukuran "+cfg.label+" berada dalam batas NAB. Program pengendalian hazard berjalan efektif sesuai Permenaker No.05/2018. Pertahankan monitoring berkala.":
+    melebihi+" pengukuran ("+Math.round((melebihi/total)*100)+"%) melampaui NAB dari total "+total+" data. Implementasi segera 5 hierarki pengendalian risiko sesuai Permenaker 05/2018 dan ISO 45001:2018 diperlukan.";
+  s2.addShape(pres.ShapeType.roundRect,{x:0.3,y:3.85,w:12.7,h:1.4,
+    fill:{color:_hzLighten(melebihi>0?"C62828":"2E7D32")},line:{color:melebihi>0?"C62828":"2E7D32",width:0},rectRadius:0.08});
+  s2.addShape(pres.ShapeType.rect,{x:0.3,y:3.85,w:0.05,h:1.4,
+    fill:{color:melebihi>0?"C62828":"2E7D32"},line:{color:melebihi>0?"C62828":"2E7D32",width:0}});
+  s2.addText([
+    {text:"Analisis: ",options:{bold:true,color:melebihi>0?"C62828":"2E7D32",fontSize:11}},
+    {text:anaT,options:{color:M.text,fontSize:11}}
+  ],{x:0.5,y:3.95,w:12.3,h:1.2,fontFace:"Calibri",wrap:true,valign:"top"});
+  /* Distribusi per kapal */
+  var kapalMap={};
   data.forEach(function(r){
-    var key=(r[cfg.temuanKey]||"Tidak Diketahui").trim();
-    if(!grupMap[key])grupMap[key]=[];
-    grupMap[key].push(r);
+    var k=r[cfg.shipKey]||"—";
+    if(!kapalMap[k])kapalMap[k]={total:0,mel:0};
+    kapalMap[k].total++;
+    var s=(r[cfg.statusKey]||"").toLowerCase();
+    if(s.includes("melebihi")||s.includes("tinggi")||s.includes("kritis"))kapalMap[k].mel++;
   });
-  var temuan=Object.keys(grupMap);
+  var kapalKeys=Object.keys(kapalMap).slice(0,4);
+  kapalKeys.forEach(function(k,i){
+    var bx=0.3+i*3.27;
+    var c=kapalMap[k].mel>0?"C62828":"2E7D32";
+    s2.addShape(pres.ShapeType.roundRect,{x:bx,y:5.4,w:3.12,h:1.5,
+      fill:{color:_hzLighten(c)},line:{color:c,width:1},rectRadius:0.08});
+    s2.addText(k.length>18?k.slice(0,16)+"..":k,{x:bx+0.08,y:5.46,w:2.96,h:0.38,fontSize:10,bold:true,color:M.navy,fontFace:"Calibri"});
+    s2.addText(kapalMap[k].mel>0?kapalMap[k].mel+" melebihi NAB":"Semua normal",
+      {x:bx+0.08,y:5.86,w:2.96,h:0.38,fontSize:12,bold:true,color:c,fontFace:"Calibri"});
+    s2.addText(kapalMap[k].total+" pengukuran",{x:bx+0.08,y:6.26,w:2.96,h:0.28,fontSize:9,color:M.muted,fontFace:"Calibri"});
+  });
+  s2.addShape(pres.ShapeType.rect,{x:0,y:7.18,w:13.3,h:0.32,fill:{color:M.gray},line:{color:M.gray,width:0}});
+  s2.addText("Ref: Permenaker 05/2018  •  ACGIH TLV 2024  •  ISO 45001:2018",
+    {x:0.2,y:7.2,w:10.5,h:0.26,fontSize:7.5,color:M.muted,fontFace:"Calibri"});
+  s2.addText("2 / 5",{x:11.2,y:7.2,w:1.9,h:0.26,fontSize:9,color:M.gold,bold:true,align:"right",fontFace:"Calibri"});
 
-  temuan.forEach(function(tipe){
-    var rows=grupMap[tipe];
-    var melebihiRows=rows.filter(function(r){var s=(r[cfg.statusKey]||"").toLowerCase();return s.includes("melebihi")||s.includes("tinggi")||s.includes("kritis");});
-    var hirarki=getHirarki(hazardType,tipe);
-    var kapalList=[...new Set(rows.map(function(r){return r[cfg.kapalKey]||"";}).filter(Boolean))];
-    var statusLabel=melebihiRows.length>0?"MELEBIHI STANDAR":"DALAM BATAS";
-    var statusColor=melebihiRows.length>0?RED:GRN;
-
-    var s=pres.addSlide();
-    s.background={color:WH};
-
-    /* Header strip */
-    s.addShape(pres.ShapeType.rect,{x:0,y:0,w:13.3,h:0.95,fill:{color:MC}});
-    s.addShape(pres.ShapeType.rect,{x:0,y:0,w:0.08,h:7.5,fill:{color:"#"+AC}});
-    s.addText(cfg.icon+" "+cfg.label.toUpperCase()+" — HIRARKI PENGENDALIAN",{
-      x:0.25,y:0.05,w:9,h:0.45,fontSize:11,bold:true,color:"CADCFC",fontFace:"Calibri"
-    });
-    s.addText(tipe.toUpperCase(),{
-      x:0.25,y:0.5,w:9,h:0.4,fontSize:14,bold:true,color:WH,fontFace:"Calibri"
-    });
-    /* Badge status */
-    s.addShape(pres.ShapeType.roundRect,{x:10.0,y:0.15,w:3.1,h:0.65,fill:{color:statusColor},rectRadius:0.08});
-    s.addText(statusLabel,{x:10.0,y:0.15,w:3.1,h:0.65,fontSize:11,bold:true,color:WH,align:"center",fontFace:"Calibri"});
-
-    /* Info baris — kapal & data */
-    s.addShape(pres.ShapeType.rect,{x:0.15,y:1.0,w:13.0,h:0.5,fill:{color:GR},line:{color:"E2E8F0",width:0.5}});
-    s.addText([
-      {text:"🚢 Kapal: ",options:{bold:true,color:TX}},
-      {text:kapalList.slice(0,5).join(", ")+(kapalList.length>5?" + "+(kapalList.length-5)+" lainnya":""),options:{color:TX}},
-      {text:"    |    📊 Total Data: ",options:{bold:true,color:TX}},
-      {text:String(rows.length),options:{color:TX}},
-      {text:"    |    ⚠ Melebihi: ",options:{bold:true,color:TX}},
-      {text:String(melebihiRows.length),options:{color:melebihiRows.length>0?RED:GRN,bold:true}}
-    ],{x:0.2,y:1.02,w:12.9,h:0.45,fontSize:10,fontFace:"Calibri"});
-
-    /* 5 Hirarki Pengendalian */
-    var hierData=[
-      {no:"1",judul:"ELIMINASI",warna:RED,icon:"🚫",isi:hirarki.E||"Identifikasi dan eliminasi sumber bahaya dari lingkungan kerja kapal jika secara teknis dan operasional memungkinkan."},
-      {no:"2",judul:"SUBSTITUSI",warna:"E65100",icon:"🔄",isi:hirarki.S||"Ganti material, proses, atau peralatan yang berbahaya dengan alternatif yang lebih aman dan memenuhi standar maritim."},
-      {no:"3",judul:"REKAYASA TEKNIK",warna:"1565C0",icon:"⚙",isi:hirarki.R||"Terapkan kontrol teknis: ventilasi, enclosure, isolasi, dan modifikasi teknis peralatan dan fasilitas kapal."},
-      {no:"4",judul:"ADMINISTRATIF",warna:GRN,icon:"📋",isi:hirarki.A||"Terapkan SOP, permit-to-work, rotasi kerja, training, dan program pengawasan sesuai regulasi Permenaker 05/2018 dan ILO MLC 2006."},
-      {no:"5",judul:"APD",warna:"6A1B9A",icon:"🦺",isi:hirarki.P||"Sediakan APD yang sesuai dengan jenis hazard, terstandarisasi SNI/ISO, dan pastikan penggunaan konsisten oleh seluruh ABK."}
+  /* ─────── SLIDE 3: DATA TABLE ─────── */
+  var s3=pres.addSlide();
+  s3.background={color:M.white};
+  s3.addShape(pres.ShapeType.rect,{x:0,y:0,w:13.3,h:1.12,fill:{color:M.navy},line:{color:M.navy,width:0}});
+  s3.addShape(pres.ShapeType.rect,{x:0,y:0,w:0.07,h:7.5,fill:{color:AC},line:{color:AC,width:0}});
+  s3.addText(cfg.icon+" "+cfg.label.toUpperCase()+"  ·  DATA PENGUKURAN",
+    {x:0.24,y:0.08,w:12.5,h:0.38,fontSize:9,bold:true,color:"CADCFC",charSpacing:1.5,fontFace:"Calibri"});
+  s3.addText("Detail Hasil Pengukuran "+cfg.label+" per Kapal & Parameter",
+    {x:0.24,y:0.52,w:12.5,h:0.46,fontSize:14.5,bold:true,color:M.white,fontFace:"Calibri"});
+  var hdrs=cfg.cols.map(function(c){
+    return{text:c,options:{bold:true,color:M.white,fill:{color:M.navy},fontSize:9.5,border:{type:"none"},align:"center"}};
+  });
+  var colW3=[0.4,2.2,1.8,1.0,0.9,0.9,1.2];
+  var rows3=data.slice(0,13).map(function(r,i){
+    var isMel=(r[cfg.statusKey]||"").toLowerCase().includes("melebihi")||
+              (r[cfg.statusKey]||"").toLowerCase().includes("tinggi")||
+              (r[cfg.statusKey]||"").toLowerCase().includes("kritis");
+    var cells=[
+      {text:String(i+1),options:{fontSize:10,align:"center",fill:{color:i%2===0?M.white:"F8FAFC"},border:{type:"none"}}},
     ];
-
-    hierData.forEach(function(h,i){
-      var bx=0.15;
-      var by=1.62+i*1.12;
-      /* Label nomor & judul */
-      s.addShape(pres.ShapeType.roundRect,{x:bx,y:by,w:2.5,h:1.0,fill:{color:h.warna},rectRadius:0.06});
-      s.addText(h.icon+" "+h.no,{x:bx,y:by+0.05,w:2.5,h:0.42,fontSize:18,bold:true,color:WH,align:"center",fontFace:"Calibri"});
-      s.addText(h.judul,{x:bx,y:by+0.52,w:2.5,h:0.42,fontSize:9,bold:true,color:WH,align:"center",fontFace:"Calibri",charSpacing:1});
-      /* Isi rekomendasi */
-      s.addShape(pres.ShapeType.rect,{x:2.7,y:by,w:10.4,h:1.0,fill:{color:i%2===0?WH:GR},line:{color:"E2E8F0",width:0.5}});
-      s.addText(h.isi,{
-        x:2.8,y:by+0.04,w:10.2,h:0.92,
-        fontSize:9.5,color:TX,fontFace:"Calibri",wrap:true,valign:"middle"
-      });
+    cfg.cols.forEach(function(col){
+      var v=r[col]||"—";
+      var isStatus=col==="Status";
+      cells.push({text:String(v),options:{
+        fontSize:isStatus?10:10,bold:isStatus,
+        color:isStatus?(isMel?"C62828":"2E7D32"):M.text,
+        fill:{color:i%2===0?M.white:"F8FAFC"},
+        border:{type:"none"},align:isStatus?"center":"left"
+      }});
     });
-
-    /* Footer slide */
-    s.addShape(pres.ShapeType.rect,{x:0,y:7.15,w:13.3,h:0.35,fill:{color:GR}});
-    s.addText("Ref: Permenaker No.05/2018 | ACGIH TLV 2024 | IMO MSC/Circ.1351 | ILO MLC 2006 | OSHA 29 CFR 1910",{
-      x:0.2,y:7.18,w:10,h:0.28,fontSize:7.5,color:MU,fontFace:"Calibri"
-    });
-    s.addText("IH Dashboard  |  Pertamina Patra Niaga III",{
-      x:10.2,y:7.18,w:3.0,h:0.28,fontSize:7.5,color:MU,align:"right",fontFace:"Calibri"
-    });
+    return cells;
   });
+  s3.addTable([hdrs].concat(rows3),
+    {x:0.3,y:1.25,w:12.7,colW:[0.4,2.2,1.8,1.0,1.0,1.0,1.3],
+     rowH:0.38,fontFace:"Calibri",border:{type:"none"},fill:{color:M.white}});
+  if(data.length>13)s3.addText("* Menampilkan 13 dari "+data.length+" data — detail lengkap di dashboard.",
+    {x:0.3,y:6.85,w:12.7,h:0.28,fontSize:9,color:M.muted,italic:true,fontFace:"Calibri"});
+  s3.addShape(pres.ShapeType.rect,{x:0,y:7.18,w:13.3,h:0.32,fill:{color:M.gray},line:{color:M.gray,width:0}});
+  s3.addText("Ref: Permenaker 05/2018  •  ACGIH TLV 2024  •  ISO 45001:2018",
+    {x:0.2,y:7.2,w:10.5,h:0.26,fontSize:7.5,color:M.muted,fontFace:"Calibri"});
+  s3.addText("3 / 5",{x:11.2,y:7.2,w:1.9,h:0.26,fontSize:9,color:M.gold,bold:true,align:"right",fontFace:"Calibri"});
 
-  /* ══════════════════════════════════════════
-     SLIDE PENUTUP — Rekomendasi Prioritas
-  ══════════════════════════════════════════ */
-  var sEnd=pres.addSlide();
-  sEnd.background={color:MC};
-  sEnd.addShape(pres.ShapeType.rect,{x:0,y:0,w:0.08,h:7.5,fill:{color:"#"+AC}});
-  sEnd.addText("REKOMENDASI PRIORITAS TINDAK LANJUT",{
-    x:0.3,y:0.4,w:12.5,h:0.7,fontSize:22,bold:true,color:WH,fontFace:"Calibri",charSpacing:2
-  });
-  sEnd.addText(cfg.icon+" "+cfg.label,{
-    x:0.3,y:1.1,w:12.5,h:0.45,fontSize:14,color:AC,fontFace:"Calibri",bold:true
-  });
-  sEnd.addShape(pres.ShapeType.rect,{x:0.3,y:1.65,w:12.5,h:0.04,fill:{color:AC}});
-
-  /* Prioritas berdasarkan melebihi */
-  var prioData=[
-    {label:"SEGERA (0–1 Bulan)",color:"C62828",items:["Hentikan pekerjaan di area dengan temuan KRITIS sampai kontrol teknis terpasang","Distribusi APD darurat untuk seluruh ABK di area terdampak","Laporkan temuan kepada HSE Officer dan Nakhoda segera","Pasang safety barrier dan warning sign di area berbahaya"]},
-    {label:"JANGKA PENDEK (1–3 Bulan)",color:"E65100",items:["Pasang rekayasa teknik: ventilasi, enclosure, atau monitoring kontinu","Revisi JSA (Job Safety Analysis) untuk semua pekerjaan berisiko tinggi","Laksanakan training ulang ABK tentang hazard "+cfg.label,"Lakukan medical check-up untuk ABK yang terpapar melebihi standar"]},
-    {label:"JANGKA PANJANG (3–12 Bulan)",color:"1565C0",items:["Review dan update program IH monitoring tahunan","Evaluasi efektivitas semua kontrol yang telah diterapkan","Integrasikan temuan ke dalam Ship Safety Management System (SMS)","Susun laporan tahunan untuk manajemen dan klas"]}
+  /* ─────── SLIDE 4: 5 HIRARKI PENGENDALIAN ─────── */
+  var s4=pres.addSlide();
+  s4.background={color:M.white};
+  s4.addShape(pres.ShapeType.rect,{x:0,y:0,w:13.3,h:1.12,fill:{color:M.navy},line:{color:M.navy,width:0}});
+  s4.addShape(pres.ShapeType.rect,{x:0,y:0,w:0.07,h:7.5,fill:{color:AC},line:{color:AC,width:0}});
+  s4.addText(cfg.icon+" "+cfg.label.toUpperCase()+"  ·  5 HIRARKI PENGENDALIAN",
+    {x:0.24,y:0.08,w:12.5,h:0.38,fontSize:9,bold:true,color:"CADCFC",charSpacing:1.5,fontFace:"Calibri"});
+  s4.addText("Rencana Pengendalian Risiko — Hierarki ISO 45001 & Permenaker 05/2018",
+    {x:0.24,y:0.52,w:12.5,h:0.46,fontSize:14.5,bold:true,color:M.white,fontFace:"Calibri"});
+  var db=HIRARKI_DB[hazardType]||{};
+  var firstKey=Object.keys(db)[0]||"default";
+  var hirarkiList=db[firstKey]||db.default||[
+    "Eliminasi sumber "+cfg.label.toLowerCase()+" berlebih",
+    "Substitusi dengan alternatif lebih aman",
+    "Rekayasa teknik & engineering control",
+    "SOP, rotasi kerja & administrative control",
+    "APD sesuai standar paparan "+cfg.label.toLowerCase()
   ];
-  prioData.forEach(function(p,i){
-    var by=2.0+i*1.7;
-    sEnd.addShape(pres.ShapeType.roundRect,{x:0.3,y:by,w:12.5,h:1.55,fill:{color:"1C3A5A"},line:{color:p.color,width:2},rectRadius:0.1});
-    sEnd.addShape(pres.ShapeType.roundRect,{x:0.3,y:by,w:3.2,h:0.45,fill:{color:p.color},rectRadius:0.06});
-    sEnd.addText(p.label,{x:0.35,y:by+0.02,w:3.1,h:0.4,fontSize:9,bold:true,color:WH,fontFace:"Calibri",align:"center"});
-    var bullets=p.items.map(function(txt,j){return{text:txt,options:{bullet:true,color:"CADCFC",fontSize:9,fontFace:"Calibri",breakLine:j<p.items.length-1}};});
-    sEnd.addText(bullets,{x:0.45,y:by+0.5,w:12.2,h:1.0});
+  var hirNos=["1","2","3","4","5"];
+  var hirLabels=["ELIMINASI","SUBSTITUSI","REC. TEKNIK","ADMINISTRATIF","APD"];
+  var hirCols=["C62828","E65100","1565C0","2E7D32","6A1B9A"];
+  /* Piramida effect - decreasing width */
+  var heights=[1.55,1.45,1.35,1.25,1.15];
+  var startY=1.28;
+  var curY=startY;
+  hirLabels.forEach(function(hl,i){
+    var margin=i*0.18;
+    var bx=0.3+margin;
+    var bw=12.7-margin*2;
+    s4.addShape(pres.ShapeType.roundRect,{x:bx,y:curY,w:bw,h:heights[i],
+      fill:{color:_hzLighten(hirCols[i])},line:{color:hirCols[i],width:1.5},rectRadius:0.06});
+    s4.addShape(pres.ShapeType.rect,{x:bx,y:curY,w:0.06,h:heights[i],
+      fill:{color:hirCols[i]},line:{color:hirCols[i],width:0}});
+    s4.addShape(pres.ShapeType.ellipse,{x:bx+0.15,y:curY+(heights[i]-0.36)/2,w:0.36,h:0.36,
+      fill:{color:hirCols[i]},line:{color:hirCols[i],width:0}});
+    s4.addText(hirNos[i],{x:bx+0.15,y:curY+(heights[i]-0.36)/2,w:0.36,h:0.36,
+      fontSize:14,bold:true,color:M.white,align:"center",fontFace:"Calibri"});
+    s4.addText(hl,{x:bx+0.62,y:curY+0.05,w:3.0,h:heights[i]-0.1,
+      fontSize:12,bold:true,color:hirCols[i],fontFace:"Calibri",valign:"middle"});
+    s4.addText(hirarkiList[i]||"—",{x:bx+3.7,y:curY+0.06,w:bw-3.9,h:heights[i]-0.12,
+      fontSize:11.5,color:M.text,fontFace:"Calibri",wrap:true,valign:"middle"});
+    curY+=heights[i]+0.04;
   });
-  /* Footer */
-  sEnd.addText("Dokumen ini dibuat otomatis oleh IH Dashboard v5.0 — "+new Date().toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"}),{
-    x:0,y:7.1,w:13.3,h:0.35,fontSize:9,color:"CADCFC",align:"center",fontFace:"Calibri"
+  s4.addShape(pres.ShapeType.rect,{x:0,y:7.18,w:13.3,h:0.32,fill:{color:M.gray},line:{color:M.gray,width:0}});
+  s4.addText("Ref: Permenaker 05/2018  •  ISO 45001:2018  •  IH Dashboard v5.0",
+    {x:0.2,y:7.2,w:10.5,h:0.26,fontSize:7.5,color:M.muted,fontFace:"Calibri"});
+  s4.addText("4 / 5",{x:11.2,y:7.2,w:1.9,h:0.26,fontSize:9,color:M.gold,bold:true,align:"right",fontFace:"Calibri"});
+
+  /* ─────── SLIDE 5: REKOMENDASI ─────── */
+  var s5=pres.addSlide();
+  s5.background={color:M.white};
+  s5.addShape(pres.ShapeType.rect,{x:0,y:0,w:13.3,h:1.12,fill:{color:M.navy},line:{color:M.navy,width:0}});
+  s5.addShape(pres.ShapeType.rect,{x:0,y:0,w:0.07,h:7.5,fill:{color:M.gold},line:{color:M.gold,width:0}});
+  s5.addText(cfg.icon+" "+cfg.label.toUpperCase()+"  ·  REKOMENDASI STRATEGIS",
+    {x:0.24,y:0.08,w:12.5,h:0.38,fontSize:9,bold:true,color:"CADCFC",charSpacing:1.5,fontFace:"Calibri"});
+  s5.addText("Rekomendasi Tindak Lanjut & Program Pengendalian "+cfg.label,
+    {x:0.24,y:0.52,w:12.5,h:0.46,fontSize:14.5,bold:true,color:M.white,fontFace:"Calibri"});
+  var reks5=[
+    {p:"Segera (0–30 Hari)",c:"C62828",items:[
+      melebihi>0?"Laksanakan pengendalian teknis untuk "+melebihi+" temuan melebihi NAB":"Pertahankan program kontrol yang sudah berjalan",
+      "Evaluasi APD yang digunakan — pastikan sesuai jenis paparan",
+      "Catat semua temuan dan tindakan di IH Dashboard"
+    ]},
+    {p:"Jangka Pendek (1–3 Bulan)",c:AC,items:[
+      "Review dan update Job Safety Analysis (JSA) area terdampak",
+      "Lakukan pengukuran ulang setelah pengendalian dipasang",
+      "Medical surveillance untuk ABK terpapar di atas NAB"
+    ]},
+    {p:"Jangka Panjang (3–12 Bulan)",c:"1565C0",items:[
+      "Integrasikan temuan ke Ship Safety Management System (SMS)",
+      "Program monitoring berkala — jadwal pengukuran rutin",
+      "Laporan tahunan "+cfg.label+" untuk audit ISM Code & biro klasifikasi"
+    ]}
+  ];
+  reks5.forEach(function(r,i){
+    var rx=0.3+i*4.38;
+    s5.addShape(pres.ShapeType.roundRect,{x:rx,y:1.28,w:4.18,h:5.65,
+      fill:{color:_hzLighten(r.c)},line:{color:r.c,width:0},rectRadius:0.1});
+    s5.addShape(pres.ShapeType.rect,{x:rx,y:1.28,w:4.18,h:0.56,fill:{color:r.c},line:{color:r.c,width:0}});
+    s5.addText(r.p,{x:rx+0.12,y:1.31,w:3.94,h:0.5,fontSize:11,bold:true,color:M.white,fontFace:"Calibri"});
+    r.items.forEach(function(it,j){
+      s5.addShape(pres.ShapeType.ellipse,{x:rx+0.18,y:2.08+j*1.55,w:0.22,h:0.22,fill:{color:r.c},line:{color:r.c,width:0}});
+      s5.addText(it,{x:rx+0.52,y:2.01+j*1.55,w:3.52,h:1.38,fontSize:11,color:M.text,fontFace:"Calibri",wrap:true,valign:"top"});
+    });
   });
+  s5.addShape(pres.ShapeType.rect,{x:0,y:7.18,w:13.3,h:0.32,fill:{color:M.gray},line:{color:M.gray,width:0}});
+  s5.addText("Ref: Permenaker 05/2018  •  ACGIH TLV & BEI 2024  •  ISO 45001:2018  •  IMO MSC/Circ.1351",
+    {x:0.2,y:7.2,w:10.5,h:0.26,fontSize:7.5,color:M.muted,fontFace:"Calibri"});
+  s5.addText("5 / 5",{x:11.2,y:7.2,w:1.9,h:0.26,fontSize:9,color:M.gold,bold:true,align:"right",fontFace:"Calibri"});
 
-  /* ── Save ── */
-  /* ══════════════════════════════════════════
-     SLIDE BIOMARKER — khusus Faktor Kimia
-  ══════════════════════════════════════════ */
-  if(hazardType==="kimia"&&(rawBiomarker.length>0||rawPersonal.length>0)){
-
-    /* ── Slide cover biomonitoring ── */
-    var sbio=pres.addSlide();
-    sbio.background={color:WH};
-    sbio.addShape(pres.ShapeType.rect,{x:0,y:0,w:13.3,h:1.1,fill:{color:MC}});
-    sbio.addShape(pres.ShapeType.rect,{x:0,y:0,w:0.08,h:7.5,fill:{color:"7B1FA2"}});
-    sbio.addText("⚗ FAKTOR KIMIA — BIOMONITORING BENZENE",{
-      x:0.25,y:0.1,w:12.5,h:0.45,fontSize:11,bold:true,color:"CADCFC",fontFace:"Calibri"
-    });
-    sbio.addText("Hasil Pemantauan Biologis & Personal Air Sampling",{
-      x:0.25,y:0.58,w:10,h:0.42,fontSize:14,bold:true,color:WH,fontFace:"Calibri"
-    });
-
-    /* KPI row */
-    var bioTotal=rawBiomarker.length+rawPersonal.length;
-    var bioMelebihi=rawBiomarker.filter(function(r){return r.kreatinin>r.rujukan;}).length
-                   +rawPersonal.filter(function(r){return r.hasil>r.nab;}).length;
-    var bioAman=bioTotal-bioMelebihi;
-    var kapalBio=new Set([].concat(rawBiomarker.map(function(r){return r.kapal;}),rawPersonal.map(function(r){return r.kapal;})).filter(Boolean)).size;
-
-    var kpiItems=[
-      {label:"Total Sampel",val:String(bioTotal),col:"7B1FA2",icon:"🧪"},
-      {label:"Melebihi BEI/NAB",val:String(bioMelebihi),col:bioMelebihi>0?RED:GRN,icon:"⚠"},
-      {label:"Dalam Batas Normal",val:String(bioAman),col:GRN,icon:"✅"},
-      {label:"Kapal Terdampak",val:String(kapalBio),col:"1565C0",icon:"🚢"}
-    ];
-    kpiItems.forEach(function(k,i){
-      var bx=0.3+i*3.17;
-      sbio.addShape(pres.ShapeType.roundRect,{x:bx,y:1.25,w:3.0,h:1.4,fill:{color:WH},line:{color:k.col,width:2},rectRadius:0.1});
-      sbio.addText(k.icon,{x:bx,y:1.3,w:3.0,h:0.5,fontSize:18,align:"center"});
-      sbio.addText(k.val,{x:bx,y:1.8,w:3.0,h:0.52,fontSize:26,bold:true,color:k.col,align:"center",fontFace:"Calibri"});
-      sbio.addText(k.label,{x:bx,y:2.33,w:3.0,h:0.28,fontSize:10,color:MU,align:"center",fontFace:"Calibri"});
-    });
-
-    /* Standar referensi */
-    sbio.addShape(pres.ShapeType.roundRect,{x:0.3,y:2.8,w:12.7,h:0.55,fill:{color:"F3E5F5"},rectRadius:0.06});
-    sbio.addText([
-      {text:"Standar: ",options:{bold:true,color:"7B1FA2",fontSize:10}},
-      {text:"ACGIH BEI 2024: Muconic Acid 500 µg/g kreatinin (25 µg/g ≈ 0.1 ppm)  |  ",options:{color:"4A148C",fontSize:10}},
-      {text:"Permenaker 05/2018: NAB Benzene Udara 0.5 ppm TWA  |  ",options:{color:"4A148C",fontSize:10}},
-      {text:"IARC: Grup 1 (Karsinogen pada Manusia)",options:{bold:true,color:"C62828",fontSize:10}}
-    ],{x:0.4,y:2.82,w:12.5,h:0.5});
-
-    /* Tabel Biomarker */
-    if(rawBiomarker.length>0){
-      sbio.addText("A. DATA BIOMARKER BENZENE (Urin — Muconic Acid/Kreatinin)",{
-        x:0.3,y:3.5,w:12.7,h:0.35,fontSize:10,bold:true,color:"7B1FA2",fontFace:"Calibri"
-      });
-      var bioRows=[[
-        {text:"No",options:{bold:true,color:WH}},
-        {text:"Tahun",options:{bold:true,color:WH}},
-        {text:"Kapal",options:{bold:true,color:WH}},
-        {text:"Fleet",options:{bold:true,color:WH}},
-        {text:"Pekerja",options:{bold:true,color:WH}},
-        {text:"Nilai (µg/g)",options:{bold:true,color:WH}},
-        {text:"BEI",options:{bold:true,color:WH}},
-        {text:"Status",options:{bold:true,color:WH}}
-      ]];
-      rawBiomarker.slice(0,12).forEach(function(r,i){
-        var over=r.kreatinin>r.rujukan;
-        bioRows.push([
-          {text:String(i+1)},
-          {text:String(r.tahun||"—")},
-          {text:String(r.kapal||"—")},
-          {text:String(r.fleet||"—")},
-          {text:String(r.pekerja||"—")},
-          {text:String(r.kreatinin||"0"),options:{bold:true,color:over?RED:GRN}},
-          {text:String(r.rujukan||"25")},
-          {text:over?"MELEBIHI BEI":"Normal",options:{bold:true,color:over?RED:GRN}}
-        ]);
-      });
-      sbio.addTable(bioRows,{
-        x:0.3,y:3.9,w:12.7,h:Math.min(rawBiomarker.slice(0,12).length*0.34+0.34,2.7),
-        fontSize:9,fontFace:"Calibri",color:TX,
-        border:{pt:0.5,color:"E2E8F0"},
-        rowH:0.3,
-        colW:[0.3,0.7,2.0,0.8,2.2,1.1,0.8,1.6],
-        fill:{color:WH},
-        thead:{fill:{color:MC},color:WH},
-        autoPage:false
-      });
-    }
-
-    /* Footer */
-    sbio.addShape(pres.ShapeType.rect,{x:0,y:7.15,w:13.3,h:0.35,fill:{color:GR}});
-    sbio.addText("Ref: ACGIH BEI 2024 | Permenaker No.05/2018 | IARC Monograph Vol.120 | ILO MLC 2006",{
-      x:0.2,y:7.18,w:10,h:0.28,fontSize:7.5,color:MU,fontFace:"Calibri"
-    });
-    sbio.addText("IH Dashboard  |  Pertamina Patra Niaga III",{
-      x:10.2,y:7.18,w:3.0,h:0.28,fontSize:7.5,color:MU,align:"right",fontFace:"Calibri"
-    });
-
-    /* ── Slide Personal Air Sampling ── */
-    if(rawPersonal.length>0){
-      var spers=pres.addSlide();
-      spers.background={color:WH};
-      spers.addShape(pres.ShapeType.rect,{x:0,y:0,w:13.3,h:1.1,fill:{color:MC}});
-      spers.addShape(pres.ShapeType.rect,{x:0,y:0,w:0.08,h:7.5,fill:{color:"7B1FA2"}});
-      spers.addText("⚗ FAKTOR KIMIA — BENZENE PERSONAL AIR SAMPLING",{
-        x:0.25,y:0.1,w:12.5,h:0.45,fontSize:11,bold:true,color:"CADCFC",fontFace:"Calibri"
-      });
-      spers.addText("Hasil Pengukuran Paparan Benzene di Udara Tempat Kerja (ppm)",{
-        x:0.25,y:0.58,w:12.5,h:0.42,fontSize:14,bold:true,color:WH,fontFace:"Calibri"
-      });
-
-      /* Statistik */
-      var persNABOver=rawPersonal.filter(function(r){return r.hasil>r.nab;}).length;
-      var persAvg=rawPersonal.length?+(rawPersonal.reduce(function(s,r){return s+r.hasil;},0)/rawPersonal.length).toFixed(3):0;
-      var persMax=rawPersonal.length?Math.max.apply(null,rawPersonal.map(function(r){return r.hasil;})):0;
-      var nabRef=rawPersonal.length?rawPersonal[0].nab:0.5;
-
-      var statItems=[
-        {label:"Total Sampel",val:String(rawPersonal.length),col:"1565C0"},
-        {label:"Melebihi NAB ("+nabRef+" ppm)",val:String(persNABOver),col:persNABOver>0?RED:GRN},
-        {label:"Rata-rata Paparan",val:String(persAvg)+" ppm",col:"7B1FA2"},
-        {label:"Nilai Tertinggi",val:String(persMax)+" ppm",col:persMax>nabRef?RED:"E65100"}
-      ];
-      statItems.forEach(function(k,i){
-        var bx=0.3+i*3.17;
-        spers.addShape(pres.ShapeType.roundRect,{x:bx,y:1.25,w:3.0,h:1.2,fill:{color:GR},line:{color:k.col,width:1.5},rectRadius:0.08});
-        spers.addText(k.val,{x:bx,y:1.32,w:3.0,h:0.55,fontSize:22,bold:true,color:k.col,align:"center",fontFace:"Calibri"});
-        spers.addText(k.label,{x:bx,y:1.88,w:3.0,h:0.32,fontSize:9.5,color:MU,align:"center",fontFace:"Calibri"});
-      });
-
-      /* NAB reference box */
-      spers.addShape(pres.ShapeType.roundRect,{x:0.3,y:2.6,w:12.7,h:0.5,fill:{color:"FFF3E0"},rectRadius:0.06});
-      spers.addText([
-        {text:"NAB Permenaker 05/2018: ",options:{bold:true,color:"E65100",fontSize:10}},
-        {text:"0.5 ppm TWA (8 jam/hari)   ",options:{color:"BF360C",fontSize:10}},
-        {text:"TLV-TWA ACGIH 2024: ",options:{bold:true,color:"E65100",fontSize:10}},
-        {text:"0.5 ppm   ",options:{color:"BF360C",fontSize:10}},
-        {text:"NIOSH REL: ",options:{bold:true,color:"C62828",fontSize:10}},
-        {text:"0.1 ppm (paling ketat, reference tertinggi)",options:{color:"C62828",fontSize:10}}
-      ],{x:0.4,y:2.63,w:12.5,h:0.44});
-
-      /* Tabel Personal */
-      spers.addText("DATA PERSONAL AIR SAMPLING BENZENE",{
-        x:0.3,y:3.22,w:12.7,h:0.35,fontSize:10,bold:true,color:"7B1FA2",fontFace:"Calibri"
-      });
-      var persRows=[[
-        {text:"No",options:{bold:true,color:WH}},
-        {text:"Tahun",options:{bold:true,color:WH}},
-        {text:"Kapal",options:{bold:true,color:WH}},
-        {text:"Fleet",options:{bold:true,color:WH}},
-        {text:"Pekerja",options:{bold:true,color:WH}},
-        {text:"Lokasi",options:{bold:true,color:WH}},
-        {text:"Hasil (ppm)",options:{bold:true,color:WH}},
-        {text:"NAB",options:{bold:true,color:WH}},
-        {text:"Status",options:{bold:true,color:WH}}
-      ]];
-      rawPersonal.slice(0,14).forEach(function(r,i){
-        var over=r.hasil>r.nab;
-        persRows.push([
-          {text:String(i+1)},
-          {text:String(r.tahun||"—")},
-          {text:String(r.kapal||"—")},
-          {text:String(r.fleet||"—")},
-          {text:String(r.pekerja||"—")},
-          {text:String(r.lokasi||"—")},
-          {text:String(r.hasil||"0"),options:{bold:true,color:over?RED:GRN}},
-          {text:String(r.nab||"0.5")},
-          {text:over?"MELEBIHI NAB":"Normal",options:{bold:true,color:over?RED:GRN}}
-        ]);
-      });
-      spers.addTable(persRows,{
-        x:0.3,y:3.62,w:12.7,h:Math.min(rawPersonal.slice(0,14).length*0.3+0.3,3.0),
-        fontSize:8.5,fontFace:"Calibri",color:TX,
-        border:{pt:0.5,color:"E2E8F0"},
-        rowH:0.28,
-        colW:[0.3,0.65,1.8,0.75,1.9,1.7,1.05,0.75,1.5],
-        fill:{color:WH},
-        thead:{fill:{color:MC},color:WH},
-        autoPage:false
-      });
-
-      /* Footer */
-      spers.addShape(pres.ShapeType.rect,{x:0,y:7.15,w:13.3,h:0.35,fill:{color:GR}});
-      spers.addText("Ref: ACGIH TLV-TWA 2024 (0.5 ppm) | Permenaker 05/2018 | NIOSH REL (0.1 ppm) | IARC Group 1",{
-        x:0.2,y:7.18,w:10,h:0.28,fontSize:7.5,color:MU,fontFace:"Calibri"
-      });
-      spers.addText("IH Dashboard  |  Pertamina Patra Niaga III",{
-        x:10.2,y:7.18,w:3.0,h:0.28,fontSize:7.5,color:MU,align:"right",fontFace:"Calibri"
-      });
-    }
-
-    /* ── Slide hirarki pengendalian khusus benzene ── */
-    var sbenz=pres.addSlide();
-    sbenz.background={color:WH};
-    sbenz.addShape(pres.ShapeType.rect,{x:0,y:0,w:13.3,h:1.1,fill:{color:MC}});
-    sbenz.addShape(pres.ShapeType.rect,{x:0,y:0,w:0.08,h:7.5,fill:{color:"7B1FA2"}});
-    sbenz.addText("⚗ FAKTOR KIMIA — HIRARKI PENGENDALIAN BENZENE",{
-      x:0.25,y:0.1,w:12.5,h:0.45,fontSize:11,bold:true,color:"CADCFC",fontFace:"Calibri"
-    });
-    sbenz.addText("Strategi Pengendalian Paparan Benzene di Lingkungan Kerja Maritim",{
-      x:0.25,y:0.58,w:12.5,h:0.42,fontSize:14,bold:true,color:WH,fontFace:"Calibri"
-    });
-
-    var hBenzene=HIRARKI_DB.kimia.benzene;
-    var hierBenz=[
-      {no:"1",judul:"ELIMINASI",warna:"C62828",icon:"🚫",isi:hBenzene.E},
-      {no:"2",judul:"SUBSTITUSI",warna:"E65100",icon:"🔄",isi:hBenzene.S},
-      {no:"3",judul:"REKAYASA TEKNIK",warna:"1565C0",icon:"⚙",isi:hBenzene.R},
-      {no:"4",judul:"ADMINISTRATIF",warna:"2E7D32",icon:"📋",isi:hBenzene.A},
-      {no:"5",judul:"APD",warna:"6A1B9A",icon:"🦺",isi:hBenzene.P}
-    ];
-    hierBenz.forEach(function(h,i){
-      var by=1.24+i*1.22;
-      sbenz.addShape(pres.ShapeType.roundRect,{x:0.15,y:by,w:2.5,h:1.1,fill:{color:h.warna},rectRadius:0.06});
-      sbenz.addText(h.icon+" "+h.no,{x:0.15,y:by+0.05,w:2.5,h:0.48,fontSize:20,bold:true,color:WH,align:"center",fontFace:"Calibri"});
-      sbenz.addText(h.judul,{x:0.15,y:by+0.6,w:2.5,h:0.42,fontSize:9,bold:true,color:WH,align:"center",fontFace:"Calibri",charSpacing:1});
-      sbenz.addShape(pres.ShapeType.rect,{x:2.7,y:by,w:10.4,h:1.1,fill:{color:i%2===0?WH:GR},line:{color:"E2E8F0",width:0.5}});
-      sbenz.addText(h.isi,{x:2.8,y:by+0.06,w:10.2,h:0.98,fontSize:9.5,color:TX,fontFace:"Calibri",wrap:true,valign:"middle"});
-    });
-    sbenz.addShape(pres.ShapeType.rect,{x:0,y:7.15,w:13.3,h:0.35,fill:{color:GR}});
-    sbenz.addText("Ref: ACGIH TLV 2024 | Permenaker 05/2018 | NIOSH REL | IARC Group 1 | IMO MSC/Circ.1351",{
-      x:0.2,y:7.18,w:10,h:0.28,fontSize:7.5,color:MU,fontFace:"Calibri"
-    });
-    sbenz.addText("IH Dashboard  |  Pertamina Patra Niaga III",{
-      x:10.2,y:7.18,w:3.0,h:0.28,fontSize:7.5,color:MU,align:"right",fontFace:"Calibri"
-    });
-  }
-
-  var filename="IH_5Hirarki_"+cfg.label.replace(/\s+/g,"_")+"_"+new Date().toISOString().slice(0,10)+".pptx";
+  var filename="IH_"+hazardType.charAt(0).toUpperCase()+hazardType.slice(1)+
+    "_"+new Date().toISOString().slice(0,10)+".pptx";
   pres.writeFile({fileName:filename})
     .then(function(){showToast("PPT "+cfg.label+" berhasil didownload!","success");})
     .catch(function(err){showToast("Gagal export PPT: "+err.message,"error");console.error(err);});
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   EXPORT BIOMARKER BENZENE — 5 Slide Premium
+═══════════════════════════════════════════════════════════════ */
+function exportBiomarkerPPT(){
+  if(typeof PptxGenJS==="undefined"){showToast("Library PPT sedang dimuat, coba lagi.","warning");return;}
+  var dataB=typeof filteredBioKimia!=="undefined"?filteredBioKimia:
+    (typeof rawBioKimia!=="undefined"?rawBioKimia:[]);
+  var dataP=typeof filteredBenzenePersonal!=="undefined"?filteredBenzenePersonal:
+    (typeof rawBenzenePersonal!=="undefined"?rawBenzenePersonal:[]);
+  if(!dataB.length&&!dataP.length){showToast("Tidak ada data Biomarker.","warning");return;}
+  showToast("Membuat PPT Biomarker Benzene...","info");
+
+  var M=_pptPC();
+  var AC="7B1FA2";
+  var tgl=new Date().toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"});
+  var BEI=25;
+  var totalB=dataB.length;
+  var melB=dataB.filter(function(r){return parseFloat(r["Hasil Urin (µg/g kreat)"]||0)>BEI;}).length;
+  var totalP=dataP.length;
+  var melP=dataP.filter(function(r){
+    return parseFloat(r["Hasil TWA"]||r["Hasil (ppm)"]||0)>0.5;
+  }).length;
+  var pctB=totalB>0?(((totalB-melB)/totalB)*100).toFixed(0):100;
+
+  var pres=new PptxGenJS();
+  pres.layout="LAYOUT_WIDE";
+  pres.title="Biomonitoring Benzene — IH Dashboard";
+
+  /* Slide 1 Cover */
+  var s1=pres.addSlide();
+  s1.background={color:M.navyD};
+  s1.addShape(pres.ShapeType.rect,{x:0,y:0,w:0.08,h:7.5,fill:{color:AC},line:{color:AC,width:0}});
+  s1.addShape(pres.ShapeType.rect,{x:0,y:0,w:13.3,h:0.04,fill:{color:AC},line:{color:AC,width:0}});
+  s1.addShape(pres.ShapeType.ellipse,{x:9.5,y:-1.2,w:5.5,h:5.5,fill:{color:M.navyL},line:{color:M.navyL,width:0}});
+  s1.addShape(pres.ShapeType.ellipse,{x:10.8,y:4.8,w:3.5,h:3.5,fill:{color:"162E42"},line:{color:"162E42",width:0}});
+  s1.addText("PT PERTAMINA PATRA NIAGA  ·  SATUAN KERJA REGIONAL III",
+    {x:0.3,y:0.22,w:9,h:0.3,fontSize:8.5,bold:true,color:"CADCFC",charSpacing:2,fontFace:"Calibri"});
+  s1.addText("Divisi Industrial Hygiene & Occupational Health",
+    {x:0.3,y:0.55,w:9,h:0.28,fontSize:10,color:"8899AA",fontFace:"Calibri"});
+  s1.addShape(pres.ShapeType.rect,{x:0.3,y:0.92,w:4.5,h:0.04,fill:{color:M.gold},line:{color:M.gold,width:0}});
+  s1.addText("⚗  BIOMONITORING BENZENE",
+    {x:0.3,y:1.08,w:9.5,h:0.95,fontSize:36,bold:true,color:M.white,fontFace:"Calibri"});
+  s1.addText("Pemantauan Biologis Paparan Benzene pada Awak Kapal Tanker BBM",
+    {x:0.3,y:2.12,w:9.5,h:0.55,fontSize:15,bold:true,color:"9B59B6",fontFace:"Calibri"});
+  s1.addShape(pres.ShapeType.rect,{x:0.3,y:2.75,w:5,h:0.04,fill:{color:AC},line:{color:AC,width:0}});
+  s1.addText("BEI ACGIH 2024: Muconic Acid 25 µg/g kreatinin  |  IARC Group 1 Carcinogen  |  Dihasilkan: "+tgl,
+    {x:0.3,y:2.86,w:9.5,h:0.36,fontSize:10,color:"CADCFC",fontFace:"Calibri"});
+  /* KPI boxes */
+  var kpisB=[
+    {v:totalB,l:"Total Sampel Urin\n(Biomonitoring)",c:AC},
+    {v:melB+(melB>0?" ⚠":""),l:"Melebihi BEI\n(>25 µg/g kreat)",c:melB>0?"C62828":"2E7D32"},
+    {v:totalP,l:"Sampling Personal\n(Area Monitoring)",c:"1565C0"},
+    {v:pctB+"%",l:"Compliance Rate\nBEI ACGIH 2024",c:parseInt(pctB)>=80?"2E7D32":parseInt(pctB)>=60?"F59E0B":"C62828"}
+  ];
+  kpisB.forEach(function(k,i){
+    var bx=0.3+i*3.27;
+    s1.addShape(pres.ShapeType.roundRect,{x:bx,y:3.45,w:3.12,h:2.1,
+      fill:{color:M.navyL},line:{color:k.c,width:1.5},rectRadius:0.1});
+    s1.addShape(pres.ShapeType.rect,{x:bx,y:3.45,w:3.12,h:0.06,fill:{color:k.c},line:{color:k.c,width:0}});
+    var fs=String(k.v).length>7?16:String(k.v).length>4?22:32;
+    s1.addText(String(k.v),{x:bx,y:3.55,w:3.12,h:1.05,fontSize:fs,bold:true,color:k.c,align:"center",fontFace:"Calibri"});
+    s1.addText(k.l,{x:bx+0.08,y:4.65,w:2.96,h:0.82,fontSize:9.5,color:"CADCFC",align:"center",fontFace:"Calibri",wrap:true});
+  });
+  s1.addText("Ref: ACGIH BEI 2024  •  IARC Monograph Vol.100F  •  Permenaker 05/2018  •  "+tgl,
+    {x:0,y:7.15,w:13.3,h:0.28,fontSize:8,color:"8899AA",align:"center",fontFace:"Calibri"});
+
+  /* Slide 2: Urin Data */
+  var s2=pres.addSlide();
+  s2.background={color:M.white};
+  s2.addShape(pres.ShapeType.rect,{x:0,y:0,w:13.3,h:1.12,fill:{color:M.navy},line:{color:M.navy,width:0}});
+  s2.addShape(pres.ShapeType.rect,{x:0,y:0,w:0.07,h:7.5,fill:{color:AC},line:{color:AC,width:0}});
+  s2.addText("⚗ BIOMARKER BENZENE  ·  DATA BIOMONITORING URIN",
+    {x:0.24,y:0.08,w:12.5,h:0.38,fontSize:9,bold:true,color:"CADCFC",charSpacing:1.5,fontFace:"Calibri"});
+  s2.addText("Hasil Pemeriksaan Muconic Acid Urin vs BEI ACGIH 2024 (25 µg/g kreatinin)",
+    {x:0.24,y:0.52,w:12.5,h:0.46,fontSize:14,bold:true,color:M.white,fontFace:"Calibri"});
+  if(dataB.length){
+    var hdrs2=[
+      {text:"No",options:{bold:true,color:M.white,fill:{color:M.navy},fontSize:9.5,border:{type:"none"},align:"center"}},
+      {text:"Nama Kapal",options:{bold:true,color:M.white,fill:{color:M.navy},fontSize:9.5,border:{type:"none"}}},
+      {text:"Nama ABK",options:{bold:true,color:M.white,fill:{color:M.navy},fontSize:9.5,border:{type:"none"}}},
+      {text:"Jabatan",options:{bold:true,color:M.white,fill:{color:M.navy},fontSize:9.5,border:{type:"none"}}},
+      {text:"Hasil (µg/g)",options:{bold:true,color:M.white,fill:{color:M.navy},fontSize:9.5,border:{type:"none"},align:"center"}},
+      {text:"BEI Limit",options:{bold:true,color:M.white,fill:{color:M.navy},fontSize:9.5,border:{type:"none"},align:"center"}},
+      {text:"Status",options:{bold:true,color:M.white,fill:{color:M.navy},fontSize:9.5,border:{type:"none"},align:"center"}}
+    ];
+    var rows2=dataB.slice(0,13).map(function(r,i){
+      var v=parseFloat(r["Hasil Urin (µg/g kreat)"]||0);
+      var isHigh=v>BEI;
+      var ev=i%2===0?M.white:"F8FAFC";
+      return[
+        {text:String(i+1),options:{fontSize:10,align:"center",fill:{color:ev},border:{type:"none"}}},
+        {text:String(r["Nama Kapal"]||"—"),options:{fontSize:10,bold:true,fill:{color:ev},border:{type:"none"}}},
+        {text:String(r["Nama ABK"]||"—"),options:{fontSize:10,fill:{color:ev},border:{type:"none"}}},
+        {text:String(r["Jabatan"]||"—"),options:{fontSize:10,fill:{color:ev},border:{type:"none"}}},
+        {text:v.toFixed(2),options:{fontSize:10,bold:isHigh,color:isHigh?"C62828":"2E7D32",align:"center",fill:{color:ev},border:{type:"none"}}},
+        {text:"25 µg/g",options:{fontSize:10,align:"center",fill:{color:ev},border:{type:"none"}}},
+        {text:isHigh?"⚠ Melebihi":"✓ Normal",options:{fontSize:10,bold:true,color:isHigh?"C62828":"2E7D32",align:"center",fill:{color:ev},border:{type:"none"}}}
+      ];
+    });
+    s2.addTable([hdrs2].concat(rows2),
+      {x:0.3,y:1.25,w:12.7,colW:[0.4,2.2,2.0,1.5,1.3,1.1,1.3],
+       rowH:0.38,fontFace:"Calibri",border:{type:"none"}});
+  }
+  s2.addShape(pres.ShapeType.rect,{x:0,y:7.18,w:13.3,h:0.32,fill:{color:M.gray},line:{color:M.gray,width:0}});
+  s2.addText("BEI ACGIH 2024: 25 µg/g kreatinin  •  IARC Group 1  •  Permenaker 05/2018",
+    {x:0.2,y:7.2,w:10.5,h:0.26,fontSize:7.5,color:M.muted,fontFace:"Calibri"});
+  s2.addText("2 / 5",{x:11.2,y:7.2,w:1.9,h:0.26,fontSize:9,color:M.gold,bold:true,align:"right",fontFace:"Calibri"});
+
+  /* Slide 3: Personal Sampling */
+  var s3=pres.addSlide();
+  s3.background={color:M.white};
+  s3.addShape(pres.ShapeType.rect,{x:0,y:0,w:13.3,h:1.12,fill:{color:M.navy},line:{color:M.navy,width:0}});
+  s3.addShape(pres.ShapeType.rect,{x:0,y:0,w:0.07,h:7.5,fill:{color:AC},line:{color:AC,width:0}});
+  s3.addText("⚗ BIOMARKER BENZENE  ·  PERSONAL AIR SAMPLING",
+    {x:0.24,y:0.08,w:12.5,h:0.38,fontSize:9,bold:true,color:"CADCFC",charSpacing:1.5,fontFace:"Calibri"});
+  s3.addText("Hasil Pengukuran Benzene Udara Area Kerja vs TLV-TWA ACGIH 2024 (0.5 ppm)",
+    {x:0.24,y:0.52,w:12.5,h:0.46,fontSize:14,bold:true,color:M.white,fontFace:"Calibri"});
+  if(dataP.length){
+    var hdrs3=[
+      {text:"No",options:{bold:true,color:M.white,fill:{color:M.navy},fontSize:9.5,border:{type:"none"},align:"center"}},
+      {text:"Nama Kapal",options:{bold:true,color:M.white,fill:{color:M.navy},fontSize:9.5,border:{type:"none"}}},
+      {text:"Lokasi Sampling",options:{bold:true,color:M.white,fill:{color:M.navy},fontSize:9.5,border:{type:"none"}}},
+      {text:"Hasil TWA (ppm)",options:{bold:true,color:M.white,fill:{color:M.navy},fontSize:9.5,border:{type:"none"},align:"center"}},
+      {text:"TLV-TWA",options:{bold:true,color:M.white,fill:{color:M.navy},fontSize:9.5,border:{type:"none"},align:"center"}},
+      {text:"Durasi",options:{bold:true,color:M.white,fill:{color:M.navy},fontSize:9.5,border:{type:"none"},align:"center"}},
+      {text:"Status",options:{bold:true,color:M.white,fill:{color:M.navy},fontSize:9.5,border:{type:"none"},align:"center"}}
+    ];
+    var rows3p=dataP.slice(0,13).map(function(r,i){
+      var v=parseFloat(r["Hasil TWA"]||r["Hasil (ppm)"]||0);
+      var isHigh=v>0.5;
+      var ev=i%2===0?M.white:"F8FAFC";
+      return[
+        {text:String(i+1),options:{fontSize:10,align:"center",fill:{color:ev},border:{type:"none"}}},
+        {text:String(r["Nama Kapal"]||"—"),options:{fontSize:10,bold:true,fill:{color:ev},border:{type:"none"}}},
+        {text:String(r["Lokasi"]||r["Area"]||"—"),options:{fontSize:10,fill:{color:ev},border:{type:"none"}}},
+        {text:v.toFixed(3),options:{fontSize:10,bold:isHigh,color:isHigh?"C62828":"2E7D32",align:"center",fill:{color:ev},border:{type:"none"}}},
+        {text:"0.5 ppm",options:{fontSize:10,align:"center",fill:{color:ev},border:{type:"none"}}},
+        {text:String(r["Durasi"]||"8 jam"),options:{fontSize:10,align:"center",fill:{color:ev},border:{type:"none"}}},
+        {text:isHigh?"⚠ Melebihi":"✓ Normal",options:{fontSize:10,bold:true,color:isHigh?"C62828":"2E7D32",align:"center",fill:{color:ev},border:{type:"none"}}}
+      ];
+    });
+    s3.addTable([hdrs3].concat(rows3p),
+      {x:0.3,y:1.25,w:12.7,colW:[0.4,2.2,2.2,1.5,1.1,1.0,1.3],
+       rowH:0.38,fontFace:"Calibri",border:{type:"none"}});
+  } else {
+    s3.addText("Belum ada data Personal Air Sampling untuk periode ini.",
+      {x:0.3,y:3.5,w:12.7,h:0.5,fontSize:14,color:M.muted,align:"center",fontFace:"Calibri"});
+  }
+  s3.addShape(pres.ShapeType.rect,{x:0,y:7.18,w:13.3,h:0.32,fill:{color:M.gray},line:{color:M.gray,width:0}});
+  s3.addText("TLV-TWA ACGIH 2024: 0.5 ppm  •  IARC Group 1 Carcinogen  •  Permenaker 05/2018",
+    {x:0.2,y:7.2,w:10.5,h:0.26,fontSize:7.5,color:M.muted,fontFace:"Calibri"});
+  s3.addText("3 / 5",{x:11.2,y:7.2,w:1.9,h:0.26,fontSize:9,color:M.gold,bold:true,align:"right",fontFace:"Calibri"});
+
+  /* Slide 4: Analisis & Hirarki Benzene */
+  var s4=pres.addSlide();
+  s4.background={color:M.white};
+  s4.addShape(pres.ShapeType.rect,{x:0,y:0,w:13.3,h:1.12,fill:{color:M.navy},line:{color:M.navy,width:0}});
+  s4.addShape(pres.ShapeType.rect,{x:0,y:0,w:0.07,h:7.5,fill:{color:AC},line:{color:AC,width:0}});
+  s4.addText("⚗ BIOMARKER BENZENE  ·  ANALISIS & PENGENDALIAN",
+    {x:0.24,y:0.08,w:12.5,h:0.38,fontSize:9,bold:true,color:"CADCFC",charSpacing:1.5,fontFace:"Calibri"});
+  s4.addText("Analisis Risiko Benzene & Rekomendasi Pengendalian (ACGIH BEI 2024 / IARC Group 1)",
+    {x:0.24,y:0.52,w:12.5,h:0.46,fontSize:14,bold:true,color:M.white,fontFace:"Calibri"});
+  /* KPI row */
+  var k4=[
+    {v:totalB,l:"Total Sampel Urin",c:AC},
+    {v:melB,l:"Melebihi BEI\n(>25 µg/g kreat)",c:melB>0?"C62828":"2E7D32"},
+    {v:totalP,l:"Sampling Personal",c:"1565C0"},
+    {v:melP,l:"Melebihi TLV-TWA\n(>0.5 ppm)",c:melP>0?"C62828":"2E7D32"}
+  ];
+  k4.forEach(function(k,i){
+    var bg=_hzLighten(k.c);
+    s4.addShape(pres.ShapeType.roundRect,{x:0.3+i*3.27,y:1.25,w:3.12,h:1.4,
+      fill:{color:bg},line:{color:k.c,width:1.5},rectRadius:0.08});
+    s4.addShape(pres.ShapeType.rect,{x:0.3+i*3.27,y:2.59,w:3.12,h:0.06,fill:{color:k.c},line:{color:k.c,width:0}});
+    s4.addText(String(k.v),{x:0.3+i*3.27,y:1.3,w:3.12,h:0.78,fontSize:30,bold:true,color:k.c,align:"center",fontFace:"Calibri"});
+    s4.addText(k.l,{x:0.38+i*3.27,y:2.1,w:2.96,h:0.46,fontSize:9,color:M.muted,align:"center",fontFace:"Calibri",wrap:true});
+  });
+  /* Analisis benzene */
+  var anaB=melB===0&&melP===0?
+    "Seluruh hasil biomonitoring berada di bawah BEI ACGIH 2024. Namun mengingat benzene diklasifikasikan sebagai karsinogen IARC Group 1 (tanpa nilai aman), pemantauan berkala dan pengendalian sumber wajib dipertahankan.":
+    "Ditemukan "+melB+" ABK dengan kadar muconic acid melebihi BEI (25 µg/g kreat) dan "+melP+
+    " titik sampling area melebihi TLV-TWA (0.5 ppm). Benzene terklasifikasi IARC Group 1 — wajib tindakan pengendalian segera.";
+  s4.addShape(pres.ShapeType.roundRect,{x:0.3,y:2.78,w:12.7,h:1.2,
+    fill:{color:melB>0||melP>0?"FFEBEE":"F3E5F5"},line:{color:AC,width:0},rectRadius:0.08});
+  s4.addShape(pres.ShapeType.rect,{x:0.3,y:2.78,w:0.05,h:1.2,fill:{color:AC},line:{color:AC,width:0}});
+  s4.addText([
+    {text:"Analisis: ",options:{bold:true,color:AC,fontSize:11}},
+    {text:anaB,options:{color:M.text,fontSize:11}}
+  ],{x:0.5,y:2.86,w:12.3,h:1.0,fontFace:"Calibri",wrap:true,valign:"top"});
+  /* 5 Hirarki Benzene */
+  var hBenz=HIRARKI_DB.kimia&&HIRARKI_DB.kimia.benzene?HIRARKI_DB.kimia.benzene:[
+    "Eliminasi penggunaan benzene — ganti bahan bakar formulasi rendah benzene",
+    "Substitusi dengan senyawa non-karsinogenik — toluene/xylene audit paparan",
+    "Ventilasi lokal exhaust (LEV) + closed system transfer BBM",
+    "SOP handling BBM + MSDS awareness + rotasi jadwal eksposur",
+    "Respirator full-face P100 + OV + coverall Tyvek type 5/6"
+  ];
+  var hirC4=["C62828","E65100","1565C0","2E7D32","6A1B9A"];
+  var hirL4=["1. ELIMINASI","2. SUBSTITUSI","3. REC. TEKNIK","4. ADMINISTRATIF","5. APD"];
+  hBenz.forEach(function(h,i){
+    s4.addShape(pres.ShapeType.roundRect,{x:0.3+i*2.56,y:4.15,w:2.44,h:2.8,
+      fill:{color:_hzLighten(hirC4[i])},line:{color:hirC4[i],width:1.2},rectRadius:0.08});
+    s4.addShape(pres.ShapeType.rect,{x:0.3+i*2.56,y:4.15,w:2.44,h:0.04,fill:{color:hirC4[i]},line:{color:hirC4[i],width:0}});
+    s4.addText(hirL4[i],{x:0.38+i*2.56,y:4.22,w:2.28,h:0.36,fontSize:9,bold:true,color:hirC4[i],fontFace:"Calibri"});
+    s4.addText(h,{x:0.38+i*2.56,y:4.62,w:2.28,h:2.22,fontSize:9.5,color:M.text,fontFace:"Calibri",wrap:true,valign:"top"});
+  });
+  s4.addShape(pres.ShapeType.rect,{x:0,y:7.18,w:13.3,h:0.32,fill:{color:M.gray},line:{color:M.gray,width:0}});
+  s4.addText("ACGIH BEI 2024  •  IARC Group 1  •  Permenaker 05/2018  •  ISO 45001:2018",
+    {x:0.2,y:7.2,w:10.5,h:0.26,fontSize:7.5,color:M.muted,fontFace:"Calibri"});
+  s4.addText("4 / 5",{x:11.2,y:7.2,w:1.9,h:0.26,fontSize:9,color:M.gold,bold:true,align:"right",fontFace:"Calibri"});
+
+  /* Slide 5: Rekomendasi */
+  var s5=pres.addSlide();
+  s5.background={color:M.white};
+  s5.addShape(pres.ShapeType.rect,{x:0,y:0,w:13.3,h:1.12,fill:{color:M.navy},line:{color:M.navy,width:0}});
+  s5.addShape(pres.ShapeType.rect,{x:0,y:0,w:0.07,h:7.5,fill:{color:M.gold},line:{color:M.gold,width:0}});
+  s5.addText("⚗ BIOMARKER BENZENE  ·  REKOMENDASI STRATEGIS",
+    {x:0.24,y:0.08,w:12.5,h:0.38,fontSize:9,bold:true,color:"CADCFC",charSpacing:1.5,fontFace:"Calibri"});
+  s5.addText("Rekomendasi Pengendalian Paparan Benzene & Program Biomonitoring Lanjutan",
+    {x:0.24,y:0.52,w:12.5,h:0.46,fontSize:14,bold:true,color:M.white,fontFace:"Calibri"});
+  var reks5b=[
+    {p:"Tindak Lanjut Segera",c:"C62828",items:[
+      melB>0?"Protokol medis ABK dengan kadar >BEI: hematologi, konsultasi spesialis OH":"Pertahankan program monitoring rutin",
+      "Audit sumber paparan benzene: cargo tank, pump room, manifold",
+      "Pastikan semua ABK terpapar memakai APD sesuai standar"
+    ]},
+    {p:"Penguatan Pengendalian",c:AC,items:[
+      "Pasang atau perbaiki ventilasi local exhaust di pump room",
+      "Review SOP bunkering & cargo handling — minimalkan paparan",
+      "Lakukan re-sampling dalam 3 bulan untuk ABK reaktif"
+    ]},
+    {p:"Program Jangka Panjang",c:"1565C0",items:[
+      "Jadwalkan biomonitoring benzene rutin setiap 6 bulan",
+      "Daftarkan ABK berisiko tinggi dalam program medical surveillance",
+      "Laporan biomonitoring tahunan untuk audit ISM & biro klasifikasi"
+    ]}
+  ];
+  reks5b.forEach(function(r,i){
+    var rx=0.3+i*4.38;
+    s5.addShape(pres.ShapeType.roundRect,{x:rx,y:1.28,w:4.18,h:5.65,
+      fill:{color:_hzLighten(r.c)},line:{color:r.c,width:0},rectRadius:0.1});
+    s5.addShape(pres.ShapeType.rect,{x:rx,y:1.28,w:4.18,h:0.56,fill:{color:r.c},line:{color:r.c,width:0}});
+    s5.addText(r.p,{x:rx+0.12,y:1.31,w:3.94,h:0.5,fontSize:11,bold:true,color:M.white,fontFace:"Calibri"});
+    r.items.forEach(function(it,j){
+      s5.addShape(pres.ShapeType.ellipse,{x:rx+0.18,y:2.08+j*1.55,w:0.22,h:0.22,fill:{color:r.c},line:{color:r.c,width:0}});
+      s5.addText(it,{x:rx+0.52,y:2.01+j*1.55,w:3.52,h:1.38,fontSize:11,color:M.text,fontFace:"Calibri",wrap:true,valign:"top"});
+    });
+  });
+  s5.addShape(pres.ShapeType.rect,{x:0,y:7.18,w:13.3,h:0.32,fill:{color:M.gray},line:{color:M.gray,width:0}});
+  s5.addText("ACGIH BEI 2024  •  IARC Group 1  •  Permenaker 05/2018  •  ISO 45001:2018  •  IMO MSC/Circ.1351",
+    {x:0.2,y:7.2,w:10.5,h:0.26,fontSize:7.5,color:M.muted,fontFace:"Calibri"});
+  s5.addText("5 / 5",{x:11.2,y:7.2,w:1.9,h:0.26,fontSize:9,color:M.gold,bold:true,align:"right",fontFace:"Calibri"});
+
+  pres.writeFile({fileName:"IH_Biomarker_Benzene_"+new Date().toISOString().slice(0,10)+".pptx"})
+    .then(function(){showToast("PPT Biomarker Benzene berhasil didownload!","success");})
+    .catch(function(err){showToast("Gagal export PPT: "+err.message,"error");console.error(err);});
+}
+
 
 /* ═══════════════════════════════════════════════════════════════
    SUMMARY DASHBOARD — Laporan Komprehensif Industrial Hygiene
@@ -4384,266 +4331,4 @@ async function exportSummaryPDF(){
     console.error(err);
   }
   if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-file-pdf"></i> Export PDF';}
-}
-
-
-/* ═══════════════════════════════════════════════════════════
-   EXPORT PPT — BIOMONITORING BENZENE (v4 — no PowerPoint repair)
-   Fix 1: colW harus sum = w (sebelumnya mismatch 1 inch → korup)
-   Fix 2: ellipse y tidak boleh negatif (sebelumnya y:-1.5)
-   Fix 3: ellipse line:{type:"none"} bukan line:{color:X}
-   Fix 4: semua warna 6-digit hex
-═══════════════════════════════════════════════════════════ */
-function exportBiomarkerPPT(){
-  var btn=document.getElementById("btnBioPPT");
-  function resetBtn(){
-    if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-file-powerpoint"></i> Download PPT';}
-  }
-  if(typeof PptxGenJS==="undefined"){
-    showToast("Library PPT sedang dimuat, coba lagi dalam beberapa detik.","warning");
-    resetBtn();return;
-  }
-  try{
-    var tipeF=((document.getElementById("bio-filter-tipe")||{}).value)||"all";
-    var tahunF=((document.getElementById("bio-filter-tahun")||{}).value)||"";
-    var kapalF=((document.getElementById("bio-filter-kapal")||{}).value)||"";
-    var bioData=(rawBiomarker||[]).filter(function(r){
-      if(tahunF&&String(r.tahun||"")!==tahunF)return false;
-      if(kapalF&&String(r.kapal||"")!==kapalF)return false;
-      return true;
-    });
-    var perData=(rawPersonal||[]).filter(function(r){
-      if(tahunF&&String(r.tahun||"")!==tahunF)return false;
-      if(kapalF&&String(r.kapal||"")!==kapalF)return false;
-      return true;
-    });
-    if(tipeF==="biomarker")perData=[];
-    if(tipeF==="personal")bioData=[];
-    if(!bioData.length&&!perData.length){
-      showToast("Tidak ada data biomonitoring. Pastikan data sudah dimuat dari server.","warning");
-      resetBtn();return;
-    }
-    if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Membuat PPT...';}
-    showToast("Membuat PPT Biomonitoring Benzene...","info");
-
-    /* Statistik */
-    var bioMel=bioData.filter(function(r){return Number(r.kreatinin||0)>Number(r.rujukan||25);}).length;
-    var perMel=perData.filter(function(r){return Number(r.hasil||0)>Number(r.nab||0.5);}).length;
-    var totalAll=bioData.length+perData.length;
-    var totalMel=bioMel+perMel;
-    var kapalSet=new Set([].concat(bioData.map(function(r){return r.kapal||"";}),perData.map(function(r){return r.kapal||"";})).filter(Boolean));
-    var bioAvg=bioData.length?+(bioData.reduce(function(s,r){return s+(Number(r.kreatinin)||0);},0)/bioData.length).toFixed(1):0;
-    var bioMax=bioData.length?Math.max.apply(null,bioData.map(function(r){return Number(r.kreatinin)||0;})):0;
-    var bioBEI=bioData.length?Number(bioData[0].rujukan||25):25;
-    var perAvg=perData.length?+(perData.reduce(function(s,r){return s+(Number(r.hasil)||0);},0)/perData.length).toFixed(3):0;
-    var perMax=perData.length?Math.max.apply(null,perData.map(function(r){return Number(r.hasil)||0;})):0;
-    var perNAB=perData.length?Number(perData[0].nab||0.5):0.5;
-    var now=new Date();
-    var tgl=now.toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"});
-    var filterLabel=(tahunF?"Tahun "+tahunF:"Semua Tahun")+(kapalF?" | "+kapalF:"");
-
-    /* Warna — HANYA 6-digit hex */
-    var MC="0F2A4A",PU="7B1FA2",BL="1565C0";
-    var WH="FFFFFF",GR="F4F6FA",TX="1E293B",MU="64748B";
-    var RED="C62828",GRN="2E7D32",NAV="1C3A5A";
-
-    var pres=new PptxGenJS();
-    pres.layout="LAYOUT_WIDE";
-    pres.author="IH Dashboard — Pertamina Patra Niaga III";
-    pres.title="Biomonitoring Benzene";
-
-    /* colW HARUS jumlahnya = w tabel persis */
-    /* Biomarker 8 col, w=12.9: sum=12.9 */
-    var bioColW=[0.4,0.7,2.6,0.9,3.2,1.8,0.8,2.5];
-    /* Personal 9 col, w=12.9: sum=12.9 */
-    var perColW=[0.35,0.7,2.1,0.85,2.4,2.1,1.05,0.75,2.6];
-
-    function mkHead(cols){
-      return cols.map(function(c){
-        return{text:c,options:{bold:true,color:WH,fill:{color:MC}}};
-      });
-    }
-    function addFtr(sl,ref){
-      sl.addShape(pres.ShapeType.rect,{x:0,y:7.15,w:13.3,h:0.35,fill:{color:GR}});
-      sl.addText(ref,{x:0.2,y:7.18,w:9.5,h:0.28,fontSize:7.5,color:MU,fontFace:"Calibri"});
-      sl.addText("IH Dashboard | Pertamina Patra Niaga III",{x:9.8,y:7.18,w:3.3,h:0.28,fontSize:7.5,color:MU,align:"right",fontFace:"Calibri"});
-    }
-    function addHdr(sl,accent,sup,main){
-      sl.background={color:WH};
-      sl.addShape(pres.ShapeType.rect,{x:0,y:0,w:13.3,h:1.05,fill:{color:MC}});
-      sl.addShape(pres.ShapeType.rect,{x:0,y:0,w:0.08,h:7.5,fill:{color:accent}});
-      sl.addText(sup,{x:0.25,y:0.07,w:12.5,h:0.38,fontSize:9,bold:true,color:"CADCFC",fontFace:"Calibri"});
-      sl.addText(main,{x:0.25,y:0.52,w:12.5,h:0.42,fontSize:13,bold:true,color:WH,fontFace:"Calibri"});
-    }
-
-    /* ══ SLIDE 1 — COVER ══ */
-    var s1=pres.addSlide();
-    s1.background={color:MC};
-    s1.addShape(pres.ShapeType.rect,{x:0,y:0,w:0.1,h:7.5,fill:{color:PU}});
-    /* FIX: ellipse y>=0, line:{type:"none"} bukan line:{color:X} */
-    s1.addShape(pres.ShapeType.ellipse,{x:9.5,y:0,w:4.5,h:4.5,fill:{color:NAV},line:{type:"none"}});
-    s1.addShape(pres.ShapeType.ellipse,{x:10.8,y:4.0,w:3.2,h:3.2,fill:{color:"162E42"},line:{type:"none"}});
-    s1.addText("LAPORAN BIOMONITORING BENZENE",{x:0.4,y:0.8,w:9,h:0.65,fontSize:24,bold:true,color:WH,fontFace:"Calibri",charSpacing:2});
-    s1.addText("Faktor Kimia  |  Industrial Hygiene Maritime",{x:0.4,y:1.52,w:9,h:0.42,fontSize:15,bold:true,color:"AD7CE0",fontFace:"Calibri"});
-    s1.addShape(pres.ShapeType.rect,{x:0.4,y:2.08,w:4,h:0.05,fill:{color:PU}});
-    s1.addText("Filter: "+filterLabel+"    |    "+tgl,{x:0.4,y:2.28,w:9,h:0.38,fontSize:10.5,color:"CADCFC",fontFace:"Calibri"});
-
-    /* KPI boxes */
-    var boxes=[
-      {label:"Total Sampel",val:String(totalAll),col:PU},
-      {label:"Melebihi BEI/NAB",val:String(totalMel),col:totalMel>0?RED:GRN},
-      {label:"Normal",val:String(totalAll-totalMel),col:GRN},
-      {label:"Kapal",val:String(kapalSet.size),col:BL}
-    ];
-    boxes.forEach(function(b,i){
-      var bx=0.4+i*3.12;
-      s1.addShape(pres.ShapeType.roundRect,{x:bx,y:3.05,w:2.95,h:1.65,fill:{color:NAV},rectRadius:0.1});
-      s1.addText(b.val,{x:bx,y:3.1,w:2.95,h:0.9,fontSize:38,bold:true,color:b.col,align:"center",fontFace:"Calibri"});
-      s1.addText(b.label,{x:bx,y:4.02,w:2.95,h:0.55,fontSize:10,color:"CADCFC",align:"center",fontFace:"Calibri"});
-    });
-
-    /* Referensi standar */
-    var refs=["ACGIH BEI 2024","Permenaker 05/2018","NIOSH REL 0.1 ppm","IARC Grup 1","ILO MLC 2006","OSHA 1910.1028"];
-    s1.addText("Referensi Standar:",{x:0.4,y:4.95,w:9,h:0.28,fontSize:9.5,bold:true,color:"CADCFC",fontFace:"Calibri"});
-    refs.forEach(function(r,i){
-      s1.addShape(pres.ShapeType.roundRect,{x:0.4+i*2.17,y:5.3,w:2.05,h:0.42,fill:{color:"1C3060"},rectRadius:0.06});
-      s1.addText(r,{x:0.44+i*2.17,y:5.33,w:1.97,h:0.36,fontSize:8.5,color:"CADCFC",align:"center",fontFace:"Calibri",valign:"middle"});
-    });
-    s1.addText("PT Pertamina Patra Niaga Regional III  |  IH Dashboard v5.0  |  "+tgl,{
-      x:0,y:7.1,w:13.3,h:0.32,fontSize:8.5,color:"8899AA",align:"center",fontFace:"Calibri"
-    });
-
-    /* ══ SLIDE 2 — BIOMARKER URIN ══ */
-    if(bioData.length>0){
-      var s2=pres.addSlide();
-      addHdr(s2,PU,"BIOMONITORING BENZENE — FAKTOR KIMIA",
-        "A. Data Biomarker Benzene (Pemantauan Biologis — Urin/Kreatinin)");
-      var kpiB=[
-        {label:"Total Sampel",val:String(bioData.length),col:PU},
-        {label:"Melebihi BEI ("+bioBEI+" ug/g)",val:String(bioMel),col:bioMel>0?RED:GRN},
-        {label:"Rata-rata",val:bioAvg+" ug/g",col:PU},
-        {label:"Nilai Tertinggi",val:bioMax+" ug/g",col:bioMax>bioBEI?RED:"E65100"}
-      ];
-      kpiB.forEach(function(k,i){
-        var bx=0.2+i*3.22;
-        s2.addShape(pres.ShapeType.roundRect,{x:bx,y:1.15,w:3.05,h:1.08,fill:{color:GR},line:{color:k.col,width:1.5},rectRadius:0.08});
-        s2.addText(k.val,{x:bx,y:1.18,w:3.05,h:0.55,fontSize:22,bold:true,color:k.col,align:"center",fontFace:"Calibri"});
-        s2.addText(k.label,{x:bx,y:1.74,w:3.05,h:0.44,fontSize:9,color:MU,align:"center",fontFace:"Calibri",wrap:true});
-      });
-      s2.addShape(pres.ShapeType.roundRect,{x:0.2,y:2.36,w:12.9,h:0.42,fill:{color:"F3E5F5"},rectRadius:0.06});
-      s2.addText("BEI ACGIH 2024: Muconic Acid 25 ug/g kreat.  |  Permenaker 05/2018: NAB benzene 0.5 ppm  |  IARC: Karsinogen Grup 1",{
-        x:0.3,y:2.38,w:12.7,h:0.38,fontSize:9,color:PU,fontFace:"Calibri",valign:"middle"
-      });
-      s2.addText("Detail Data Biomarker Benzene",{x:0.2,y:2.92,w:12.9,h:0.28,fontSize:10,bold:true,color:PU,fontFace:"Calibri"});
-      var bRows=[mkHead(["No","Tahun","Nama Kapal","Fleet","Nama Pekerja","Kreatinin (ug/g)","BEI","Status"])];
-      bioData.forEach(function(r,i){
-        var over=Number(r.kreatinin||0)>Number(r.rujukan||25);
-        bRows.push([
-          {text:String(i+1)},
-          {text:String(r.tahun||"-")},
-          {text:String(r.kapal||"-")},
-          {text:String(r.fleet||"-")},
-          {text:String(r.pekerja||"-")},
-          {text:String(r.kreatinin||0),options:{bold:true,color:over?RED:GRN}},
-          {text:String(r.rujukan||25)},
-          {text:over?"MELEBIHI BEI":"Normal",options:{bold:true,color:over?RED:GRN}}
-        ]);
-      });
-      /* FIX: colW sum = w = 12.9 */
-      s2.addTable(bRows,{
-        x:0.2,y:3.24,w:12.9,
-        fontSize:9,fontFace:"Calibri",color:TX,
-        border:{pt:0.5,color:"E2E8F0"},rowH:0.32,
-        colW:bioColW
-      });
-      addFtr(s2,"Ref: ACGIH BEI 2024 | Permenaker No.05/2018 | IARC Monograph Vol.120 | ILO MLC 2006");
-    }
-
-    /* ══ SLIDE 3 — PERSONAL AIR SAMPLING ══ */
-    if(perData.length>0){
-      var s3=pres.addSlide();
-      addHdr(s3,BL,"BIOMONITORING BENZENE — FAKTOR KIMIA",
-        "B. Benzene Personal Air Sampling (Paparan Udara Tempat Kerja — ppm)");
-      var kpiP=[
-        {label:"Total Sampel",val:String(perData.length),col:BL},
-        {label:"Melebihi NAB ("+perNAB+" ppm)",val:String(perMel),col:perMel>0?RED:GRN},
-        {label:"Rata-rata Paparan",val:perAvg+" ppm",col:BL},
-        {label:"Nilai Tertinggi",val:perMax+" ppm",col:perMax>perNAB?RED:"E65100"}
-      ];
-      kpiP.forEach(function(k,i){
-        var bx=0.2+i*3.22;
-        s3.addShape(pres.ShapeType.roundRect,{x:bx,y:1.15,w:3.05,h:1.08,fill:{color:GR},line:{color:k.col,width:1.5},rectRadius:0.08});
-        s3.addText(k.val,{x:bx,y:1.18,w:3.05,h:0.55,fontSize:22,bold:true,color:k.col,align:"center",fontFace:"Calibri"});
-        s3.addText(k.label,{x:bx,y:1.74,w:3.05,h:0.44,fontSize:9,color:MU,align:"center",fontFace:"Calibri",wrap:true});
-      });
-      s3.addShape(pres.ShapeType.roundRect,{x:0.2,y:2.36,w:12.9,h:0.42,fill:{color:"E3F2FD"},rectRadius:0.06});
-      s3.addText("Permenaker 05/2018 & ACGIH TLV-TWA 2024: 0.5 ppm  |  NIOSH REL: 0.1 ppm  |  OSHA PEL: 1 ppm  |  IARC: Karsinogen Grup 1",{
-        x:0.3,y:2.38,w:12.7,h:0.38,fontSize:9,color:BL,fontFace:"Calibri",valign:"middle"
-      });
-      s3.addText("Detail Data Personal Air Sampling Benzene",{x:0.2,y:2.92,w:12.9,h:0.28,fontSize:10,bold:true,color:BL,fontFace:"Calibri"});
-      var pRows=[mkHead(["No","Tahun","Nama Kapal","Fleet","Nama Pekerja","Lokasi","Hasil (ppm)","NAB","Status"])];
-      perData.forEach(function(r,i){
-        var over=Number(r.hasil||0)>Number(r.nab||0.5);
-        pRows.push([
-          {text:String(i+1)},
-          {text:String(r.tahun||"-")},
-          {text:String(r.kapal||"-")},
-          {text:String(r.fleet||"-")},
-          {text:String(r.pekerja||"-")},
-          {text:String(r.lokasi||"-")},
-          {text:String(r.hasil||0),options:{bold:true,color:over?RED:GRN}},
-          {text:String(r.nab||0.5)},
-          {text:over?"MELEBIHI NAB":"Normal",options:{bold:true,color:over?RED:GRN}}
-        ]);
-      });
-      /* FIX: colW sum = w = 12.9 */
-      s3.addTable(pRows,{
-        x:0.2,y:3.24,w:12.9,
-        fontSize:8.5,fontFace:"Calibri",color:TX,
-        border:{pt:0.5,color:"E2E8F0"},rowH:0.28,
-        colW:perColW
-      });
-      addFtr(s3,"Ref: ACGIH TLV-TWA 2024 | Permenaker 05/2018 | NIOSH REL 0.1 ppm | OSHA 29 CFR 1910.1028");
-    }
-
-    /* ══ SLIDE 4 — 5 HIRARKI PENGENDALIAN ══ */
-    var s4=pres.addSlide();
-    addHdr(s4,PU,"BIOMONITORING BENZENE — FAKTOR KIMIA",
-      "C. Strategi 5 Hirarki Pengendalian Paparan Benzene (Industri Maritim)");
-    var hB=(HIRARKI_DB&&HIRARKI_DB.kimia&&HIRARKI_DB.kimia.benzene)||{
-      E:"Eliminasi sumber benzene dari area kerja kapal. Ganti proses yang menghasilkan uap benzene jika memungkinkan secara teknis.",
-      S:"Substitusi: gunakan bahan bakar ultra-low benzene (<0.1%). Ganti solvent benzene dengan cyclohexane, heptane, atau produk aqueous.",
-      R:"Rekayasa Teknik: pasang vapor recovery system pada manifold cargo, LEV (Local Exhaust Ventilation) di pump room, enclosed loading system, gas detector permanen.",
-      A:"Administratif: permit-to-work untuk confined space, biomonitoring urin 6 bulan sekali, rotasi kerja maks 2 jam tanpa break di area >0.1 ppm, JSA sebelum masuk cargo tank.",
-      P:"APD: full-face respirator organic vapor cartridge (NIOSH-approved) untuk paparan >0.5 ppm, chemical-resistant gloves (nitrile), coverall anti-static, emergency SCBA."
-    };
-    var h5=[
-      {no:"1",judul:"ELIMINASI",warna:"C62828",isi:hB.E},
-      {no:"2",judul:"SUBSTITUSI",warna:"E65100",isi:hB.S},
-      {no:"3",judul:"REKAYASA TEKNIK",warna:"1565C0",isi:hB.R},
-      {no:"4",judul:"ADMINISTRATIF",warna:"2E7D32",isi:hB.A},
-      {no:"5",judul:"APD",warna:"6A1B9A",isi:hB.P}
-    ];
-    h5.forEach(function(h,i){
-      var by=1.18+i*1.18;
-      s4.addShape(pres.ShapeType.roundRect,{x:0.15,y:by,w:2.55,h:1.06,fill:{color:h.warna},rectRadius:0.07});
-      s4.addText(h.judul,{x:0.15,y:by+0.08,w:2.55,h:0.5,fontSize:12,bold:true,color:WH,align:"center",fontFace:"Calibri"});
-      s4.addText("Tingkat "+h.no,{x:0.15,y:by+0.62,w:2.55,h:0.36,fontSize:9,color:WH,align:"center",fontFace:"Calibri"});
-      s4.addShape(pres.ShapeType.rect,{x:2.75,y:by,w:10.35,h:1.06,fill:{color:i%2===0?WH:GR},line:{color:"E2E8F0",width:0.5}});
-      s4.addText(h.isi,{x:2.85,y:by+0.05,w:10.15,h:0.96,fontSize:9.5,color:TX,fontFace:"Calibri",wrap:true,valign:"middle"});
-    });
-    addFtr(s4,"Ref: ACGIH TLV 2024 | Permenaker 05/2018 | NIOSH REL | IARC Group 1 | IMO MSC/Circ.1351 | OSHA 1910.1028");
-
-    /* SAVE */
-    var suffix=(tahunF?"_"+tahunF:"")+(kapalF?"_"+kapalF.replace(/\s+/g,""):"");
-    var fname="IH_Biomonitoring_Benzene"+suffix+"_"+now.toISOString().slice(0,10)+".pptx";
-    pres.writeFile({fileName:fname})
-      .then(function(){showToast("PPT Biomonitoring Benzene berhasil didownload!","success");resetBtn();})
-      .catch(function(err){showToast("Gagal simpan: "+err.message,"error");console.error(err);resetBtn();});
-
-  }catch(err){
-    showToast("Error: "+err.message,"error");
-    console.error("exportBiomarkerPPT:",err.stack||err);
-    resetBtn();
-  }
 }
