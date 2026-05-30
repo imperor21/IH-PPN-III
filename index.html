@@ -534,6 +534,24 @@ Kirim ulang kode OTP
 </section>
 
 <section class="page-content" id="page-p3k">
+
+  <!-- ── Page Header ── -->
+  <div class="page-header-row" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+    <div>
+      <h2 style="font-size:20px;font-weight:800;color:var(--text);margin-bottom:2px">P3K &amp; AED Office</h2>
+      <p style="font-size:12.5px;color:var(--text-muted)">Monitoring bulanan kotak P3K Tipe A &amp; AED · Gedung Patra Jasa Office Tower</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="background:var(--blue-soft);color:var(--blue);padding:5px 12px;border-radius:99px;font-size:11px;font-weight:700">
+        <i class="fas fa-scale-balanced" style="margin-right:5px"></i>Per.15/MEN/VIII/2008
+      </span>
+      <span style="background:#F3E5F5;color:#7B1FA2;padding:5px 12px;border-radius:99px;font-size:11px;font-weight:700">
+        <i class="fas fa-heart-pulse" style="margin-right:5px"></i>PERKI 2023
+      </span>
+    </div>
+  </div>
+
+  <!-- ── Filter Bar ── -->
   <div class="filter-bar">
     <select id="p3k-filter-lantai" onchange="applyP3KFilters()">
       <option value="">Semua Lantai</option>
@@ -556,10 +574,18 @@ Kirim ulang kode OTP
     <button class="btn-clear" onclick="clearP3KFilters()"><i class="fas fa-rotate-left"></i> Reset</button>
     <button class="btn-export-ppt" onclick="exportP3KPPT()"><i class="fas fa-file-powerpoint"></i> Export PPT</button>
   </div>
-  <!-- KPI -->
-  <div id="p3k-kpi-strip" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px"></div>
-  <!-- Tabs -->
-  <div style="display:flex;gap:0;border-bottom:2px solid #E2E8F0;margin-bottom:18px">
+
+  <!-- ── KPI Cards ── -->
+  <div class="kpi-grid" style="margin-bottom:22px" id="p3k-kpi-strip">
+    <div class="kpi-card blue"><div class="kpi-icon"><i class="fas fa-location-dot"></i></div><div class="kpi-body"><div class="kpi-value" id="p3k-kpi-lokasi">14</div><div class="kpi-label">Total Lokasi</div></div></div>
+    <div class="kpi-card green"><div class="kpi-icon"><i class="fas fa-kit-medical"></i></div><div class="kpi-body"><div class="kpi-value" id="p3k-kpi-p3k">—</div><div class="kpi-label">P3K Sudah Dicek</div></div></div>
+    <div class="kpi-card purple"><div class="kpi-icon"><i class="fas fa-heart-pulse"></i></div><div class="kpi-body"><div class="kpi-value" id="p3k-kpi-aed">—</div><div class="kpi-label">AED Sudah Dicek</div></div></div>
+    <div class="kpi-card red"><div class="kpi-icon"><i class="fas fa-triangle-exclamation"></i></div><div class="kpi-body"><div class="kpi-value" id="p3k-kpi-masalah">—</div><div class="kpi-label">Ada Masalah</div></div></div>
+    <div class="kpi-card teal"><div class="kpi-icon"><i class="fas fa-calendar-check"></i></div><div class="kpi-body"><div class="kpi-value" id="p3k-kpi-progress">—</div><div class="kpi-label">Progress 2026</div></div></div>
+  </div>
+
+  <!-- ── Tab Navigation ── -->
+  <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:20px">
     <button id="p3k-tab-overview" class="tab-btn active" onclick="switchP3KTab('overview')">
       <i class="fas fa-grid-2"></i> Status per Lokasi
     </button>
@@ -570,10 +596,24 @@ Kirim ulang kode OTP
       <i class="fas fa-triangle-exclamation"></i> Temuan &amp; Tindak Lanjut
     </button>
   </div>
-  <!-- Content -->
-  <div id="p3k-content-overview" style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px"></div>
-  <div id="p3k-content-table"    style="display:none"></div>
-  <div id="p3k-content-masalah"  style="display:none"></div>
+
+  <!-- ── Tab: Status per Lokasi ── -->
+  <div id="p3k-content-overview"></div>
+
+  <!-- ── Tab: Tabel ── -->
+  <div id="p3k-content-table" style="display:none">
+    <div class="table-card">
+      <div class="table-header-row" style="padding:16px 20px;border-bottom:1.5px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:14px;font-weight:700;color:var(--text)"><i class="fas fa-table-list" style="color:var(--blue);margin-right:8px"></i>Data Pengecekan Lengkap</div>
+        <div id="p3k-table-count" style="font-size:12px;color:var(--text-muted)"></div>
+      </div>
+      <div id="p3k-table-wrap" style="overflow-x:auto"></div>
+    </div>
+  </div>
+
+  <!-- ── Tab: Temuan ── -->
+  <div id="p3k-content-masalah" style="display:none"></div>
+
 </section>
 <section class="page-content" id="page-menu5"><div class="placeholder-page"><div class="placeholder-icon"><i class="fas fa-chart-pie"></i></div><h2>Sebaran Alkes Kapal</h2><p>Modul belum tersedia.</p><div class="placeholder-tag">Coming Soon</div></div></section>
 
