@@ -1042,6 +1042,22 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
   .page-content{padding:10px 10px calc(var(--mobile-nav) + 10px);gap:10px}
   .pedoman-stats-row{grid-template-columns:1fr}
   .chart-body{height:185px}
+  /* Risk prediction KPI: 2 kolom di HP, dengan label yang terbaca */
+  #page-riskprediction .kpi-row[style*="repeat(5"]{
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px;
+  }
+  #page-riskprediction .kpi-card{
+    padding: 10px 10px;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+  }
+  #page-riskprediction .kpi-icon{
+    width: 36px; height: 36px; font-size: 15px; flex-shrink: 0;
+  }
+  #page-riskprediction .kpi-value{font-size: 22px;}
+  #page-riskprediction .kpi-label{font-size: 10px; white-space: normal; line-height: 1.3;}
 }
 
 /* ═══════════════════════════════════════════════════════════
