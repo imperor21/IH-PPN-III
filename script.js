@@ -2135,90 +2135,117 @@ function hcvRenderProfile(){
   var S='http://www.w3.org/2000/svg';
   svg.innerHTML='';
 
-  /* ── Blueprint image: profile view (crop dari baris A-F gambar blueprint) ── */
-  /* viewBox SVG: 900 x 245 — gambar di-crop bagian profile (baris A-F = ~37% tinggi dari total) */
-  var defs=document.createElementNS(S,'defs');
-  var clip=document.createElementNS(S,'clipPath');
-  clip.setAttribute('id','profileClip');
-  var clipRect=document.createElementNS(S,'rect');
-  clipRect.setAttribute('x','0');clipRect.setAttribute('y','0');
-  clipRect.setAttribute('width','900');clipRect.setAttribute('height','245');
-  clip.appendChild(clipRect);
-  defs.appendChild(clip);
-  svg.appendChild(defs);
+  var IMG_URL='https://raw.githubusercontent.com/imperor21/IH-PPN-III/main/Ship%20Blueprint.png';
+  /* Blueprint: 1536x1024. Displayed at width=900 → total height=600px.
+     Profile section (rows A-F, skip title): y_start=18, y_end=232 → height=215px
+     SVG viewBox: 900x220 */
 
-  /* Background gelap sesuai tema HCV */
-  var bg=document.createElementNS(S,'rect');
-  bg.setAttribute('x','0');bg.setAttribute('y','0');
-  bg.setAttribute('width','900');bg.setAttribute('height','245');
-  bg.setAttribute('fill','#0A1828');
-  svg.appendChild(bg);
-
-  /* Image blueprint — profile view (baris A-F dari blueprint, sekitar y=40 sampai y=290 dari gambar asli ~860px tinggi) */
-  /* Gambar asli: 1344x960. Profile view (baris A-F) ada di ~y=40..310 dari total 960 */
-  /* Kita tampilkan dengan viewBox crop: x=0, y=0, w=1344, h=310, dipetakan ke 900x245 SVG */
-  var img=document.createElementNS(S,'image');
-  img.setAttribute('href','https://raw.githubusercontent.com/imperor21/IH-PPN-III/main/Ship%20Blueprint.png');
-  img.setAttribute('x','0');
-  img.setAttribute('y','0');
-  img.setAttribute('width','900');
-  img.setAttribute('height','900');        /* tampilkan bagian atas gambar — profile row */
-  img.setAttribute('preserveAspectRatio','xMidYMin slice');
-  img.setAttribute('clip-path','url(#profileClip)');
-  img.setAttribute('opacity','1');
-  svg.appendChild(img);
-
-  /* helper untuk zone overlay */
-  var el=function(tag,attrs){
+  /* helper */
+  function el(tag,attrs){
     var e=document.createElementNS(S,tag);
     Object.keys(attrs).forEach(function(k){e.setAttribute(k,attrs[k]);});
     return e;
-  };
+  }
 
+  /* Dark bg */
+  svg.appendChild(el('rect',{x:0,y:0,width:900,height:220,fill:'#081422'}));
+
+  /* Blueprint image via foreignObject untuk presisi crop */
+  var fo=document.createElementNS(S,'foreignObject');
+  fo.setAttribute('x','0');fo.setAttribute('y','0');
+  fo.setAttribute('width','900');fo.setAttribute('height','220');
+  var ns='http://www.w3.org/1999/xhtml';
+  var div=document.createElementNS(ns,'div');
+  div.setAttribute('style','width:900px;height:220px;overflow:hidden;');
+  var imgEl=document.createElementNS(ns,'img');
+  imgEl.setAttribute('src',IMG_URL);
+  /* width=900 → total render height=600. Profile crop: skip top 18px, show 215px */
+  imgEl.setAttribute('style','width:900px;height:600px;object-fit:none;object-position:0 -18px;display:block;margin:0;padding:0;border:none;');
+  div.appendChild(imgEl);
+  fo.appendChild(div);
+  svg.appendChild(fo);
+
+  /* Subtle overlay gradient bawah agar label zona tidak tertabrak elemen blueprint */
+  var grad=document.createElementNS(S,'defs');
+  var lg=document.createElementNS(S,'linearGradient');
+  lg.setAttribute('id','profGrad');lg.setAttribute('x1','0');lg.setAttribute('y1','0');lg.setAttribute('x2','0');lg.setAttribute('y2','1');
+  var s1=document.createElementNS(S,'stop');s1.setAttribute('offset','75%');s1.setAttribute('stop-color','#081422');s1.setAttribute('stop-opacity','0');
+  var s2=document.createElementNS(S,'stop');s2.setAttribute('offset','100%');s2.setAttribute('stop-color','#081422');s2.setAttribute('stop-opacity','0.55');
+  lg.appendChild(s1);lg.appendChild(s2);grad.appendChild(lg);svg.appendChild(grad);
+  svg.appendChild(el('rect',{x:0,y:0,width:900,height:220,fill:'url(#profGrad)',style:'pointer-events:none'}));
+
+  /* Zone overlay function — label pill di ATAS zona dengan desain jelas */
   function zone(id,x,y,w,h,col,lbl){
     var g=document.createElementNS(S,'g');
     g.setAttribute('cursor','pointer');
-    /* highlight rect */
-    var r=el('rect',{x:x,y:y,width:w,height:h,fill:col,opacity:'.0',rx:4,stroke:col,'stroke-width':2});
+
+    /* highlight rect — transparan saat idle, menyala saat hover */
+    var r=el('rect',{x:x,y:y,width:w,height:h,fill:col,opacity:'0',rx:5,
+      stroke:col,'stroke-width':'1.5','stroke-dasharray':'5,3'});
     g.appendChild(r);
-    /* label pill di bawah zona */
-    var bw=lbl.length*6.2+16; var bh=14;
-    var bx=Math.max(2,Math.min(896-bw,x+w/2-bw/2));
-    var by=y+h+4;
-    g.appendChild(el('rect',{x:bx,y:by,width:bw,height:bh,fill:'#060E1E',stroke:col,'stroke-width':1.2,rx:4,opacity:'.92'}));
+
+    /* corner dot penanda zona */
+    g.appendChild(el('circle',{cx:x+7,cy:y+7,r:3.5,fill:col,opacity:'0.9'}));
+
+    /* label pill — solid background agar mudah dibaca di atas blueprint */
+    var PAD=10; var BH=20;
+    var bw=lbl.length*7.2+PAD*2;
+    var bx=Math.max(x,Math.min(x+w-bw,x+w/2-bw/2));
+    var by=y+h-BH-6; /* posisi di BAWAH DALAM zona, dekat tepi bawah */
+
+    /* shadow/blur backdrop */
+    g.appendChild(el('rect',{x:bx-1,y:by-1,width:bw+2,height:BH+2,
+      fill:'#000',opacity:'0.5',rx:5}));
+    /* pill background solid */
+    g.appendChild(el('rect',{x:bx,y:by,width:bw,height:BH,
+      fill:'#0A1828',stroke:col,'stroke-width':'1.5',rx:4,opacity:'0.95'}));
+    /* left accent bar */
+    g.appendChild(el('rect',{x:bx,y:by,width:4,height:BH,fill:col,rx:2}));
+
+    /* label text — putih bersih, bold */
     var t=document.createElementNS(S,'text');
-    t.setAttribute('x',String(bx+bw/2));t.setAttribute('y',String(by+9.5));
-    t.setAttribute('text-anchor','middle');t.setAttribute('fill',col);
-    t.setAttribute('font-size','7.5');t.setAttribute('font-family','Arial');t.setAttribute('font-weight','700');
-    t.textContent=lbl;g.appendChild(t);
-    /* dot marker di sudut atas kiri zona */
-    g.appendChild(el('circle',{cx:x+6,cy:y+6,r:3,fill:col,opacity:'.9'}));
+    t.setAttribute('x',String(bx+4+PAD));
+    t.setAttribute('y',String(by+13.5));
+    t.setAttribute('fill','#FFFFFF');
+    t.setAttribute('font-size','10');
+    t.setAttribute('font-family','Arial,sans-serif');
+    t.setAttribute('font-weight','700');
+    t.setAttribute('letter-spacing','0.5');
+    t.textContent=lbl;
+    g.appendChild(t);
+
     g.addEventListener('click',function(){hcvZoneClick(id);});
-    g.addEventListener('mouseenter',function(){r.setAttribute('opacity','.22');r.setAttribute('stroke-width','2.5');});
-    g.addEventListener('mouseleave',function(){r.setAttribute('opacity','.0');r.setAttribute('stroke-width','2');});
+    g.addEventListener('mouseenter',function(){
+      r.setAttribute('opacity','0.18');
+      r.setAttribute('stroke-width','2');
+    });
+    g.addEventListener('mouseleave',function(){
+      r.setAttribute('opacity','0');
+      r.setAttribute('stroke-width','1.5');
+    });
     svg.appendChild(g);
   }
 
-  /* ZONE OVERLAYS — disesuaikan dengan posisi elemen di blueprint
-     Blueprint profile view (baris A-F) setelah di-crop & scale ke 900x245:
-     - Accommodation/Bridge (kiri, superstructure) : x≈10, y≈10, w≈175, h≈185
-     - Cargo Tank Area (tengah panjang)            : x≈185, y≈60, w≈430, h≈130
-     - Pump Room (kanan tengah)                   : x≈615, y≈60, w≈85, h≈130
-     - Engine Room (kiri bawah, di bawah bridge)  : x≈10, y≈170, w≈175, h≈60
-     - Haluan / Fore (kanan)                      : x≈700, y≈60, w≈185, h≈150
-  */
-  zone('bridge', 10,  10,  175, 185, '#FF8F00', 'AKOMODASI & ANJUNGAN');
-  zone('cargo',  185, 60,  430, 130, '#B71C1C', 'CARGO TANK AREA');
-  zone('engine', 10,  170, 175, 65,  '#C62828', 'KAMAR MESIN');
-  zone('pump',   615, 60,  85,  130, '#E63946', 'PUMP ROOM');
-  zone('fore',   700, 55,  190, 175, '#FF8F00', 'HALUAN & MOORING');
+  /* ZONE OVERLAYS — posisi disesuaikan dengan blueprint VLCC
+     Blueprint 1536x1024 → rendered 900x600 → profile crop y:18..232 = 215px height di SVG 220px
+     Elemen kapal dalam profile view (baris A-F blueprint):
+     - Accommodation/Bridge (AFT kiri)      : ~x:18..195,  y:20..210
+     - Cargo Tank Area (tengah panjang)      : ~x:195..640, y:90..195
+     - Pump Room (kanan-tengah)              : ~x:640..730, y:90..195
+     - Engine Room (bawah accommodation)    : ~x:18..195,  y:155..210
+     - Haluan/Fore (kanan)                  : ~x:730..895, y:70..210  */
+  zone('bridge', 18,  22,  177, 188, '#FF8F00', 'AKOMODASI & ANJUNGAN');
+  zone('cargo',  197, 88,  440, 122, '#E53935', 'CARGO TANK AREA');
+  zone('engine', 18,  155, 177, 55,  '#C62828', 'KAMAR MESIN');
+  zone('pump',   637, 88,  90,  122, '#E91E8C', 'PUMP ROOM');
+  zone('fore',   727, 68,  168, 142, '#FF8F00', 'HALUAN & MOORING');
 
-  /* Label VIEW */
+  /* Watermark label */
   var vt=document.createElementNS(S,'text');
-  vt.setAttribute('x','894');vt.setAttribute('y','240');vt.setAttribute('text-anchor','end');
-  vt.setAttribute('fill','rgba(0,180,216,.5)');vt.setAttribute('font-size','8');
+  vt.setAttribute('x','894');vt.setAttribute('y','216');vt.setAttribute('text-anchor','end');
+  vt.setAttribute('fill','rgba(0,180,216,0.4)');vt.setAttribute('font-size','8.5');
   vt.setAttribute('font-family','Arial');vt.setAttribute('font-style','italic');
-  vt.textContent='STARBOARD VIEW — VLCC Blueprint';
+  vt.textContent='PROFILE VIEW (STARBOARD) — VLCC General Arrangement';
   svg.appendChild(vt);
 }
 
@@ -2229,86 +2256,91 @@ function hcvRenderTop(){
   var S='http://www.w3.org/2000/svg';
   svg.innerHTML='';
 
-  /* Background */
-  var bg=document.createElementNS(S,'rect');
-  bg.setAttribute('x','0');bg.setAttribute('y','0');
-  bg.setAttribute('width','900');bg.setAttribute('height','170');
-  bg.setAttribute('fill','#0A1828');
-  svg.appendChild(bg);
+  var IMG_URL='https://raw.githubusercontent.com/imperor21/IH-PPN-III/main/Ship%20Blueprint.png';
+  /* Blueprint: 1536x1024. Displayed at width=900 → total height=600px.
+     Top view section (rows G-J, Main Deck Plan): y_start=225, height=158px
+     SVG viewBox: 900x162 */
 
-  /* ── Blueprint image: top view (Main Deck) — baris G-J dari blueprint asli ── */
-  /* Gambar asli 1344x960. Baris G-J (TOP VIEW section) ada di sekitar y=390..570 dari 960 total */
-  /* Scale factor: SVG width 900 / image width 1344 = 0.6696 */
-  /* Crop y: start=390, height=180 → dipetakan ke SVG height 170 */
-  /* Kita pakai foreignObject + img agar bisa crop dengan object-position */
+  function el(tag,attrs){
+    var e=document.createElementNS(S,tag);
+    Object.keys(attrs).forEach(function(k){e.setAttribute(k,attrs[k]);});
+    return e;
+  }
+
+  /* Dark bg */
+  svg.appendChild(el('rect',{x:0,y:0,width:900,height:162,fill:'#081422'}));
+
+  /* Blueprint image — crop top view section */
   var fo=document.createElementNS(S,'foreignObject');
   fo.setAttribute('x','0');fo.setAttribute('y','0');
-  fo.setAttribute('width','900');fo.setAttribute('height','170');
-  /* xhtml namespace untuk img di dalam foreignObject */
-  var div=document.createElementNS('http://www.w3.org/1999/xhtml','div');
-  div.setAttribute('style','width:900px;height:170px;overflow:hidden;position:relative;');
-  var imgEl=document.createElementNS('http://www.w3.org/1999/xhtml','img');
-  imgEl.setAttribute('src','https://raw.githubusercontent.com/imperor21/IH-PPN-III/main/Ship%20Blueprint.png');
-  /* Scale: lebar 900px, gambar asli 1344px → scale 0.67. Crop bagian top view (G-J) */
-  /* Top view di blueprint ada di ~40.6% sampai 59.4% tinggi gambar */
-  /* Gambar ditampilkan penuh width=900, height proporsional = 960/1344*900 = 642px */
-  /* Crop: object-position-y = -(40.6% * 642) = -260px */
-  imgEl.setAttribute('style','width:900px;height:642px;object-fit:none;object-position:0 -260px;display:block;');
+  fo.setAttribute('width','900');fo.setAttribute('height','162');
+  var ns='http://www.w3.org/1999/xhtml';
+  var div=document.createElementNS(ns,'div');
+  div.setAttribute('style','width:900px;height:162px;overflow:hidden;');
+  var imgEl=document.createElementNS(ns,'img');
+  imgEl.setAttribute('src',IMG_URL);
+  /* width=900 → total render height=600. Top view: skip 225px from top, show 158px */
+  imgEl.setAttribute('style','width:900px;height:600px;object-fit:none;object-position:0 -225px;display:block;margin:0;padding:0;border:none;');
   div.appendChild(imgEl);
   fo.appendChild(div);
   svg.appendChild(fo);
 
-  /* helper el */
-  var el=function(tag,attrs){
-    var e=document.createElementNS(S,tag);
-    Object.keys(attrs).forEach(function(k){e.setAttribute(k,attrs[k]);});
-    return e;
-  };
-
-  /* Zone overlays — disesuaikan dengan Top View (G-J) di blueprint
-     Setelah scale ke 900px lebar:
-     - Bridge/Accommodation (kiri/AFT)   : x≈10,  y≈15,  w≈130, h≈140
-     - Cargo Tank Area (tengah)           : x≈140, y≈15,  w≈520, h≈140
-     - Pump Room (tengah-kanan)           : x≈660, y≈15,  w≈80,  h≈140
-     - Engine Room (kiri bawah/AFT)       : x≈10,  y≈90,  w≈130, h≈65
-     - Fore (kanan)                       : x≈740, y≈15,  w≈150, h≈140
-  */
+  /* Zone overlays — Top View (G-J) blueprint VLCC
+     Main Deck Plan: AFT di kiri, FORE di kanan
+     Accommodation/Bridge bloc (AFT kiri)  : x≈10..160,  y≈5..155
+     Cargo Tank Area (tengah luas)          : x≈160..660, y≈5..155
+     Pump Room                              : x≈660..750, y≈5..155
+     Engine Room (di bawah accommodation)  : x≈10..160,  y≈90..155
+     Forecastle (FORE kanan)               : x≈750..890, y≈5..155  */
   var tZones=[
-    {id:'bridge',x:10,  y:15, w:130, h:140, col:'#FF8F00', lbl:'AKOMODASI'},
-    {id:'cargo', x:140, y:15, w:520, h:140, col:'#B71C1C', lbl:'CARGO TANK AREA'},
-    {id:'pump',  x:660, y:15, w:80,  h:140, col:'#E63946', lbl:'PUMP ROOM'},
-    {id:'engine',x:10,  y:90, w:130, h:65,  col:'#C62828', lbl:'ENGINE ROOM'},
-    {id:'fore',  x:740, y:15, w:150, h:140, col:'#FF8F00', lbl:'FORE'},
+    {id:'bridge',x:10,  y:5,  w:150, h:150, col:'#FF8F00', lbl:'AKOMODASI'},
+    {id:'cargo', x:162, y:5,  w:495, h:150, col:'#E53935', lbl:'CARGO TANK AREA'},
+    {id:'pump',  x:659, y:5,  w:88,  h:150, col:'#E91E8C', lbl:'PUMP ROOM'},
+    {id:'engine',x:10,  y:88, w:150, h:67,  col:'#C62828', lbl:'ENGINE ROOM'},
+    {id:'fore',  x:749, y:5,  w:142, h:150, col:'#FF8F00', lbl:'FORE'},
   ];
 
   tZones.forEach(function(z){
     var g=document.createElementNS(S,'g');g.setAttribute('cursor','pointer');
-    var r=el('rect',{x:z.x,y:z.y,width:z.w,height:z.h,fill:z.col,opacity:'0',rx:3,stroke:z.col,'stroke-width':1.5});
+    var r=el('rect',{x:z.x,y:z.y,width:z.w,height:z.h,
+      fill:z.col,opacity:'0',rx:4,stroke:z.col,'stroke-width':'1.5','stroke-dasharray':'5,3'});
     g.appendChild(r);
-    /* label pill di tengah zona */
-    var bw=z.lbl.length*6+14; var bh=13;
+
+    /* corner dot */
+    g.appendChild(el('circle',{cx:z.x+6,cy:z.y+6,r:3,fill:z.col,opacity:'0.85'}));
+
+    /* label pill solid */
+    var PAD=8; var BH=18;
+    var bw=z.lbl.length*7+PAD*2;
     var bx=Math.max(z.x+2,Math.min(z.x+z.w-bw-2,z.x+z.w/2-bw/2));
-    var by=z.y+z.h/2-bh/2;
-    g.appendChild(el('rect',{x:bx,y:by,width:bw,height:bh,fill:'rgba(6,14,30,0.88)',stroke:z.col,'stroke-width':1,rx:3}));
+    var by=z.y+z.h-BH-5;
+
+    g.appendChild(el('rect',{x:bx-1,y:by-1,width:bw+2,height:BH+2,fill:'#000',opacity:'0.5',rx:4}));
+    g.appendChild(el('rect',{x:bx,y:by,width:bw,height:BH,fill:'#0A1828',stroke:z.col,'stroke-width':'1.5',rx:3,opacity:'0.95'}));
+    g.appendChild(el('rect',{x:bx,y:by,width:4,height:BH,fill:z.col,rx:2}));
+
     var t=document.createElementNS(S,'text');
-    t.setAttribute('x',String(bx+bw/2));t.setAttribute('y',String(by+8.5));
-    t.setAttribute('text-anchor','middle');t.setAttribute('fill',z.col);
-    t.setAttribute('font-size','7');t.setAttribute('font-family','Arial');t.setAttribute('font-weight','700');
-    t.textContent=z.lbl;g.appendChild(t);
-    /* dot marker */
-    g.appendChild(el('circle',{cx:z.x+5,cy:z.y+5,r:2.5,fill:z.col,opacity:'.85'}));
+    t.setAttribute('x',String(bx+4+PAD));
+    t.setAttribute('y',String(by+12.5));
+    t.setAttribute('fill','#FFFFFF');
+    t.setAttribute('font-size','9');
+    t.setAttribute('font-family','Arial,sans-serif');
+    t.setAttribute('font-weight','700');
+    t.textContent=z.lbl;
+    g.appendChild(t);
+
     g.addEventListener('click',function(){hcvZoneClick(z.id);});
-    g.addEventListener('mouseenter',function(){r.setAttribute('opacity','.22');r.setAttribute('stroke-width','2');});
+    g.addEventListener('mouseenter',function(){r.setAttribute('opacity','0.20');r.setAttribute('stroke-width','2');});
     g.addEventListener('mouseleave',function(){r.setAttribute('opacity','0');r.setAttribute('stroke-width','1.5');});
     svg.appendChild(g);
   });
 
-  /* Label */
+  /* Label watermark */
   var nt=document.createElementNS(S,'text');
-  nt.setAttribute('x','894');nt.setAttribute('y','165');nt.setAttribute('text-anchor','end');
-  nt.setAttribute('fill','rgba(0,180,216,.5)');nt.setAttribute('font-size','7.5');
+  nt.setAttribute('x','895');nt.setAttribute('y','158');nt.setAttribute('text-anchor','end');
+  nt.setAttribute('fill','rgba(0,180,216,0.4)');nt.setAttribute('font-size','8');
   nt.setAttribute('font-family','Arial');nt.setAttribute('font-style','italic');
-  nt.textContent='TOP VIEW (MAIN DECK) — VLCC Blueprint';
+  nt.textContent='TOP VIEW (MAIN DECK) — VLCC General Arrangement';
   svg.appendChild(nt);
 }
 
