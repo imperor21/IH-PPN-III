@@ -7,16 +7,15 @@ const API_URL = "https://script.google.com/macros/s/AKfycbxWscFjKrrqQgNwmeRLAfjB
 
 async function gasPost(payload) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30000); // 30 detik timeout
+  const timeout = setTimeout(() => controller.abort(), 20000);
   try {
     const res = await fetch(API_URL, {
       method:"POST", redirect:"follow",
-      headers:{"Content-Type":"text/plain;charset=utf-8"},
+      headers:{"Content-Type":"text/plain;charset=utf-8","Connection":"keep-alive"},
       body:JSON.stringify(payload),
       signal: controller.signal
     });
     clearTimeout(timeout);
-    // GAS kadang return HTML redirect jika session expired atau deploy error
     const text = await res.text();
     try {
       return JSON.parse(text);
@@ -26,12 +25,15 @@ async function gasPost(payload) {
     }
   } catch(e) {
     clearTimeout(timeout);
-    if (e.name === "AbortError") {
-      throw new Error("Request timeout (>30 detik). Server GAS tidak merespons.");
-    }
+    if (e.name === "AbortError") throw new Error("Request timeout (>20 detik). Server GAS tidak merespons.");
     throw e;
   }
 }
+
+/* ── GAS Warm-up: ping GAS saat halaman pertama dimuat ── */
+(function warmupGAS(){
+  fetch(API_URL,{method:"POST",redirect:"follow",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"ping"})}).catch(function(){});
+})();
 
 /* AUTH */
 function getToken(){return sessionStorage.getItem("ppn_token");}
@@ -103,10 +105,11 @@ async function doLogin(){
       document.getElementById("loginError").style.display="none";
       document.getElementById("loginOverlay").classList.add("hidden");
       document.getElementById("sidebarUsername").textContent=getMappedName(data.displayName);
-      applyRoleUI();loadData();
+      applyRoleUI();
+      /* loadData berjalan di background — dashboard langsung terlihat */
+      loadData();
     }
     else if(data.status==="otp_required"){
-      /* Tampilkan panel OTP */
       _otpUsername=username;
       showOTPPanel(data.message);
     }
@@ -206,7 +209,8 @@ async function doVerifyOTP(){
       saveSession(data,data.token);
       document.getElementById("loginOverlay").classList.add("hidden");
       document.getElementById("sidebarUsername").textContent=getMappedName(data.displayName);
-      applyRoleUI();loadData();
+      applyRoleUI();
+      loadData();
     }else{
       var errEl=document.getElementById("otpError");
       var errMsg=document.getElementById("otpErrorMsg");
@@ -2133,230 +2137,271 @@ function hcvRenderProfile(){
   var svg=document.getElementById('hcvProfileSVG');
   if(!svg)return;
   var S='http://www.w3.org/2000/svg';
-  svg.innerHTML='';
-  function el(tag,attrs){
-    var e=document.createElementNS(S,tag);
-    Object.keys(attrs).forEach(function(k){e.setAttribute(k,attrs[k]);});
-    return e;
-  }
-  function tx(x,y,txt,attrs){
-    var t=document.createElementNS(S,'text');
-    t.setAttribute('x',x);t.setAttribute('y',y);
-    Object.keys(attrs||{}).forEach(function(k){t.setAttribute(k,attrs[k]);});
-    t.textContent=txt;return t;
-  }
-  function zone(id,x,y,w,h,col,lbl,ly){
-    var g=document.createElementNS(S,'g');
-    g.setAttribute('cursor','pointer');
-    var r=el('rect',{x:x,y:y,width:w,height:h,fill:col,opacity:'.18',rx:3,stroke:col,'stroke-width':1.5});
+
+  /* ── Zone overlay helper ── */
+  function zone(id,x,y,w,h,col,lbl,lyOffset){
+    var g=document.createElementNS(S,'g');g.setAttribute('cursor','pointer');
+    var r=document.createElementNS(S,'rect');
+    r.setAttribute('x',x);r.setAttribute('y',y);r.setAttribute('width',w);r.setAttribute('height',h);
+    r.setAttribute('fill',col);r.setAttribute('opacity','0');r.setAttribute('rx','4');
+    r.setAttribute('stroke',col);r.setAttribute('stroke-width','2');r.setAttribute('stroke-dasharray','6,3');
     g.appendChild(r);
-    g.appendChild(el('rect',{x:x+1,y:y+1,width:5,height:h-2,fill:col,rx:3}));
-    /* leader line up */
-    g.appendChild(el('line',{x1:x+w/2,y1:y,x2:x+w/2,y2:ly+11,stroke:col,'stroke-width':1,'stroke-dasharray':'3,2',opacity:'.7'}));
-    /* label box */
-    var bw=lbl.length*6.5+14; var bh=12;
-    var bx=Math.max(2,Math.min(896-bw,x+w/2-bw/2));
-    g.appendChild(el('rect',{x:bx,y:ly-1,width:bw,height:bh,fill:'#060E1E',stroke:col,'stroke-width':1.2,rx:3,opacity:'.94'}));
+    /* dashed leader line */
+    var lx=parseFloat(x)+parseFloat(w)/2;
+    var ly=parseFloat(y)+(lyOffset||0);
+    var line=document.createElementNS(S,'line');
+    line.setAttribute('x1',lx);line.setAttribute('y1',y);line.setAttribute('x2',lx);line.setAttribute('y2',ly-12);
+    line.setAttribute('stroke',col);line.setAttribute('stroke-width','1.5');line.setAttribute('stroke-dasharray','5,3');
+    line.setAttribute('opacity','0.8');g.appendChild(line);
+    /* pill label */
+    var PAD=12; var BH=22; var bw=lbl.length*7.8+PAD*2;
+    var bx=Math.max(2,Math.min(956-bw,lx-bw/2));
+    var by=ly-BH-2;
+    /* pill shadow */
+    var sh=document.createElementNS(S,'rect');
+    sh.setAttribute('x',bx-1);sh.setAttribute('y',by-1);sh.setAttribute('width',bw+2);sh.setAttribute('height',BH+2);
+    sh.setAttribute('fill','#000');sh.setAttribute('opacity','0.5');sh.setAttribute('rx','12');g.appendChild(sh);
+    /* pill bg */
+    var pb=document.createElementNS(S,'rect');
+    pb.setAttribute('x',bx);pb.setAttribute('y',by);pb.setAttribute('width',bw);pb.setAttribute('height',BH);
+    pb.setAttribute('fill',col);pb.setAttribute('rx','11');g.appendChild(pb);
+    /* pill text */
     var t=document.createElementNS(S,'text');
-    t.setAttribute('x',bx+bw/2);t.setAttribute('y',ly+8);t.setAttribute('text-anchor','middle');
-    t.setAttribute('fill',col);t.setAttribute('font-size','8');t.setAttribute('font-family','Arial');t.setAttribute('font-weight','700');
-    t.textContent=lbl;g.appendChild(t);
+    t.setAttribute('x',lx);t.setAttribute('y',String(by+15));
+    t.setAttribute('text-anchor','middle');t.setAttribute('fill','#FFFFFF');
+    t.setAttribute('font-size','10');t.setAttribute('font-family','Arial,sans-serif');t.setAttribute('font-weight','800');
+    t.setAttribute('letter-spacing','0.5');t.textContent=lbl;g.appendChild(t);
+    /* dot at line top */
+    var dot=document.createElementNS(S,'circle');
+    dot.setAttribute('cx',lx);dot.setAttribute('cy',y);dot.setAttribute('r','3.5');dot.setAttribute('fill',col);g.appendChild(dot);
     g.addEventListener('click',function(){hcvZoneClick(id);});
-    g.addEventListener('mouseenter',function(){r.setAttribute('opacity','.36');});
-    g.addEventListener('mouseleave',function(){r.setAttribute('opacity','.18');});
-    svg.appendChild(g);
+    g.addEventListener('mouseenter',function(){r.setAttribute('opacity','0.18');r.setAttribute('stroke-width','2.5');});
+    g.addEventListener('mouseleave',function(){r.setAttribute('opacity','0');r.setAttribute('stroke-width','2');});
+    return g;
   }
 
-  /* Sky */
-  svg.appendChild(el('rect',{x:0,y:0,width:900,height:195,fill:'#C8D8E8'}));
-  svg.appendChild(el('rect',{x:0,y:175,width:900,height:20,fill:'#B8CCDC'}));
-  /* Water */
-  svg.appendChild(el('rect',{x:0,y:195,width:900,height:50,fill:'#2E6E9E'}));
-  svg.appendChild(el('rect',{x:0,y:195,width:900,height:4,fill:'#3A80B8'}));
-  svg.appendChild(el('line',{x1:0,y1:206,x2:900,y2:206,stroke:'#3A80B8','stroke-width':1,opacity:'.6'}));
-  svg.appendChild(el('line',{x1:0,y1:218,x2:900,y2:218,stroke:'#3A80B8','stroke-width':.8,opacity:'.35'}));
+  /* ── Build full SVG markup ── */
+  svg.innerHTML=`<defs>
+  <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#C8E8F8"/><stop offset="100%" stop-color="#BADCF5"/></linearGradient>
+  <linearGradient id="seaGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1A6080"/><stop offset="100%" stop-color="#052F47"/></linearGradient>
+  <linearGradient id="superGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#F0F0EE"/><stop offset="100%" stop-color="#D8D8D6"/></linearGradient>
+  <filter id="sh"><feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#00000040"/></filter>
+</defs>
+<!-- SKY -->
+<rect width="960" height="290" fill="url(#skyGrad)"/>
+<!-- SEA -->
+<rect x="0" y="195" width="960" height="95" fill="url(#seaGrad)"/>
+<rect x="0" y="195" width="960" height="4" fill="#2A8AAA" opacity="0.6"/>
+<path d="M0,202 Q240,198 480,202 Q720,206 960,202" fill="none" stroke="#3ABCCC" stroke-width="1.5" opacity="0.35"/>
+<path d="M0,212 Q320,209 640,212 Q800,214 960,212" fill="none" stroke="#2A9AB5" stroke-width="1" opacity="0.25"/>
+<!-- HULL MAIN -->
+<path d="M 40,132 L 40,195 Q 41,210 72,214 L 820,207 Q 876,204 913,185 Q 938,168 942,148 Q 928,132 900,130 Z" fill="#0C121E" filter="url(#sh)"/>
+<!-- RED BOTTOM -->
+<path d="M 42,200 Q 43,212 72,218 L 820,213 Q 876,210 913,194 L 915,204 Q 882,220 820,222 L 72,224 Q 44,218 42,210 Z" fill="#8B0E10"/>
+<path d="M 42,207 Q 44,215 72,219 L 820,215 Q 878,212 914,198 L 914,206 Q 882,219 820,221 L 72,222 Q 44,218 42,212 Z" fill="#AA1214"/>
+<!-- WATERLINE WHITE -->
+<path d="M 44,196 Q 400,194 820,191 Q 870,191 910,180 L 913,186 Q 875,198 820,199 L 44,202 Z" fill="#E8E8E0" opacity="0.85"/>
+<!-- HULL SHEER -->
+<path d="M 40,132 Q 400,126 820,122 Q 878,122 910,130 Q 928,136 942,148" fill="none" stroke="#252E3E" stroke-width="2"/>
+<!-- STERN -->
+<rect x="32" y="130" width="10" height="82" rx="2" fill="#080E1A"/>
+<rect x="32" y="196" width="10" height="28" rx="2" fill="#5A0808"/>
+<!-- BOW -->
+<path d="M 900,130 Q 932,130 945,152 Q 956,164 956,182 Q 952,196 940,206 L 912,206 Q 928,196 937,182 Q 942,166 938,152 Q 930,136 915,132 Z" fill="#0A1018"/>
+<path d="M 912,207 Q 930,202 940,212 L 920,222 Q 898,220 880,218 L 912,214 Z" fill="#6A0A0A"/>
+<ellipse cx="950" cy="218" rx="14" ry="8" fill="#060A10" opacity="0.7"/>
+<!-- SUPERSTRUCTURE -->
+<rect x="40" y="70" width="192" height="63" rx="2" fill="url(#superGrad)"/>
+<rect x="44" y="98" width="186" height="9" fill="#CCCCCA" rx="1"/>
+<rect x="44" y="86" width="186" height="9" fill="#D4D4D2" rx="1"/>
+<rect x="44" y="74" width="186" height="9" fill="#E3E5E4" rx="1"/>
+<g fill="#6AACCC" opacity="0.85">
+  <rect x="50" y="75" width="8" height="6" rx="1"/><rect x="62" y="75" width="8" height="6" rx="1"/><rect x="74" y="75" width="8" height="6" rx="1"/><rect x="86" y="75" width="8" height="6" rx="1"/><rect x="98" y="75" width="8" height="6" rx="1"/><rect x="110" y="75" width="8" height="6" rx="1"/><rect x="122" y="75" width="8" height="6" rx="1"/><rect x="134" y="75" width="8" height="6" rx="1"/><rect x="146" y="75" width="8" height="6" rx="1"/><rect x="158" y="75" width="8" height="6" rx="1"/><rect x="170" y="75" width="8" height="6" rx="1"/><rect x="182" y="75" width="8" height="6" rx="1"/><rect x="194" y="75" width="8" height="6" rx="1"/><rect x="206" y="75" width="8" height="6" rx="1"/><rect x="218" y="75" width="8" height="6" rx="1"/>
+  <rect x="50" y="87" width="8" height="6" rx="1"/><rect x="62" y="87" width="8" height="6" rx="1"/><rect x="74" y="87" width="8" height="6" rx="1"/><rect x="86" y="87" width="8" height="6" rx="1"/><rect x="98" y="87" width="8" height="6" rx="1"/><rect x="110" y="87" width="8" height="6" rx="1"/><rect x="122" y="87" width="8" height="6" rx="1"/><rect x="134" y="87" width="8" height="6" rx="1"/><rect x="146" y="87" width="8" height="6" rx="1"/><rect x="158" y="87" width="8" height="6" rx="1"/><rect x="170" y="87" width="8" height="6" rx="1"/><rect x="182" y="87" width="8" height="6" rx="1"/><rect x="194" y="87" width="8" height="6" rx="1"/><rect x="206" y="87" width="8" height="6" rx="1"/>
+  <rect x="50" y="99" width="8" height="6" rx="1"/><rect x="62" y="99" width="8" height="6" rx="1"/><rect x="74" y="99" width="8" height="6" rx="1"/><rect x="86" y="99" width="8" height="6" rx="1"/><rect x="98" y="99" width="8" height="6" rx="1"/><rect x="110" y="99" width="8" height="6" rx="1"/><rect x="122" y="99" width="8" height="6" rx="1"/><rect x="134" y="99" width="8" height="6" rx="1"/><rect x="146" y="99" width="8" height="6" rx="1"/><rect x="158" y="99" width="8" height="6" rx="1"/><rect x="170" y="99" width="8" height="6" rx="1"/><rect x="182" y="99" width="8" height="6" rx="1"/><rect x="194" y="99" width="8" height="6" rx="1"/>
+</g>
+<rect x="34" y="58" width="208" height="14" rx="2" fill="#C8C8C6"/>
+<g fill="#5ABCDC" opacity="0.6"><rect x="44" y="61" width="26" height="9" rx="1"/><rect x="74" y="61" width="26" height="9" rx="1"/><rect x="104" y="61" width="26" height="9" rx="1"/><rect x="134" y="61" width="26" height="9" rx="1"/><rect x="164" y="61" width="26" height="9" rx="1"/><rect x="194" y="61" width="26" height="9" rx="1"/><rect x="224" y="61" width="14" height="9" rx="1"/></g>
+<rect x="50" y="44" width="178" height="16" rx="2" fill="#D0D0CE"/>
+<rect x="64" y="30" width="140" height="15" rx="2" fill="#C4C4C2"/>
+<rect x="80" y="18" width="106" height="13" rx="2" fill="#B8B8B6"/>
+<!-- MAST -->
+<rect x="128" y="5" width="5" height="26" rx="1" fill="#909090"/>
+<line x1="106" y1="10" x2="160" y2="10" stroke="#888" stroke-width="2"/>
+<circle cx="133" cy="5" r="4" fill="#A0A0A0"/>
+<!-- FUNNEL -->
+<path d="M 230,30 L 228,106 L 280,106 L 278,30 Z" fill="#CC7700"/>
+<path d="M 222,26 Q 226,17 254,17 Q 283,17 287,26 L 278,32 Q 274,22 254,22 Q 234,22 230,32 Z" fill="#AA5500"/>
+<ellipse cx="254" cy="17" rx="33" ry="8" fill="#1A1A2A"/>
+<rect x="228" y="52" width="52" height="18" fill="#CC1111"/>
+<rect x="226" y="98" width="64" height="10" rx="2" fill="#994400" opacity="0.8"/>
+<!-- LIFEBOATS -->
+<rect x="230" y="112" width="18" height="10" rx="3" fill="#E8D080" stroke="#C4A840" stroke-width="1"/>
+<rect x="252" y="112" width="18" height="10" rx="3" fill="#E8D080" stroke="#C4A840" stroke-width="1"/>
+<rect x="230" y="125" width="18" height="10" rx="3" fill="#DCC870" stroke="#B89830" stroke-width="1"/>
+<rect x="252" y="125" width="18" height="10" rx="3" fill="#DCC870" stroke="#B89830" stroke-width="1"/>
+<!-- CARGO DECK -->
+<rect x="234" y="126" width="660" height="8" rx="1" fill="#2A1A1A"/>
+<rect x="234" y="126" width="660" height="3" rx="1" fill="#3A2020"/>
+<!-- TANK DOMES -->
+<g>
+  <ellipse cx="295" cy="122" rx="22" ry="10" fill="#1A0808"/><ellipse cx="295" cy="120" rx="14" ry="6" fill="#140606"/>
+  <ellipse cx="360" cy="120" rx="22" ry="10" fill="#1A0808"/><ellipse cx="360" cy="118" rx="14" ry="6" fill="#140606"/>
+  <ellipse cx="425" cy="120" rx="22" ry="10" fill="#1A0808"/><ellipse cx="425" cy="118" rx="14" ry="6" fill="#140606"/>
+  <ellipse cx="490" cy="120" rx="22" ry="10" fill="#1A0808"/><ellipse cx="490" cy="118" rx="14" ry="6" fill="#140606"/>
+  <ellipse cx="555" cy="120" rx="22" ry="10" fill="#1A0808"/><ellipse cx="555" cy="118" rx="14" ry="6" fill="#140606"/>
+  <ellipse cx="620" cy="120" rx="22" ry="10" fill="#1A0808"/><ellipse cx="620" cy="118" rx="14" ry="6" fill="#140606"/>
+</g>
+<!-- TANK DIVIDERS -->
+<g stroke="#3A2828" stroke-width="2"><line x1="326" y1="128" x2="326" y2="148"/><line x1="392" y1="128" x2="392" y2="148"/><line x1="458" y1="128" x2="458" y2="148"/><line x1="524" y1="128" x2="524" y2="148"/><line x1="590" y1="128" x2="590" y2="148"/></g>
+<!-- PIPELINE -->
+<rect x="234" y="134" width="656" height="4" rx="2" fill="#4A6A8A"/>
+<rect x="234" y="140" width="656" height="3" rx="1.5" fill="#3A5878"/>
+<g fill="#3A6070"><rect x="292" y="132" width="6" height="8" rx="1"/><rect x="357" y="132" width="6" height="8" rx="1"/><rect x="422" y="132" width="6" height="8" rx="1"/><rect x="487" y="132" width="6" height="8" rx="1"/><rect x="552" y="132" width="6" height="8" rx="1"/><rect x="617" y="132" width="6" height="8" rx="1"/></g>
+<!-- MANIFOLD -->
+<rect x="468" y="116" width="44" height="22" rx="3" fill="#3A5060"/><rect x="462" y="124" width="56" height="6" rx="2" fill="#4A6270"/>
+<!-- RAILING -->
+<line x1="234" y1="126" x2="234" y2="114" stroke="#506070" stroke-width="1.5"/>
+<line x1="234" y1="114" x2="752" y2="100" stroke="#506070" stroke-width="1.5"/>
+<g stroke="#405060" stroke-width="1"><line x1="284" y1="126" x2="284" y2="116"/><line x1="344" y1="126" x2="344" y2="114"/><line x1="404" y1="126" x2="404" y2="112"/><line x1="464" y1="126" x2="464" y2="110"/><line x1="524" y1="126" x2="524" y2="108"/><line x1="584" y1="126" x2="584" y2="106"/><line x1="644" y1="126" x2="644" y2="104"/><line x1="704" y1="126" x2="704" y2="102"/></g>
+<!-- PUMP ROOM DECKHOUSE -->
+<rect x="614" y="98" width="84" height="38" rx="2" fill="#1A2A3A"/>
+<rect x="612" y="96" width="88" height="5" rx="1" fill="#2A3E4E"/>
+<g fill="#3A7898" opacity="0.8"><rect x="620" y="104" width="10" height="8" rx="1"/><rect x="634" y="104" width="10" height="8" rx="1"/><rect x="648" y="104" width="10" height="8" rx="1"/><rect x="662" y="104" width="10" height="8" rx="1"/><rect x="676" y="104" width="10" height="8" rx="1"/></g>
+<g fill="#2A4A5A" stroke="#3A5A6A" stroke-width="0.5"><rect x="622" y="88" width="4" height="10" rx="1"/><rect x="633" y="88" width="4" height="10" rx="1"/><rect x="644" y="88" width="4" height="10" rx="1"/></g>
+<!-- FORE MAST -->
+<rect x="732" y="58" width="5" height="76" rx="1" fill="#6A7A88"/>
+<line x1="710" y1="70" x2="758" y2="70" stroke="#6A7A88" stroke-width="2"/>
+<circle cx="734" cy="58" r="4" fill="#7A8A98"/>
+<!-- FORECASTLE -->
+<path d="M 754,130 L 754,118 Q 756,112 780,108 L 855,102 Q 894,100 914,112 L 924,130 L 924,132 Z" fill="#181E2C"/>
+<rect x="756" y="116" width="168" height="3" fill="#2A3444"/>
+<ellipse cx="784" cy="124" rx="14" ry="7" fill="#2A3A4A"/>
+<ellipse cx="824" cy="124" rx="14" ry="7" fill="#2A3A4A"/>
+<g fill="#1A2830"><rect x="764" y="128" width="8" height="6" rx="1"/><rect x="784" y="128" width="8" height="6" rx="1"/><rect x="804" y="128" width="8" height="6" rx="1"/><rect x="824" y="128" width="8" height="6" rx="1"/></g>
+<circle cx="916" cy="160" r="7" fill="#0C1418" stroke="#303A48" stroke-width="2"/>
+<circle cx="914" cy="176" r="6" fill="#0C1418" stroke="#303A48" stroke-width="2"/>`;
 
-  /* HULL */
-  svg.appendChild(el('path',{d:'M 30,198 L 30,160 L 52,157 L 795,143 Q 830,140 848,150 L 854,168 L 854,198 Z',fill:'#181818'}));
-  /* Red anti-fouling */
-  svg.appendChild(el('path',{d:'M 31,198 L 31,210 Q 32,220 60,222 L 798,218 Q 826,216 840,210 L 852,202 L 854,195 Q 840,195 830,196 L 35,196 Z',fill:'#8C1A14'}));
-  /* White waterline */
-  svg.appendChild(el('line',{x1:31,y1:198,x2:795,y2:198,stroke:'#D8DDD5','stroke-width':2.5}));
-  svg.appendChild(el('line',{x1:795,y1:198,x2:843,y2:192,stroke:'#D8DDD5','stroke-width':2.5}));
-  /* Hull sheer line */
-  svg.appendChild(el('line',{x1:52,y1:157,x2:795,y2:143,stroke:'#252E38','stroke-width':1.5}));
-  /* Stern */
-  svg.appendChild(el('rect',{x:22,y:155,width:9,height:46,fill:'#101010',rx:1}));
-  svg.appendChild(el('rect',{x:22,y:198,width:9,height:24,fill:'#6A1210',rx:1}));
-  /* Bow */
-  svg.appendChild(el('path',{d:'M 844,150 Q 855,148 862,158 L 868,175 L 868,198 L 854,198 L 852,168 Z',fill:'#181818'}));
-  svg.appendChild(el('path',{d:'M 854,198 L 868,198 L 868,212 Q 858,220 838,222 L 798,222 Q 822,220 836,214 Z',fill:'#8C1A14'}));
-  svg.appendChild(el('ellipse',{cx:866,cy:212,rx:12,ry:8,fill:'#6A1210',opacity:'.65'}));
-
-  /* SUPERSTRUCTURE */
-  svg.appendChild(el('rect',{x:30,y:66,width:185,height:96,fill:'#D8DCDE',rx:1}));
-  [78,90,102,114,126,138,150].forEach(function(y){
-    svg.appendChild(el('line',{x1:30,y1:y,x2:215,y2:y,stroke:'#BCC0C4','stroke-width':1.2}));
-  });
-  /* Windows */
-  [[68,11],[80,10],[92,10],[104,9],[116,9],[128,8],[140,8],[152,7]].forEach(function(row,fi){
-    var y=row[0],h=row[1];
-    for(var x=36;x<213;x+=14){
-      svg.appendChild(el('rect',{x:x,y:y,width:10,height:h,fill:'#7AAEC2',rx:1,opacity:String(0.95-fi*0.08)}));
-    }
-  });
-  /* Bridge deck */
-  svg.appendChild(el('rect',{x:18,y:50,width:208,height:18,fill:'#CDD2D6',rx:1}));
-  svg.appendChild(el('rect',{x:24,y:53,width:196,height:12,fill:'#7ABCD0',rx:1,opacity:'.6'}));
-  [52,84,116,148,180,208].forEach(function(x){
-    svg.appendChild(el('line',{x1:x,y1:53,x2:x,y2:65,stroke:'#9CC8D8','stroke-width':1}));
-  });
-  svg.appendChild(el('rect',{x:40,y:36,width:152,height:15,fill:'#C0C6CC',rx:1}));
-  svg.appendChild(el('rect',{x:62,y:22,width:108,height:15,fill:'#B4BAC0',rx:1}));
-
-  /* FUNNEL (orange/amber) */
-  svg.appendChild(el('path',{d:'M 222,22 L 220,100 L 270,100 L 268,22 Z',fill:'#D4780A'}));
-  svg.appendChild(el('path',{d:'M 215,18 Q 218,12 245,12 Q 272,12 274,18 L 268,24 Q 265,18 245,18 Q 225,18 222,24 Z',fill:'#B86808'}));
-  svg.appendChild(el('ellipse',{cx:245,cy:12,rx:31,ry:6.5,fill:'#0A1218'}));
-  /* Red stripe */
-  svg.appendChild(el('rect',{x:220,y:42,width:50,height:14,fill:'#CC2200'}));
-  svg.appendChild(el('rect',{x:218,y:93,width:62,height:8,fill:'#A86006',rx:1}));
-
-  /* Mast */
-  svg.appendChild(el('line',{x1:124,y1:36,x2:124,y2:6,stroke:'#7A8A94','stroke-width':3}));
-  svg.appendChild(el('line',{x1:96,y1:13,x2:154,y2:13,stroke:'#7A8A94','stroke-width':2}));
-  svg.appendChild(el('circle',{cx:124,cy:6,r:3.5,fill:'#909AA4'}));
-
-  /* Lifeboats */
-  [[222,106,15,9],[240,106,15,9],[222,118,15,9],[240,118,15,9]].forEach(function(b){
-    svg.appendChild(el('rect',{x:b[0],y:b[1],width:b[2],height:b[3],fill:'#E8D8A8',rx:2,stroke:'#C4A870','stroke-width':.8}));
-  });
-
-  /* CARGO DECK */
-  svg.appendChild(el('rect',{x:276,y:157,width:466,height:14,fill:'#2A3A28'}));
-  svg.appendChild(el('rect',{x:276,y:157,width:466,height:3,fill:'#364A34'}));
-
-  /* CARGO TANK DOMES */
-  [[288,157,310,138],[322,157,352,140],[368,157,396,142],[412,157,438,144],[454,157,478,146]].forEach(function(t){
-    svg.appendChild(el('path',{d:'M '+t[0]+','+t[1]+' Q '+t[0]+','+t[2]+' '+t[3]+','+t[2]+' Q '+(t[3]+((t[3]-t[0])*1))+','+t[2]+' '+(t[3]+((t[3]-t[0])*1))+','+t[1],fill:'#1C2C38'}));
-    var cx=t[3]; var cy=t[2];
-    svg.appendChild(el('ellipse',{cx:cx,cy:cy,rx:String(t[3]-t[0]),ry:'8',fill:'#182230'}));
-    svg.appendChild(el('ellipse',{cx:cx,cy:cy,rx:String((t[3]-t[0])/2),ry:'3.5',fill:'#1C2A36'}));
-  });
-
-  /* Tank dividers */
-  [318,370,414,456,508].forEach(function(x){
-    svg.appendChild(el('rect',{x:x,y:157,width:3,height:20,fill:'#364852'}));
-  });
-
-  /* Manifold */
-  svg.appendChild(el('rect',{x:456,y:143,width:32,height:24,fill:'#3A5060',rx:2}));
-  svg.appendChild(el('rect',{x:452,y:150,width:40,height:5,fill:'#4A6272',rx:1}));
-
-  /* Pipelines */
-  svg.appendChild(el('rect',{x:278,y:163,width:464,height:4,fill:'#3A5A6E',rx:1.5}));
-  svg.appendChild(el('rect',{x:278,y:168,width:464,height:3,fill:'#2E4A5A',rx:1}));
-
-  /* Railing */
-  svg.appendChild(el('line',{x1:278,y1:162,x2:280,y2:150,stroke:'#446070','stroke-width':1.2}));
-  svg.appendChild(el('line',{x1:280,y1:150,x2:720,y2:138,stroke:'#446070','stroke-width':1.2}));
-  [300,344,386,430,474,516,560,604,648,692].forEach(function(x){
-    var y2=150-(x-280)*12/440;
-    svg.appendChild(el('line',{x1:x,y1:162-(x-280)*12/440+6,x2:x,y2:y2,stroke:'#446070','stroke-width':1}));
-  });
-
-  /* Pump room deckhouse */
-  svg.appendChild(el('rect',{x:548,y:126,width:76,height:46,fill:'#1E2E3A',rx:1}));
-  svg.appendChild(el('rect',{x:546,y:126,width:80,height:4,fill:'#2A3E4E'}));
-  [556,570,584,598,612].forEach(function(x){
-    svg.appendChild(el('rect',{x:x,y:134,width:9,height:8,fill:'#4A8098',rx:1,opacity:'.8'}));
-  });
-  [558,572,588].forEach(function(x){
-    svg.appendChild(el('rect',{x:x,y:114,width:5,height:13,fill:'#2A3E4E',rx:1}));
-  });
-
-  /* Fore mast */
-  svg.appendChild(el('line',{x1:658,y1:157,x2:658,y2:102,stroke:'#5A6A78','stroke-width':3}));
-  svg.appendChild(el('line',{x1:636,y1:113,x2:680,y2:113,stroke:'#5A6A78','stroke-width':2}));
-  svg.appendChild(el('circle',{cx:658,cy:102,r:3.5,fill:'#6A7880'}));
-
-  /* Forecastle */
-  svg.appendChild(el('path',{d:'M 726,157 L 726,146 Q 728,143 748,141 L 808,139 Q 826,138 832,143 L 836,153 L 836,157 Z',fill:'#1E2C38'}));
-  svg.appendChild(el('rect',{x:726,y:145,width:112,height:3,fill:'#2A3E4E'}));
-  [744,766].forEach(function(x){svg.appendChild(el('ellipse',{cx:x,cy:153,rx:11,ry:5,fill:'#2E4050'}));});
-  [732,750,768,786,804,820].forEach(function(x){svg.appendChild(el('rect',{x:x,y:157,width:7,height:7,fill:'#2A3C4E',rx:1}));});
-  svg.appendChild(el('circle',{cx:838,cy:168,r:5.5,fill:'#101820',stroke:'#384858','stroke-width':1.5}));
-  svg.appendChild(el('circle',{cx:836,cy:180,r:4.5,fill:'#101820',stroke:'#384858','stroke-width':1.5}));
-
-  /* ZONE OVERLAYS */
-  zone('bridge', 18,  18, 204, 145, '#FF8F00', 'AKOMODASI & ANJUNGAN', 18);
-  zone('cargo',  278, 128, 268, 86,  '#B71C1C', 'CARGO TANK AREA',      18);
-  zone('engine', 22,  164, 256, 72,  '#C62828', 'KAMAR MESIN',          222);
-  zone('pump',   544, 118, 90,  96,  '#E63946', 'PUMP ROOM',            18);
-  zone('fore',   722, 132, 130, 98,  '#FF8F00', 'HALUAN & MOORING',     18);
-
-  /* Waterline label */
-  svg.appendChild(tx(880,240,'STARBOARD VIEW',{'text-anchor':'end',fill:'#607888','font-size':'8','font-family':'Arial','font-style':'italic'}));
+  /* ── Zone overlays ── */
+  svg.appendChild(zone('bridge', 40, 50, 240, 155, '#FF9900', 'AKOMODASI & ANJUNGAN', -18));
+  svg.appendChild(zone('cargo', 282, 115, 330, 80, '#FF2233', 'CARGO TANK AREA', -18));
+  svg.appendChild(zone('engine', 40, 155, 240, 60, '#CC2200', 'KAMAR MESIN', 60));
+  svg.appendChild(zone('pump', 612, 90, 88, 105, '#FF10AA', 'PUMP ROOM', -18));
+  svg.appendChild(zone('fore', 752, 96, 178, 142, '#FF9900', 'HALUAN & MOORING', -18));
 }
 
-/* ── TOP VIEW SVG ── */
 function hcvRenderTop(){
   var svg=document.getElementById('hcvTopSVG');
   if(!svg)return;
   var S='http://www.w3.org/2000/svg';
-  svg.innerHTML='';
-  function el(tag,attrs){
-    var e=document.createElementNS(S,tag);
-    Object.keys(attrs).forEach(function(k){e.setAttribute(k,attrs[k]);});
-    return e;
-  }
-  svg.appendChild(el('rect',{x:0,y:0,width:900,height:170,fill:'#0D1E36'}));
-  svg.appendChild(el('path',{d:'M 38 15 L 38 155 L 738 155 Q 848 155 868 85 Q 848 15 738 15 Z',fill:'#1A2E40',stroke:'#2A3E54','stroke-width':1.5}));
-  var tZones=[
-    {id:'bridge',path:'M 38 15 L 38 155 L 180 155 L 180 15 Z',col:'#FF8F00',lbls:['Akomodasi','& Anjungan'],lx:108,ly:85},
-    {id:'cargo', path:'M 184 15 L 184 155 L 592 155 L 592 15 Z',col:'#B71C1C',lbls:['CARGO TANKS'],lx:388,ly:85},
-    {id:'pump',  path:'M 596 15 L 596 155 L 686 155 L 686 15 Z',col:'#E63946',lbls:['Pump','Room'],lx:640,ly:85},
-    {id:'engine',path:'M 38 90 L 38 155 L 180 155 L 180 90 Z',col:'#C62828',lbls:['Engine','(Bawah)'],lx:108,ly:120},
-    {id:'fore',  path:'M 690 15 L 690 155 L 738 155 Q 848 155 868 85 Q 848 15 738 15 Z',col:'#FF8F00',lbls:['Forecastle'],lx:778,ly:85},
-  ];
-  tZones.forEach(function(z){
+
+  svg.innerHTML=`<defs>
+  <linearGradient id="cargoGT" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#C81820"/><stop offset="100%" stop-color="#A01018"/></linearGradient>
+  <linearGradient id="bridgeGT" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#CC8800"/><stop offset="100%" stop-color="#AA6600"/></linearGradient>
+  <linearGradient id="pumpGT" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#CC1080"/><stop offset="100%" stop-color="#AA0060"/></linearGradient>
+  <linearGradient id="foreGT" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#D48000"/><stop offset="100%" stop-color="#E89000"/></linearGradient>
+  <linearGradient id="bgGT" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0A1628"/><stop offset="100%" stop-color="#0E1E38"/></linearGradient>
+</defs>
+<rect width="960" height="210" fill="url(#bgGT)"/>
+<!-- SHIP BODY OUTLINE -->
+<path d="M 50,105 Q 48,55 100,30 L 200,20 L 700,18 Q 800,18 870,40 Q 920,58 935,80 Q 948,95 948,105 Q 948,120 935,132 Q 920,152 870,170 Q 800,188 700,190 L 200,188 L 100,178 Q 48,158 50,105 Z" fill="#0C1A2E" stroke="#2A4060" stroke-width="2"/>
+<!-- BRIDGE / ACCOMMODATION -->
+<path d="M 55,105 Q 54,70 88,48 L 165,34 L 196,28 L 198,68 Q 170,72 148,78 Q 120,84 108,94 L 102,110 L 108,120 Q 120,128 148,134 Q 170,140 198,144 L 196,184 L 165,178 Q 88,162 55,140 Q 53,128 55,105 Z" fill="url(#bridgeGT)" stroke="#FF9900" stroke-width="1.5"/>
+<!-- Bridge label -->
+<text x="124" y="93" text-anchor="middle" fill="#FFF" font-size="11" font-family="Arial" font-weight="800">Akomodasi</text>
+<text x="124" y="108" text-anchor="middle" fill="#FFF" font-size="11" font-family="Arial" font-weight="800">&amp; Anjungan</text>
+<!-- ENGINE ROOM (lower bridge) -->
+<path d="M 102,112 Q 120,130 150,136 Q 174,140 198,144 L 198,184 L 165,178 Q 88,162 55,140 Q 53,128 55,112 Z" fill="#AA6600" stroke="#FF9900" stroke-width="1" stroke-dasharray="4,2"/>
+<text x="124" y="158" text-anchor="middle" fill="#FFF" font-size="10" font-family="Arial" font-weight="700">Engine</text>
+<text x="124" y="171" text-anchor="middle" fill="#FFF" font-size="10" font-family="Arial" font-weight="700">(Bawah)</text>
+<!-- HELIPAD -->
+<ellipse cx="128" cy="58" rx="34" ry="28" fill="#1A3A1A" stroke="#44AA44" stroke-width="2"/>
+<ellipse cx="128" cy="58" rx="28" ry="22" fill="none" stroke="#44AA44" stroke-width="1.5"/>
+<text x="128" y="64" text-anchor="middle" fill="#44CC44" font-size="20" font-family="Arial" font-weight="900">H</text>
+<!-- CARGO TANK AREA -->
+<path d="M 200,22 L 700,20 L 700,190 L 200,188 L 198,144 L 198,68 Z" fill="url(#cargoGT)" stroke="#FF2233" stroke-width="1.5"/>
+<!-- Tank grid -->
+<g stroke="#E02030" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.55">
+  <line x1="320" y1="22" x2="320" y2="190"/><line x1="440" y1="20" x2="440" y2="190"/>
+  <line x1="560" y1="20" x2="560" y2="190"/><line x1="680" y1="20" x2="680" y2="190"/>
+  <line x1="200" y1="105" x2="700" y2="105"/>
+</g>
+<!-- Tank hatches -->
+<g>
+  <ellipse cx="260" cy="68" rx="22" ry="15" fill="#A00818" stroke="#CC1020" stroke-width="1.5"/>
+  <ellipse cx="260" cy="140" rx="22" ry="15" fill="#A00818" stroke="#CC1020" stroke-width="1.5"/>
+  <ellipse cx="380" cy="62" rx="22" ry="15" fill="#A00818" stroke="#CC1020" stroke-width="1.5"/>
+  <ellipse cx="380" cy="148" rx="22" ry="15" fill="#A00818" stroke="#CC1020" stroke-width="1.5"/>
+  <ellipse cx="500" cy="62" rx="22" ry="15" fill="#A00818" stroke="#CC1020" stroke-width="1.5"/>
+  <ellipse cx="500" cy="148" rx="22" ry="15" fill="#A00818" stroke="#CC1020" stroke-width="1.5"/>
+  <ellipse cx="620" cy="62" rx="22" ry="15" fill="#A00818" stroke="#CC1020" stroke-width="1.5"/>
+  <ellipse cx="620" cy="148" rx="22" ry="15" fill="#A00818" stroke="#CC1020" stroke-width="1.5"/>
+</g>
+<!-- Manifold -->
+<rect x="450" y="89" width="60" height="28" rx="4" fill="#3A1818" stroke="#CC2030" stroke-width="1.5"/>
+<rect x="444" y="99" width="72" height="9" rx="3" fill="#4A2020"/>
+<!-- Pipeline -->
+<rect x="200" y="101" width="500" height="7" rx="3" fill="#5A0A10" stroke="#801020" stroke-width="1"/>
+<!-- CARGO LABEL -->
+<text x="450" y="44" text-anchor="middle" fill="#FFF" font-size="15" font-family="Arial" font-weight="900">CARGO TANK AREA</text>
+<!-- PUMP ROOM -->
+<path d="M 702,20 L 790,22 L 790,188 L 702,188 Z" fill="url(#pumpGT)" stroke="#FF10AA" stroke-width="1.5"/>
+<circle cx="746" cy="74" r="22" fill="#AA0060" stroke="#FF10AA" stroke-width="1.5"/>
+<circle cx="746" cy="74" r="14" fill="none" stroke="#FF50CC" stroke-width="1.5"/>
+<circle cx="746" cy="74" r="6" fill="#FF10AA"/>
+<circle cx="746" cy="138" r="22" fill="#AA0060" stroke="#FF10AA" stroke-width="1.5"/>
+<circle cx="746" cy="138" r="14" fill="none" stroke="#FF50CC" stroke-width="1.5"/>
+<circle cx="746" cy="138" r="6" fill="#FF10AA"/>
+<rect x="738" y="97" width="16" height="39" rx="2" fill="#880050" stroke="#CC0080" stroke-width="1"/>
+<text x="746" y="107" text-anchor="middle" fill="#FFF" font-size="9" font-family="Arial" font-weight="800">PUMP</text>
+<text x="746" y="120" text-anchor="middle" fill="#FFF" font-size="9" font-family="Arial" font-weight="800">ROOM</text>
+<!-- FORECASTLE -->
+<path d="M 792,22 Q 870,20 920,50 Q 946,68 948,105 Q 946,142 920,162 Q 870,188 792,188 Z" fill="url(#foreGT)" stroke="#FF9900" stroke-width="1.5"/>
+<ellipse cx="832" cy="68" rx="24" ry="16" fill="#CC7700" stroke="#FFAA00" stroke-width="1.5"/>
+<ellipse cx="832" cy="68" rx="16" ry="10" fill="#AA5500" stroke="#FFAA00" stroke-width="1"/>
+<ellipse cx="832" cy="142" rx="24" ry="16" fill="#CC7700" stroke="#FFAA00" stroke-width="1.5"/>
+<ellipse cx="832" cy="142" rx="16" ry="10" fill="#AA5500" stroke="#FFAA00" stroke-width="1"/>
+<g fill="#AA6600" stroke="#FFCC00" stroke-width="1">
+  <rect x="872" y="62" width="10" height="8" rx="2"/><rect x="888" y="72" width="10" height="8" rx="2"/>
+  <rect x="898" y="90" width="10" height="8" rx="2"/><rect x="898" y="114" width="10" height="8" rx="2"/>
+  <rect x="888" y="132" width="10" height="8" rx="2"/><rect x="872" y="143" width="10" height="8" rx="2"/>
+</g>
+<text x="846" y="99" text-anchor="middle" fill="#FFF" font-size="10" font-family="Arial" font-weight="900">FORECASTLE</text>
+<text x="846" y="115" text-anchor="middle" fill="#FFF" font-size="10" font-family="Arial" font-weight="900">&amp; MOORING</text>
+<!-- ZONE DIVIDERS -->
+<line x1="198" y1="22" x2="198" y2="188" stroke="#FFF" stroke-width="2.5" opacity="0.5"/>
+<line x1="700" y1="20" x2="700" y2="190" stroke="#FFF" stroke-width="2.5" opacity="0.5"/>
+<line x1="790" y1="22" x2="790" y2="188" stroke="#FFF" stroke-width="2.5" opacity="0.5"/>
+<!-- Engine/Bridge divider -->
+<path d="M 102,112 Q 120,130 152,136 Q 176,140 198,144" fill="none" stroke="#FFAA00" stroke-width="1.5" stroke-dasharray="5,3" opacity="0.7"/>
+<!-- COMPASS -->
+<text x="926" y="16" text-anchor="middle" fill="#90CCFF" font-size="13" font-family="Arial" font-weight="700">N ↑</text>`;
+
+  /* ── Zone overlays (clickable) ── */
+  function tz(id,path_d,col,lx,ly,lbl){
     var g=document.createElementNS(S,'g');g.setAttribute('cursor','pointer');
-    var p=el('path',{d:z.path,fill:z.col,opacity:'.28',stroke:z.col,'stroke-width':1.2});
+    var p=document.createElementNS(S,'path');
+    p.setAttribute('d',path_d);p.setAttribute('fill',col);p.setAttribute('opacity','0');
+    p.setAttribute('stroke',col);p.setAttribute('stroke-width','2');
     g.appendChild(p);
-    g.addEventListener('click',function(){hcvZoneClick(z.id);});
-    g.addEventListener('mouseenter',function(){p.setAttribute('opacity','.45');});
-    g.addEventListener('mouseleave',function(){p.setAttribute('opacity','.28');});
-    svg.appendChild(g);
-    z.lbls.forEach(function(line,li){
-      var t=document.createElementNS(S,'text');
-      t.setAttribute('x',z.lx);t.setAttribute('y',z.ly-((z.lbls.length-1)*8)+li*16);
-      t.setAttribute('text-anchor','middle');t.setAttribute('fill','#fff');
-      t.setAttribute('font-size',z.lbls.length>1?'8':'10');
-      t.setAttribute('font-family','Arial');t.setAttribute('font-weight','700');
-      t.textContent=line;svg.appendChild(t);
-    });
-  });
-  [340,490,592].forEach(function(x){svg.appendChild(el('line',{x1:x,y1:15,x2:x,y2:155,stroke:'rgba(0,180,216,.25)','stroke-width':1.5}));});
-  [184,686,690].forEach(function(x){svg.appendChild(el('line',{x1:x,y1:15,x2:x,y2:155,stroke:'rgba(0,180,216,.3)','stroke-width':1.5}));});
-  /* Void strips */
-  svg.appendChild(el('rect',{x:184,y:15,width:408,height:14,fill:'#455A64',opacity:'.35'}));
-  svg.appendChild(el('rect',{x:184,y:141,width:408,height:14,fill:'#455A64',opacity:'.35'}));
-  var vt=document.createElementNS(S,'text');
-  vt.setAttribute('x','388');vt.setAttribute('y','26');vt.setAttribute('text-anchor','middle');
-  vt.setAttribute('fill','rgba(144,164,174,.7)');vt.setAttribute('font-size','8');vt.setAttribute('font-family','Arial');
-  vt.textContent='VOID / BALLAST SPACE';svg.appendChild(vt);
-  /* Manifold */
-  svg.appendChild(el('rect',{x:386,y:70,width:56,height:24,fill:'#4A6070',rx:3,opacity:'.7'}));
-  var mt=document.createElementNS(S,'text');
-  mt.setAttribute('x','414');mt.setAttribute('y','85');mt.setAttribute('text-anchor','middle');
-  mt.setAttribute('fill','#7FC3E8');mt.setAttribute('font-size','8');mt.setAttribute('font-family','Arial');
-  mt.textContent='MANIFOLD';svg.appendChild(mt);
-  var nt=document.createElementNS(S,'text');
-  nt.setAttribute('x','886');nt.setAttribute('y','18');nt.setAttribute('text-anchor','end');
-  nt.setAttribute('fill','rgba(0,180,216,.55)');nt.setAttribute('font-size','11');
-  nt.setAttribute('font-weight','700');nt.setAttribute('font-family','Arial');
-  nt.textContent='N \u2191';svg.appendChild(nt);
+    /* label always visible */
+    var t=document.createElementNS(S,'text');
+    t.setAttribute('x',lx);t.setAttribute('y',ly);t.setAttribute('text-anchor','middle');
+    t.setAttribute('fill','rgba(255,255,255,0.0)');t.setAttribute('font-size','1');t.setAttribute('pointer-events','none');
+    g.appendChild(t);
+    g.addEventListener('click',function(){hcvZoneClick(id);});
+    g.addEventListener('mouseenter',function(){p.setAttribute('opacity','0.2');p.setAttribute('stroke-width','3');});
+    g.addEventListener('mouseleave',function(){p.setAttribute('opacity','0');p.setAttribute('stroke-width','2');});
+    return g;
+  }
+  svg.appendChild(tz('bridge','M 55,55 Q 54,70 88,48 L 165,34 L 198,28 L 198,68 Q 170,72 148,78 Q 120,84 108,94 L 102,108 L 55,105 Z','#FF9900',124,80,''));
+  svg.appendChild(tz('engine','M 102,112 Q 120,130 150,136 Q 174,140 198,144 L 198,184 L 165,178 Q 88,162 55,140 Q 53,128 55,112 Z','#CC2200',124,160,''));
+  svg.appendChild(tz('cargo','M 200,22 L 700,20 L 700,190 L 200,188 L 198,144 L 198,68 Z','#FF2233',450,105,''));
+  svg.appendChild(tz('pump','M 702,20 L 790,22 L 790,188 L 702,188 Z','#FF10AA',746,105,''));
+  svg.appendChild(tz('fore','M 792,22 Q 870,20 920,50 Q 946,68 948,105 Q 946,142 920,162 Q 870,188 792,188 Z','#FF9900',860,105,''));
 }
+
+
 
 /* ── ZONE CLICK — show detail ── */
 function hcvZoneClick(zoneId){
