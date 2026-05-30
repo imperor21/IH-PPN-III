@@ -2134,169 +2134,92 @@ function hcvRenderProfile(){
   if(!svg)return;
   var S='http://www.w3.org/2000/svg';
   svg.innerHTML='';
-  function el(tag,attrs){
+
+  /* ── Blueprint image: profile view (crop dari baris A-F gambar blueprint) ── */
+  /* viewBox SVG: 900 x 245 — gambar di-crop bagian profile (baris A-F = ~37% tinggi dari total) */
+  var defs=document.createElementNS(S,'defs');
+  var clip=document.createElementNS(S,'clipPath');
+  clip.setAttribute('id','profileClip');
+  var clipRect=document.createElementNS(S,'rect');
+  clipRect.setAttribute('x','0');clipRect.setAttribute('y','0');
+  clipRect.setAttribute('width','900');clipRect.setAttribute('height','245');
+  clip.appendChild(clipRect);
+  defs.appendChild(clip);
+  svg.appendChild(defs);
+
+  /* Background gelap sesuai tema HCV */
+  var bg=document.createElementNS(S,'rect');
+  bg.setAttribute('x','0');bg.setAttribute('y','0');
+  bg.setAttribute('width','900');bg.setAttribute('height','245');
+  bg.setAttribute('fill','#0A1828');
+  svg.appendChild(bg);
+
+  /* Image blueprint — profile view (baris A-F dari blueprint, sekitar y=40 sampai y=290 dari gambar asli ~860px tinggi) */
+  /* Gambar asli: 1344x960. Profile view (baris A-F) ada di ~y=40..310 dari total 960 */
+  /* Kita tampilkan dengan viewBox crop: x=0, y=0, w=1344, h=310, dipetakan ke 900x245 SVG */
+  var img=document.createElementNS(S,'image');
+  img.setAttribute('href','https://raw.githubusercontent.com/imperor21/IH-PPN-III/main/Ship%20Blueprint.png');
+  img.setAttribute('x','0');
+  img.setAttribute('y','0');
+  img.setAttribute('width','900');
+  img.setAttribute('height','900');        /* tampilkan bagian atas gambar — profile row */
+  img.setAttribute('preserveAspectRatio','xMidYMin slice');
+  img.setAttribute('clip-path','url(#profileClip)');
+  img.setAttribute('opacity','1');
+  svg.appendChild(img);
+
+  /* helper untuk zone overlay */
+  var el=function(tag,attrs){
     var e=document.createElementNS(S,tag);
     Object.keys(attrs).forEach(function(k){e.setAttribute(k,attrs[k]);});
     return e;
-  }
-  function tx(x,y,txt,attrs){
-    var t=document.createElementNS(S,'text');
-    t.setAttribute('x',x);t.setAttribute('y',y);
-    Object.keys(attrs||{}).forEach(function(k){t.setAttribute(k,attrs[k]);});
-    t.textContent=txt;return t;
-  }
-  function zone(id,x,y,w,h,col,lbl,ly){
+  };
+
+  function zone(id,x,y,w,h,col,lbl){
     var g=document.createElementNS(S,'g');
     g.setAttribute('cursor','pointer');
-    var r=el('rect',{x:x,y:y,width:w,height:h,fill:col,opacity:'.18',rx:3,stroke:col,'stroke-width':1.5});
+    /* highlight rect */
+    var r=el('rect',{x:x,y:y,width:w,height:h,fill:col,opacity:'.0',rx:4,stroke:col,'stroke-width':2});
     g.appendChild(r);
-    g.appendChild(el('rect',{x:x+1,y:y+1,width:5,height:h-2,fill:col,rx:3}));
-    /* leader line up */
-    g.appendChild(el('line',{x1:x+w/2,y1:y,x2:x+w/2,y2:ly+11,stroke:col,'stroke-width':1,'stroke-dasharray':'3,2',opacity:'.7'}));
-    /* label box */
-    var bw=lbl.length*6.5+14; var bh=12;
+    /* label pill di bawah zona */
+    var bw=lbl.length*6.2+16; var bh=14;
     var bx=Math.max(2,Math.min(896-bw,x+w/2-bw/2));
-    g.appendChild(el('rect',{x:bx,y:ly-1,width:bw,height:bh,fill:'#060E1E',stroke:col,'stroke-width':1.2,rx:3,opacity:'.94'}));
+    var by=y+h+4;
+    g.appendChild(el('rect',{x:bx,y:by,width:bw,height:bh,fill:'#060E1E',stroke:col,'stroke-width':1.2,rx:4,opacity:'.92'}));
     var t=document.createElementNS(S,'text');
-    t.setAttribute('x',bx+bw/2);t.setAttribute('y',ly+8);t.setAttribute('text-anchor','middle');
-    t.setAttribute('fill',col);t.setAttribute('font-size','8');t.setAttribute('font-family','Arial');t.setAttribute('font-weight','700');
+    t.setAttribute('x',String(bx+bw/2));t.setAttribute('y',String(by+9.5));
+    t.setAttribute('text-anchor','middle');t.setAttribute('fill',col);
+    t.setAttribute('font-size','7.5');t.setAttribute('font-family','Arial');t.setAttribute('font-weight','700');
     t.textContent=lbl;g.appendChild(t);
+    /* dot marker di sudut atas kiri zona */
+    g.appendChild(el('circle',{cx:x+6,cy:y+6,r:3,fill:col,opacity:'.9'}));
     g.addEventListener('click',function(){hcvZoneClick(id);});
-    g.addEventListener('mouseenter',function(){r.setAttribute('opacity','.36');});
-    g.addEventListener('mouseleave',function(){r.setAttribute('opacity','.18');});
+    g.addEventListener('mouseenter',function(){r.setAttribute('opacity','.22');r.setAttribute('stroke-width','2.5');});
+    g.addEventListener('mouseleave',function(){r.setAttribute('opacity','.0');r.setAttribute('stroke-width','2');});
     svg.appendChild(g);
   }
 
-  /* Sky */
-  svg.appendChild(el('rect',{x:0,y:0,width:900,height:195,fill:'#C8D8E8'}));
-  svg.appendChild(el('rect',{x:0,y:175,width:900,height:20,fill:'#B8CCDC'}));
-  /* Water */
-  svg.appendChild(el('rect',{x:0,y:195,width:900,height:50,fill:'#2E6E9E'}));
-  svg.appendChild(el('rect',{x:0,y:195,width:900,height:4,fill:'#3A80B8'}));
-  svg.appendChild(el('line',{x1:0,y1:206,x2:900,y2:206,stroke:'#3A80B8','stroke-width':1,opacity:'.6'}));
-  svg.appendChild(el('line',{x1:0,y1:218,x2:900,y2:218,stroke:'#3A80B8','stroke-width':.8,opacity:'.35'}));
+  /* ZONE OVERLAYS — disesuaikan dengan posisi elemen di blueprint
+     Blueprint profile view (baris A-F) setelah di-crop & scale ke 900x245:
+     - Accommodation/Bridge (kiri, superstructure) : x≈10, y≈10, w≈175, h≈185
+     - Cargo Tank Area (tengah panjang)            : x≈185, y≈60, w≈430, h≈130
+     - Pump Room (kanan tengah)                   : x≈615, y≈60, w≈85, h≈130
+     - Engine Room (kiri bawah, di bawah bridge)  : x≈10, y≈170, w≈175, h≈60
+     - Haluan / Fore (kanan)                      : x≈700, y≈60, w≈185, h≈150
+  */
+  zone('bridge', 10,  10,  175, 185, '#FF8F00', 'AKOMODASI & ANJUNGAN');
+  zone('cargo',  185, 60,  430, 130, '#B71C1C', 'CARGO TANK AREA');
+  zone('engine', 10,  170, 175, 65,  '#C62828', 'KAMAR MESIN');
+  zone('pump',   615, 60,  85,  130, '#E63946', 'PUMP ROOM');
+  zone('fore',   700, 55,  190, 175, '#FF8F00', 'HALUAN & MOORING');
 
-  /* HULL */
-  svg.appendChild(el('path',{d:'M 30,198 L 30,160 L 52,157 L 795,143 Q 830,140 848,150 L 854,168 L 854,198 Z',fill:'#181818'}));
-  /* Red anti-fouling */
-  svg.appendChild(el('path',{d:'M 31,198 L 31,210 Q 32,220 60,222 L 798,218 Q 826,216 840,210 L 852,202 L 854,195 Q 840,195 830,196 L 35,196 Z',fill:'#8C1A14'}));
-  /* White waterline */
-  svg.appendChild(el('line',{x1:31,y1:198,x2:795,y2:198,stroke:'#D8DDD5','stroke-width':2.5}));
-  svg.appendChild(el('line',{x1:795,y1:198,x2:843,y2:192,stroke:'#D8DDD5','stroke-width':2.5}));
-  /* Hull sheer line */
-  svg.appendChild(el('line',{x1:52,y1:157,x2:795,y2:143,stroke:'#252E38','stroke-width':1.5}));
-  /* Stern */
-  svg.appendChild(el('rect',{x:22,y:155,width:9,height:46,fill:'#101010',rx:1}));
-  svg.appendChild(el('rect',{x:22,y:198,width:9,height:24,fill:'#6A1210',rx:1}));
-  /* Bow */
-  svg.appendChild(el('path',{d:'M 844,150 Q 855,148 862,158 L 868,175 L 868,198 L 854,198 L 852,168 Z',fill:'#181818'}));
-  svg.appendChild(el('path',{d:'M 854,198 L 868,198 L 868,212 Q 858,220 838,222 L 798,222 Q 822,220 836,214 Z',fill:'#8C1A14'}));
-  svg.appendChild(el('ellipse',{cx:866,cy:212,rx:12,ry:8,fill:'#6A1210',opacity:'.65'}));
-
-  /* SUPERSTRUCTURE */
-  svg.appendChild(el('rect',{x:30,y:66,width:185,height:96,fill:'#D8DCDE',rx:1}));
-  [78,90,102,114,126,138,150].forEach(function(y){
-    svg.appendChild(el('line',{x1:30,y1:y,x2:215,y2:y,stroke:'#BCC0C4','stroke-width':1.2}));
-  });
-  /* Windows */
-  [[68,11],[80,10],[92,10],[104,9],[116,9],[128,8],[140,8],[152,7]].forEach(function(row,fi){
-    var y=row[0],h=row[1];
-    for(var x=36;x<213;x+=14){
-      svg.appendChild(el('rect',{x:x,y:y,width:10,height:h,fill:'#7AAEC2',rx:1,opacity:String(0.95-fi*0.08)}));
-    }
-  });
-  /* Bridge deck */
-  svg.appendChild(el('rect',{x:18,y:50,width:208,height:18,fill:'#CDD2D6',rx:1}));
-  svg.appendChild(el('rect',{x:24,y:53,width:196,height:12,fill:'#7ABCD0',rx:1,opacity:'.6'}));
-  [52,84,116,148,180,208].forEach(function(x){
-    svg.appendChild(el('line',{x1:x,y1:53,x2:x,y2:65,stroke:'#9CC8D8','stroke-width':1}));
-  });
-  svg.appendChild(el('rect',{x:40,y:36,width:152,height:15,fill:'#C0C6CC',rx:1}));
-  svg.appendChild(el('rect',{x:62,y:22,width:108,height:15,fill:'#B4BAC0',rx:1}));
-
-  /* FUNNEL (orange/amber) */
-  svg.appendChild(el('path',{d:'M 222,22 L 220,100 L 270,100 L 268,22 Z',fill:'#D4780A'}));
-  svg.appendChild(el('path',{d:'M 215,18 Q 218,12 245,12 Q 272,12 274,18 L 268,24 Q 265,18 245,18 Q 225,18 222,24 Z',fill:'#B86808'}));
-  svg.appendChild(el('ellipse',{cx:245,cy:12,rx:31,ry:6.5,fill:'#0A1218'}));
-  /* Red stripe */
-  svg.appendChild(el('rect',{x:220,y:42,width:50,height:14,fill:'#CC2200'}));
-  svg.appendChild(el('rect',{x:218,y:93,width:62,height:8,fill:'#A86006',rx:1}));
-
-  /* Mast */
-  svg.appendChild(el('line',{x1:124,y1:36,x2:124,y2:6,stroke:'#7A8A94','stroke-width':3}));
-  svg.appendChild(el('line',{x1:96,y1:13,x2:154,y2:13,stroke:'#7A8A94','stroke-width':2}));
-  svg.appendChild(el('circle',{cx:124,cy:6,r:3.5,fill:'#909AA4'}));
-
-  /* Lifeboats */
-  [[222,106,15,9],[240,106,15,9],[222,118,15,9],[240,118,15,9]].forEach(function(b){
-    svg.appendChild(el('rect',{x:b[0],y:b[1],width:b[2],height:b[3],fill:'#E8D8A8',rx:2,stroke:'#C4A870','stroke-width':.8}));
-  });
-
-  /* CARGO DECK */
-  svg.appendChild(el('rect',{x:276,y:157,width:466,height:14,fill:'#2A3A28'}));
-  svg.appendChild(el('rect',{x:276,y:157,width:466,height:3,fill:'#364A34'}));
-
-  /* CARGO TANK DOMES */
-  [[288,157,310,138],[322,157,352,140],[368,157,396,142],[412,157,438,144],[454,157,478,146]].forEach(function(t){
-    svg.appendChild(el('path',{d:'M '+t[0]+','+t[1]+' Q '+t[0]+','+t[2]+' '+t[3]+','+t[2]+' Q '+(t[3]+((t[3]-t[0])*1))+','+t[2]+' '+(t[3]+((t[3]-t[0])*1))+','+t[1],fill:'#1C2C38'}));
-    var cx=t[3]; var cy=t[2];
-    svg.appendChild(el('ellipse',{cx:cx,cy:cy,rx:String(t[3]-t[0]),ry:'8',fill:'#182230'}));
-    svg.appendChild(el('ellipse',{cx:cx,cy:cy,rx:String((t[3]-t[0])/2),ry:'3.5',fill:'#1C2A36'}));
-  });
-
-  /* Tank dividers */
-  [318,370,414,456,508].forEach(function(x){
-    svg.appendChild(el('rect',{x:x,y:157,width:3,height:20,fill:'#364852'}));
-  });
-
-  /* Manifold */
-  svg.appendChild(el('rect',{x:456,y:143,width:32,height:24,fill:'#3A5060',rx:2}));
-  svg.appendChild(el('rect',{x:452,y:150,width:40,height:5,fill:'#4A6272',rx:1}));
-
-  /* Pipelines */
-  svg.appendChild(el('rect',{x:278,y:163,width:464,height:4,fill:'#3A5A6E',rx:1.5}));
-  svg.appendChild(el('rect',{x:278,y:168,width:464,height:3,fill:'#2E4A5A',rx:1}));
-
-  /* Railing */
-  svg.appendChild(el('line',{x1:278,y1:162,x2:280,y2:150,stroke:'#446070','stroke-width':1.2}));
-  svg.appendChild(el('line',{x1:280,y1:150,x2:720,y2:138,stroke:'#446070','stroke-width':1.2}));
-  [300,344,386,430,474,516,560,604,648,692].forEach(function(x){
-    var y2=150-(x-280)*12/440;
-    svg.appendChild(el('line',{x1:x,y1:162-(x-280)*12/440+6,x2:x,y2:y2,stroke:'#446070','stroke-width':1}));
-  });
-
-  /* Pump room deckhouse */
-  svg.appendChild(el('rect',{x:548,y:126,width:76,height:46,fill:'#1E2E3A',rx:1}));
-  svg.appendChild(el('rect',{x:546,y:126,width:80,height:4,fill:'#2A3E4E'}));
-  [556,570,584,598,612].forEach(function(x){
-    svg.appendChild(el('rect',{x:x,y:134,width:9,height:8,fill:'#4A8098',rx:1,opacity:'.8'}));
-  });
-  [558,572,588].forEach(function(x){
-    svg.appendChild(el('rect',{x:x,y:114,width:5,height:13,fill:'#2A3E4E',rx:1}));
-  });
-
-  /* Fore mast */
-  svg.appendChild(el('line',{x1:658,y1:157,x2:658,y2:102,stroke:'#5A6A78','stroke-width':3}));
-  svg.appendChild(el('line',{x1:636,y1:113,x2:680,y2:113,stroke:'#5A6A78','stroke-width':2}));
-  svg.appendChild(el('circle',{cx:658,cy:102,r:3.5,fill:'#6A7880'}));
-
-  /* Forecastle */
-  svg.appendChild(el('path',{d:'M 726,157 L 726,146 Q 728,143 748,141 L 808,139 Q 826,138 832,143 L 836,153 L 836,157 Z',fill:'#1E2C38'}));
-  svg.appendChild(el('rect',{x:726,y:145,width:112,height:3,fill:'#2A3E4E'}));
-  [744,766].forEach(function(x){svg.appendChild(el('ellipse',{cx:x,cy:153,rx:11,ry:5,fill:'#2E4050'}));});
-  [732,750,768,786,804,820].forEach(function(x){svg.appendChild(el('rect',{x:x,y:157,width:7,height:7,fill:'#2A3C4E',rx:1}));});
-  svg.appendChild(el('circle',{cx:838,cy:168,r:5.5,fill:'#101820',stroke:'#384858','stroke-width':1.5}));
-  svg.appendChild(el('circle',{cx:836,cy:180,r:4.5,fill:'#101820',stroke:'#384858','stroke-width':1.5}));
-
-  /* ZONE OVERLAYS */
-  zone('bridge', 18,  18, 204, 145, '#FF8F00', 'AKOMODASI & ANJUNGAN', 18);
-  zone('cargo',  278, 128, 268, 86,  '#B71C1C', 'CARGO TANK AREA',      18);
-  zone('engine', 22,  164, 256, 72,  '#C62828', 'KAMAR MESIN',          222);
-  zone('pump',   544, 118, 90,  96,  '#E63946', 'PUMP ROOM',            18);
-  zone('fore',   722, 132, 130, 98,  '#FF8F00', 'HALUAN & MOORING',     18);
-
-  /* Waterline label */
-  svg.appendChild(tx(880,240,'STARBOARD VIEW',{'text-anchor':'end',fill:'#607888','font-size':'8','font-family':'Arial','font-style':'italic'}));
+  /* Label VIEW */
+  var vt=document.createElementNS(S,'text');
+  vt.setAttribute('x','894');vt.setAttribute('y','240');vt.setAttribute('text-anchor','end');
+  vt.setAttribute('fill','rgba(0,180,216,.5)');vt.setAttribute('font-size','8');
+  vt.setAttribute('font-family','Arial');vt.setAttribute('font-style','italic');
+  vt.textContent='STARBOARD VIEW — VLCC Blueprint';
+  svg.appendChild(vt);
 }
 
 /* ── TOP VIEW SVG ── */
@@ -2305,57 +2228,88 @@ function hcvRenderTop(){
   if(!svg)return;
   var S='http://www.w3.org/2000/svg';
   svg.innerHTML='';
-  function el(tag,attrs){
+
+  /* Background */
+  var bg=document.createElementNS(S,'rect');
+  bg.setAttribute('x','0');bg.setAttribute('y','0');
+  bg.setAttribute('width','900');bg.setAttribute('height','170');
+  bg.setAttribute('fill','#0A1828');
+  svg.appendChild(bg);
+
+  /* ── Blueprint image: top view (Main Deck) — baris G-J dari blueprint asli ── */
+  /* Gambar asli 1344x960. Baris G-J (TOP VIEW section) ada di sekitar y=390..570 dari 960 total */
+  /* Scale factor: SVG width 900 / image width 1344 = 0.6696 */
+  /* Crop y: start=390, height=180 → dipetakan ke SVG height 170 */
+  /* Kita pakai foreignObject + img agar bisa crop dengan object-position */
+  var fo=document.createElementNS(S,'foreignObject');
+  fo.setAttribute('x','0');fo.setAttribute('y','0');
+  fo.setAttribute('width','900');fo.setAttribute('height','170');
+  /* xhtml namespace untuk img di dalam foreignObject */
+  var div=document.createElementNS('http://www.w3.org/1999/xhtml','div');
+  div.setAttribute('style','width:900px;height:170px;overflow:hidden;position:relative;');
+  var imgEl=document.createElementNS('http://www.w3.org/1999/xhtml','img');
+  imgEl.setAttribute('src','https://raw.githubusercontent.com/imperor21/IH-PPN-III/main/Ship%20Blueprint.png');
+  /* Scale: lebar 900px, gambar asli 1344px → scale 0.67. Crop bagian top view (G-J) */
+  /* Top view di blueprint ada di ~40.6% sampai 59.4% tinggi gambar */
+  /* Gambar ditampilkan penuh width=900, height proporsional = 960/1344*900 = 642px */
+  /* Crop: object-position-y = -(40.6% * 642) = -260px */
+  imgEl.setAttribute('style','width:900px;height:642px;object-fit:none;object-position:0 -260px;display:block;');
+  div.appendChild(imgEl);
+  fo.appendChild(div);
+  svg.appendChild(fo);
+
+  /* helper el */
+  var el=function(tag,attrs){
     var e=document.createElementNS(S,tag);
     Object.keys(attrs).forEach(function(k){e.setAttribute(k,attrs[k]);});
     return e;
-  }
-  svg.appendChild(el('rect',{x:0,y:0,width:900,height:170,fill:'#0D1E36'}));
-  svg.appendChild(el('path',{d:'M 38 15 L 38 155 L 738 155 Q 848 155 868 85 Q 848 15 738 15 Z',fill:'#1A2E40',stroke:'#2A3E54','stroke-width':1.5}));
+  };
+
+  /* Zone overlays — disesuaikan dengan Top View (G-J) di blueprint
+     Setelah scale ke 900px lebar:
+     - Bridge/Accommodation (kiri/AFT)   : x≈10,  y≈15,  w≈130, h≈140
+     - Cargo Tank Area (tengah)           : x≈140, y≈15,  w≈520, h≈140
+     - Pump Room (tengah-kanan)           : x≈660, y≈15,  w≈80,  h≈140
+     - Engine Room (kiri bawah/AFT)       : x≈10,  y≈90,  w≈130, h≈65
+     - Fore (kanan)                       : x≈740, y≈15,  w≈150, h≈140
+  */
   var tZones=[
-    {id:'bridge',path:'M 38 15 L 38 155 L 180 155 L 180 15 Z',col:'#FF8F00',lbls:['Akomodasi','& Anjungan'],lx:108,ly:85},
-    {id:'cargo', path:'M 184 15 L 184 155 L 592 155 L 592 15 Z',col:'#B71C1C',lbls:['CARGO TANKS'],lx:388,ly:85},
-    {id:'pump',  path:'M 596 15 L 596 155 L 686 155 L 686 15 Z',col:'#E63946',lbls:['Pump','Room'],lx:640,ly:85},
-    {id:'engine',path:'M 38 90 L 38 155 L 180 155 L 180 90 Z',col:'#C62828',lbls:['Engine','(Bawah)'],lx:108,ly:120},
-    {id:'fore',  path:'M 690 15 L 690 155 L 738 155 Q 848 155 868 85 Q 848 15 738 15 Z',col:'#FF8F00',lbls:['Forecastle'],lx:778,ly:85},
+    {id:'bridge',x:10,  y:15, w:130, h:140, col:'#FF8F00', lbl:'AKOMODASI'},
+    {id:'cargo', x:140, y:15, w:520, h:140, col:'#B71C1C', lbl:'CARGO TANK AREA'},
+    {id:'pump',  x:660, y:15, w:80,  h:140, col:'#E63946', lbl:'PUMP ROOM'},
+    {id:'engine',x:10,  y:90, w:130, h:65,  col:'#C62828', lbl:'ENGINE ROOM'},
+    {id:'fore',  x:740, y:15, w:150, h:140, col:'#FF8F00', lbl:'FORE'},
   ];
+
   tZones.forEach(function(z){
     var g=document.createElementNS(S,'g');g.setAttribute('cursor','pointer');
-    var p=el('path',{d:z.path,fill:z.col,opacity:'.28',stroke:z.col,'stroke-width':1.2});
-    g.appendChild(p);
+    var r=el('rect',{x:z.x,y:z.y,width:z.w,height:z.h,fill:z.col,opacity:'0',rx:3,stroke:z.col,'stroke-width':1.5});
+    g.appendChild(r);
+    /* label pill di tengah zona */
+    var bw=z.lbl.length*6+14; var bh=13;
+    var bx=Math.max(z.x+2,Math.min(z.x+z.w-bw-2,z.x+z.w/2-bw/2));
+    var by=z.y+z.h/2-bh/2;
+    g.appendChild(el('rect',{x:bx,y:by,width:bw,height:bh,fill:'rgba(6,14,30,0.88)',stroke:z.col,'stroke-width':1,rx:3}));
+    var t=document.createElementNS(S,'text');
+    t.setAttribute('x',String(bx+bw/2));t.setAttribute('y',String(by+8.5));
+    t.setAttribute('text-anchor','middle');t.setAttribute('fill',z.col);
+    t.setAttribute('font-size','7');t.setAttribute('font-family','Arial');t.setAttribute('font-weight','700');
+    t.textContent=z.lbl;g.appendChild(t);
+    /* dot marker */
+    g.appendChild(el('circle',{cx:z.x+5,cy:z.y+5,r:2.5,fill:z.col,opacity:'.85'}));
     g.addEventListener('click',function(){hcvZoneClick(z.id);});
-    g.addEventListener('mouseenter',function(){p.setAttribute('opacity','.45');});
-    g.addEventListener('mouseleave',function(){p.setAttribute('opacity','.28');});
+    g.addEventListener('mouseenter',function(){r.setAttribute('opacity','.22');r.setAttribute('stroke-width','2');});
+    g.addEventListener('mouseleave',function(){r.setAttribute('opacity','0');r.setAttribute('stroke-width','1.5');});
     svg.appendChild(g);
-    z.lbls.forEach(function(line,li){
-      var t=document.createElementNS(S,'text');
-      t.setAttribute('x',z.lx);t.setAttribute('y',z.ly-((z.lbls.length-1)*8)+li*16);
-      t.setAttribute('text-anchor','middle');t.setAttribute('fill','#fff');
-      t.setAttribute('font-size',z.lbls.length>1?'8':'10');
-      t.setAttribute('font-family','Arial');t.setAttribute('font-weight','700');
-      t.textContent=line;svg.appendChild(t);
-    });
   });
-  [340,490,592].forEach(function(x){svg.appendChild(el('line',{x1:x,y1:15,x2:x,y2:155,stroke:'rgba(0,180,216,.25)','stroke-width':1.5}));});
-  [184,686,690].forEach(function(x){svg.appendChild(el('line',{x1:x,y1:15,x2:x,y2:155,stroke:'rgba(0,180,216,.3)','stroke-width':1.5}));});
-  /* Void strips */
-  svg.appendChild(el('rect',{x:184,y:15,width:408,height:14,fill:'#455A64',opacity:'.35'}));
-  svg.appendChild(el('rect',{x:184,y:141,width:408,height:14,fill:'#455A64',opacity:'.35'}));
-  var vt=document.createElementNS(S,'text');
-  vt.setAttribute('x','388');vt.setAttribute('y','26');vt.setAttribute('text-anchor','middle');
-  vt.setAttribute('fill','rgba(144,164,174,.7)');vt.setAttribute('font-size','8');vt.setAttribute('font-family','Arial');
-  vt.textContent='VOID / BALLAST SPACE';svg.appendChild(vt);
-  /* Manifold */
-  svg.appendChild(el('rect',{x:386,y:70,width:56,height:24,fill:'#4A6070',rx:3,opacity:'.7'}));
-  var mt=document.createElementNS(S,'text');
-  mt.setAttribute('x','414');mt.setAttribute('y','85');mt.setAttribute('text-anchor','middle');
-  mt.setAttribute('fill','#7FC3E8');mt.setAttribute('font-size','8');mt.setAttribute('font-family','Arial');
-  mt.textContent='MANIFOLD';svg.appendChild(mt);
+
+  /* Label */
   var nt=document.createElementNS(S,'text');
-  nt.setAttribute('x','886');nt.setAttribute('y','18');nt.setAttribute('text-anchor','end');
-  nt.setAttribute('fill','rgba(0,180,216,.55)');nt.setAttribute('font-size','11');
-  nt.setAttribute('font-weight','700');nt.setAttribute('font-family','Arial');
-  nt.textContent='N \u2191';svg.appendChild(nt);
+  nt.setAttribute('x','894');nt.setAttribute('y','165');nt.setAttribute('text-anchor','end');
+  nt.setAttribute('fill','rgba(0,180,216,.5)');nt.setAttribute('font-size','7.5');
+  nt.setAttribute('font-family','Arial');nt.setAttribute('font-style','italic');
+  nt.textContent='TOP VIEW (MAIN DECK) — VLCC Blueprint';
+  svg.appendChild(nt);
 }
 
 /* ── ZONE CLICK — show detail ── */
