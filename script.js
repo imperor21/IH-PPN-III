@@ -7,19 +7,16 @@ const API_URL = "https://script.google.com/macros/s/AKfycbxWscFjKrrqQgNwmeRLAfjB
 
 async function gasPost(payload) {
   const controller = new AbortController();
-  /* Timeout 20 detik — GAS cold start biasanya 3-8 detik, 20 sudah cukup longgar */
-  const timeout = setTimeout(() => controller.abort(), 20000);
+  const timeout = setTimeout(() => controller.abort(), 30000); // 30 detik timeout
   try {
     const res = await fetch(API_URL, {
       method:"POST", redirect:"follow",
-      headers:{
-        "Content-Type":"text/plain;charset=utf-8",
-        "Connection":"keep-alive"
-      },
+      headers:{"Content-Type":"text/plain;charset=utf-8"},
       body:JSON.stringify(payload),
       signal: controller.signal
     });
     clearTimeout(timeout);
+    // GAS kadang return HTML redirect jika session expired atau deploy error
     const text = await res.text();
     try {
       return JSON.parse(text);
@@ -29,21 +26,12 @@ async function gasPost(payload) {
     }
   } catch(e) {
     clearTimeout(timeout);
-    if (e.name === "AbortError") throw new Error("Request timeout (>20 detik). Server GAS tidak merespons.");
+    if (e.name === "AbortError") {
+      throw new Error("Request timeout (>30 detik). Server GAS tidak merespons.");
+    }
     throw e;
   }
 }
-
-/* ── GAS Warm-up: ping GAS saat halaman pertama dimuat agar cold start
-   selesai sebelum user klik tombol Login ── */
-(function warmupGAS(){
-  /* Fire-and-forget ping ringan — tidak perlu response */
-  fetch(API_URL, {
-    method:"POST", redirect:"follow",
-    headers:{"Content-Type":"text/plain;charset=utf-8"},
-    body:JSON.stringify({action:"ping"})
-  }).catch(()=>{/* diabaikan */});
-})();
 
 /* AUTH */
 function getToken(){return sessionStorage.getItem("ppn_token");}
@@ -113,14 +101,12 @@ async function doLogin(){
       loginAttempts=0;localStorage.removeItem("ppn_locked_until");
       saveSession(data,data.token);
       document.getElementById("loginError").style.display="none";
-      /* ── Langsung masuk dashboard tanpa tunggu loadData selesai ── */
       document.getElementById("loginOverlay").classList.add("hidden");
       document.getElementById("sidebarUsername").textContent=getMappedName(data.displayName);
-      applyRoleUI();
-      /* loadData berjalan di background — dashboard sudah terlihat */
-      loadData();
+      applyRoleUI();loadData();
     }
     else if(data.status==="otp_required"){
+      /* Tampilkan panel OTP */
       _otpUsername=username;
       showOTPPanel(data.message);
     }
@@ -218,11 +204,9 @@ async function doVerifyOTP(){
     if(data.status==="ok"){
       if(_otpTimer)clearInterval(_otpTimer);
       saveSession(data,data.token);
-      /* ── Langsung masuk, loadData di background ── */
       document.getElementById("loginOverlay").classList.add("hidden");
       document.getElementById("sidebarUsername").textContent=getMappedName(data.displayName);
-      applyRoleUI();
-      loadData();
+      applyRoleUI();loadData();
     }else{
       var errEl=document.getElementById("otpError");
       var errMsg=document.getElementById("otpErrorMsg");
@@ -3825,16 +3809,25 @@ function renderRiskTable(data){
 
 function renderCriticalCards(data){
   var el=document.getElementById("rpCriticalCards");
-  if(!el||!data.length)return;
+  if(!el||!data.length){if(el)el.innerHTML="";return;}
 
-  el.innerHTML='<div style="margin:8px 0 6px;font-size:12px;font-weight:700;color:var(--text)">'
-    +'<i class="fas fa-fire-flame-curved" style="color:#C62828;margin-right:6px"></i>'
-    +'Kapal Prioritas Intervensi Segera</div>'
+  el.innerHTML='<div style="margin:16px 0 8px;font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px">'
+    +'<i class="fas fa-fire-flame-curved" style="color:#C62828"></i>'
+    +'Kapal Prioritas Intervensi Segera'
+    +'<span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:4px">— kapal dengan skor risiko tertinggi berdasarkan data IH yang tersedia</span>'
+    +'</div>'
     +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:10px">'
     +data.map(function(r){
+      /* Dimensi label map */
+      var dims=[
+        {label:"HRA Coverage",     sublabel:"Riwayat Pelaksanaan HRA",         score:r.hraScore,     max:30, info:r.hraInfo, c:r.hraScore>20?"#C62828":r.hraScore>10?"#E65100":"#2E7D32", icon:"fas fa-clipboard-check"},
+        {label:"Hazard Pengukuran",sublabel:"Parameter Melebihi NAB (5 Faktor)",score:r.hazardScore,  max:35, info:r.hazardInfo,c:r.hazardScore>25?"#C62828":r.hazardScore>12?"#E65100":"#2E7D32",icon:"fas fa-radiation"},
+        {label:"DAT",              sublabel:"Drug & Alcohol Test",               score:r.datScore,    max:20, info:r.datInfo,  c:r.datScore>=20?"#C62828":r.datScore>0?"#E65100":"#2E7D32",  icon:"fas fa-vial"},
+        {label:"Biomonitoring",    sublabel:"Benzene S-PMA vs BEI ACGIH",        score:r.bioScore,    max:15, info:r.bioInfo,  c:r.bioScore>8?"#C62828":r.bioScore>0?"#7B1FA2":"#2E7D32",    icon:"fas fa-dna"}
+      ];
       return'<div style="background:var(--card);border:1px solid var(--border);border-top:3px solid '+r.levelColor+';border-radius:12px;padding:16px">'
         /* Header kapal */
-        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'
           +'<div>'
             +'<div style="font-size:14px;font-weight:700;color:var(--text)"><i class="fas fa-ship" style="margin-right:6px;color:'+r.levelColor+'"></i>'+esc(r.kapal)+'</div>'
             +'<div style="font-size:11px;color:var(--text-muted);margin-top:2px">'+esc(r.fleet)+'</div>'
@@ -3844,29 +3837,32 @@ function renderCriticalCards(data){
             +'<span style="background:'+r.levelBg+';color:'+r.levelColor+';padding:2px 10px;border-radius:20px;font-size:10px;font-weight:700">'+r.level+'</span>'
           +'</div>'
         +'</div>'
-        /* 4 dimensi */
+        /* 4 dimensi dengan label lengkap */
         +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">'
-        +[
-          {label:"HRA",score:r.hraScore,max:30,info:r.hraInfo,c:r.hraScore>20?"#C62828":r.hraScore>10?"#E65100":"#2E7D32"},
-          {label:"5 Hazard",score:r.hazardScore,max:35,info:r.hazardInfo,c:r.hazardScore>25?"#C62828":r.hazardScore>12?"#E65100":"#2E7D32"},
-          {label:"DAT",score:r.datScore,max:20,info:r.datInfo,c:r.datScore>=20?"#C62828":r.datScore>0?"#E65100":"#2E7D32"},
-          {label:"Biomarker",score:r.bioScore,max:15,info:r.bioInfo,c:r.bioScore>8?"#C62828":r.bioScore>0?"#7B1FA2":"#2E7D32"}
-        ].map(function(d){
-          return'<div style="background:var(--bg);border-radius:8px;padding:8px 10px">'
-            +'<div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">'+d.label+'</div>'
-            +'<div style="display:flex;align-items:center;justify-content:space-between">'
-              +'<div style="font-size:14px;font-weight:700;color:'+d.c+'">'+d.score+' <span style="font-size:10px;font-weight:400;color:var(--text-muted)">/ '+d.max+'</span></div>'
+        +dims.map(function(d){
+          var pct=Math.min(100,Math.round(d.score/d.max*100));
+          return'<div style="background:var(--bg);border-radius:8px;padding:10px 11px">'
+            +'<div style="display:flex;align-items:center;gap:5px;margin-bottom:5px">'
+              +'<i class="'+d.icon+'" style="font-size:10px;color:'+d.c+'"></i>'
+              +'<div>'
+                +'<div style="font-size:10px;font-weight:700;color:var(--text)">'+d.label+'</div>'
+                +'<div style="font-size:9px;color:var(--text-muted);line-height:1.3">'+d.sublabel+'</div>'
+              +'</div>'
             +'</div>'
-            +'<div style="background:var(--border);border-radius:3px;height:5px;overflow:hidden;margin-top:5px">'
-              +'<div style="width:'+Math.min(100,Math.round(d.score/d.max*100))+'%;background:'+d.c+';height:100%;border-radius:3px"></div>'
+            +'<div style="display:flex;align-items:baseline;gap:4px;margin-bottom:5px">'
+              +'<span style="font-size:18px;font-weight:700;color:'+d.c+'">'+d.score+'</span>'
+              +'<span style="font-size:10px;color:var(--text-muted)">/ '+d.max+' poin</span>'
             +'</div>'
-            +'<div style="font-size:9.5px;color:var(--text-muted);margin-top:4px;line-height:1.4">'+esc(d.info)+'</div>'
+            +'<div style="background:var(--border);border-radius:3px;height:5px;overflow:hidden;margin-bottom:5px">'
+              +'<div style="width:'+pct+'%;background:'+d.c+';height:100%;border-radius:3px"></div>'
+            +'</div>'
+            +'<div style="font-size:9.5px;color:var(--text-muted);line-height:1.4">'+esc(d.info)+'</div>'
           +'</div>';
         }).join("")
         +'</div>'
         /* Rekomendasi */
         +'<div style="background:'+r.levelBg+';border-radius:8px;padding:10px 12px">'
-          +'<div style="font-size:10px;font-weight:700;color:'+r.levelColor+';margin-bottom:6px"><i class="fas fa-list-check" style="margin-right:4px"></i>Tindak Lanjut</div>'
+          +'<div style="font-size:10px;font-weight:700;color:'+r.levelColor+';margin-bottom:6px"><i class="fas fa-list-check" style="margin-right:4px"></i>Rekomendasi Tindak Lanjut</div>'
           +r.rekList.map(function(rek,j){
             return'<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:'+(j<r.rekList.length-1?'5px':'0')+'">'
               +'<div style="width:4px;height:4px;background:'+r.levelColor+';border-radius:50%;flex-shrink:0;margin-top:5px"></div>'
@@ -3876,6 +3872,16 @@ function renderCriticalCards(data){
         +'</div>'
       +'</div>';
     }).join("")
+    +'</div>'
+    /* Catatan bawah */
+    +'<div style="margin-top:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 14px;display:flex;align-items:flex-start;gap:8px">'
+      +'<i class="fas fa-circle-info" style="color:var(--blue);margin-top:1px;font-size:12px;flex-shrink:0"></i>'
+      +'<div style="font-size:10.5px;color:var(--text-muted);line-height:1.6">'
+        +'<b style="color:var(--text)">Catatan:</b> Skor risiko di atas dihitung berdasarkan data yang sudah diinput ke sistem. '
+        +'Kapal dengan skor HRA = 30/30 menunjukkan bahwa belum ada data HRA 2026 yang tercatat — '
+        +'bukan berarti kapal tersebut sudah terbukti memiliki bahaya, melainkan sebagai <b style="color:var(--text)">sinyal prioritas penjadwalan HRA 2026</b>. '
+        +'Skor akan diperbarui otomatis setelah pelaksanaan program IH 2026 diinput ke Google Sheets.'
+      +'</div>'
     +'</div>';
 }
 
