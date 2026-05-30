@@ -2137,269 +2137,98 @@ function hcvRenderProfile(){
   var svg=document.getElementById('hcvProfileSVG');
   if(!svg)return;
   var S='http://www.w3.org/2000/svg';
+  var ns='http://www.w3.org/1999/xhtml';
+  var IMG='https://raw.githubusercontent.com/imperor21/IH-PPN-III/main/ship_profile.png';
+  svg.innerHTML='';
 
-  /* ── Zone overlay helper ── */
-  function zone(id,x,y,w,h,col,lbl,lyOffset){
+  /* Dark bg */
+  function el(tag,attrs){var e=document.createElementNS(S,tag);Object.keys(attrs).forEach(function(k){e.setAttribute(k,attrs[k]);});return e;}
+  svg.appendChild(el('rect',{x:0,y:0,width:960,height:269,fill:'#081018'}));
+
+  /* Image via foreignObject */
+  var fo=document.createElementNS(S,'foreignObject');
+  fo.setAttribute('x','0');fo.setAttribute('y','0');fo.setAttribute('width','960');fo.setAttribute('height','269');
+  var div=document.createElementNS(ns,'div');
+  div.setAttribute('style','width:960px;height:269px;overflow:hidden;line-height:0;font-size:0;');
+  var img=document.createElementNS(ns,'img');
+  img.setAttribute('src',IMG);
+  img.setAttribute('style','width:960px;height:269px;display:block;');
+  div.appendChild(img);fo.appendChild(div);svg.appendChild(fo);
+
+  /* Zone overlay helper */
+  function zone(id,x,y,w,h,col,lbl,pos){
     var g=document.createElementNS(S,'g');g.setAttribute('cursor','pointer');
-    var r=document.createElementNS(S,'rect');
-    r.setAttribute('x',x);r.setAttribute('y',y);r.setAttribute('width',w);r.setAttribute('height',h);
-    r.setAttribute('fill',col);r.setAttribute('opacity','0');r.setAttribute('rx','4');
-    r.setAttribute('stroke',col);r.setAttribute('stroke-width','2');r.setAttribute('stroke-dasharray','6,3');
+    var r=el('rect',{x:x,y:y,width:w,height:h,fill:col,opacity:'0',rx:'4',stroke:col,'stroke-width':'2','stroke-dasharray':'5,3'});
     g.appendChild(r);
     /* dashed leader line */
-    var lx=parseFloat(x)+parseFloat(w)/2;
-    var ly=parseFloat(y)+(lyOffset||0);
-    var line=document.createElementNS(S,'line');
-    line.setAttribute('x1',lx);line.setAttribute('y1',y);line.setAttribute('x2',lx);line.setAttribute('y2',ly-12);
-    line.setAttribute('stroke',col);line.setAttribute('stroke-width','1.5');line.setAttribute('stroke-dasharray','5,3');
-    line.setAttribute('opacity','0.8');g.appendChild(line);
-    /* pill label */
-    var PAD=12; var BH=22; var bw=lbl.length*7.8+PAD*2;
-    var bx=Math.max(2,Math.min(956-bw,lx-bw/2));
-    var by=ly-BH-2;
-    /* pill shadow */
-    var sh=document.createElementNS(S,'rect');
-    sh.setAttribute('x',bx-1);sh.setAttribute('y',by-1);sh.setAttribute('width',bw+2);sh.setAttribute('height',BH+2);
-    sh.setAttribute('fill','#000');sh.setAttribute('opacity','0.5');sh.setAttribute('rx','12');g.appendChild(sh);
-    /* pill bg */
-    var pb=document.createElementNS(S,'rect');
-    pb.setAttribute('x',bx);pb.setAttribute('y',by);pb.setAttribute('width',bw);pb.setAttribute('height',BH);
-    pb.setAttribute('fill',col);pb.setAttribute('rx','11');g.appendChild(pb);
-    /* pill text */
+    var lx=x+w/2;
+    var ly=(pos==='bottom')?y+h+30:y-30;
+    var ly2=(pos==='bottom')?y+h:y;
+    var line=el('line',{x1:lx,y1:ly2,x2:lx,y2:ly,stroke:col,'stroke-width':'1.5','stroke-dasharray':'4,3',opacity:'0.9'});
+    g.appendChild(line);
+    /* corner dot */
+    g.appendChild(el('circle',{cx:lx,cy:ly2,r:'3.5',fill:col,opacity:'0.9'}));
+    /* pill */
+    var BH=22;var PAD=10;var bw=lbl.length*7.6+PAD*2;
+    var bx=Math.max(2,Math.min(958-bw,lx-bw/2));
+    var by=(pos==='bottom')?ly+2:ly-BH-2;
+    g.appendChild(el('rect',{x:bx-1,y:by-1,width:bw+2,height:BH+2,fill:'#000',opacity:'0.45',rx:'12'}));
+    g.appendChild(el('rect',{x:bx,y:by,width:bw,height:BH,fill:col,rx:'11'}));
     var t=document.createElementNS(S,'text');
-    t.setAttribute('x',lx);t.setAttribute('y',String(by+15));
+    t.setAttribute('x',String(lx));t.setAttribute('y',String(by+15));
     t.setAttribute('text-anchor','middle');t.setAttribute('fill','#FFFFFF');
-    t.setAttribute('font-size','10');t.setAttribute('font-family','Arial,sans-serif');t.setAttribute('font-weight','800');
-    t.setAttribute('letter-spacing','0.5');t.textContent=lbl;g.appendChild(t);
-    /* dot at line top */
-    var dot=document.createElementNS(S,'circle');
-    dot.setAttribute('cx',lx);dot.setAttribute('cy',y);dot.setAttribute('r','3.5');dot.setAttribute('fill',col);g.appendChild(dot);
+    t.setAttribute('font-size','10');t.setAttribute('font-family','Arial,sans-serif');
+    t.setAttribute('font-weight','800');t.textContent=lbl;g.appendChild(t);
     g.addEventListener('click',function(){hcvZoneClick(id);});
-    g.addEventListener('mouseenter',function(){r.setAttribute('opacity','0.18');r.setAttribute('stroke-width','2.5');});
+    g.addEventListener('mouseenter',function(){r.setAttribute('opacity','0.2');r.setAttribute('stroke-width','2.5');});
     g.addEventListener('mouseleave',function(){r.setAttribute('opacity','0');r.setAttribute('stroke-width','2');});
-    return g;
+    svg.appendChild(g);
   }
 
-  /* ── Build full SVG markup ── */
-  svg.innerHTML=`<defs>
-  <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#C8E8F8"/><stop offset="100%" stop-color="#BADCF5"/></linearGradient>
-  <linearGradient id="seaGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1A6080"/><stop offset="100%" stop-color="#052F47"/></linearGradient>
-  <linearGradient id="superGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#F0F0EE"/><stop offset="100%" stop-color="#D8D8D6"/></linearGradient>
-  <filter id="sh"><feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#00000040"/></filter>
-</defs>
-<!-- SKY -->
-<rect width="960" height="290" fill="url(#skyGrad)"/>
-<!-- SEA -->
-<rect x="0" y="195" width="960" height="95" fill="url(#seaGrad)"/>
-<rect x="0" y="195" width="960" height="4" fill="#2A8AAA" opacity="0.6"/>
-<path d="M0,202 Q240,198 480,202 Q720,206 960,202" fill="none" stroke="#3ABCCC" stroke-width="1.5" opacity="0.35"/>
-<path d="M0,212 Q320,209 640,212 Q800,214 960,212" fill="none" stroke="#2A9AB5" stroke-width="1" opacity="0.25"/>
-<!-- HULL MAIN -->
-<path d="M 40,132 L 40,195 Q 41,210 72,214 L 820,207 Q 876,204 913,185 Q 938,168 942,148 Q 928,132 900,130 Z" fill="#0C121E" filter="url(#sh)"/>
-<!-- RED BOTTOM -->
-<path d="M 42,200 Q 43,212 72,218 L 820,213 Q 876,210 913,194 L 915,204 Q 882,220 820,222 L 72,224 Q 44,218 42,210 Z" fill="#8B0E10"/>
-<path d="M 42,207 Q 44,215 72,219 L 820,215 Q 878,212 914,198 L 914,206 Q 882,219 820,221 L 72,222 Q 44,218 42,212 Z" fill="#AA1214"/>
-<!-- WATERLINE WHITE -->
-<path d="M 44,196 Q 400,194 820,191 Q 870,191 910,180 L 913,186 Q 875,198 820,199 L 44,202 Z" fill="#E8E8E0" opacity="0.85"/>
-<!-- HULL SHEER -->
-<path d="M 40,132 Q 400,126 820,122 Q 878,122 910,130 Q 928,136 942,148" fill="none" stroke="#252E3E" stroke-width="2"/>
-<!-- STERN -->
-<rect x="32" y="130" width="10" height="82" rx="2" fill="#080E1A"/>
-<rect x="32" y="196" width="10" height="28" rx="2" fill="#5A0808"/>
-<!-- BOW -->
-<path d="M 900,130 Q 932,130 945,152 Q 956,164 956,182 Q 952,196 940,206 L 912,206 Q 928,196 937,182 Q 942,166 938,152 Q 930,136 915,132 Z" fill="#0A1018"/>
-<path d="M 912,207 Q 930,202 940,212 L 920,222 Q 898,220 880,218 L 912,214 Z" fill="#6A0A0A"/>
-<ellipse cx="950" cy="218" rx="14" ry="8" fill="#060A10" opacity="0.7"/>
-<!-- SUPERSTRUCTURE -->
-<rect x="40" y="70" width="192" height="63" rx="2" fill="url(#superGrad)"/>
-<rect x="44" y="98" width="186" height="9" fill="#CCCCCA" rx="1"/>
-<rect x="44" y="86" width="186" height="9" fill="#D4D4D2" rx="1"/>
-<rect x="44" y="74" width="186" height="9" fill="#E3E5E4" rx="1"/>
-<g fill="#6AACCC" opacity="0.85">
-  <rect x="50" y="75" width="8" height="6" rx="1"/><rect x="62" y="75" width="8" height="6" rx="1"/><rect x="74" y="75" width="8" height="6" rx="1"/><rect x="86" y="75" width="8" height="6" rx="1"/><rect x="98" y="75" width="8" height="6" rx="1"/><rect x="110" y="75" width="8" height="6" rx="1"/><rect x="122" y="75" width="8" height="6" rx="1"/><rect x="134" y="75" width="8" height="6" rx="1"/><rect x="146" y="75" width="8" height="6" rx="1"/><rect x="158" y="75" width="8" height="6" rx="1"/><rect x="170" y="75" width="8" height="6" rx="1"/><rect x="182" y="75" width="8" height="6" rx="1"/><rect x="194" y="75" width="8" height="6" rx="1"/><rect x="206" y="75" width="8" height="6" rx="1"/><rect x="218" y="75" width="8" height="6" rx="1"/>
-  <rect x="50" y="87" width="8" height="6" rx="1"/><rect x="62" y="87" width="8" height="6" rx="1"/><rect x="74" y="87" width="8" height="6" rx="1"/><rect x="86" y="87" width="8" height="6" rx="1"/><rect x="98" y="87" width="8" height="6" rx="1"/><rect x="110" y="87" width="8" height="6" rx="1"/><rect x="122" y="87" width="8" height="6" rx="1"/><rect x="134" y="87" width="8" height="6" rx="1"/><rect x="146" y="87" width="8" height="6" rx="1"/><rect x="158" y="87" width="8" height="6" rx="1"/><rect x="170" y="87" width="8" height="6" rx="1"/><rect x="182" y="87" width="8" height="6" rx="1"/><rect x="194" y="87" width="8" height="6" rx="1"/><rect x="206" y="87" width="8" height="6" rx="1"/>
-  <rect x="50" y="99" width="8" height="6" rx="1"/><rect x="62" y="99" width="8" height="6" rx="1"/><rect x="74" y="99" width="8" height="6" rx="1"/><rect x="86" y="99" width="8" height="6" rx="1"/><rect x="98" y="99" width="8" height="6" rx="1"/><rect x="110" y="99" width="8" height="6" rx="1"/><rect x="122" y="99" width="8" height="6" rx="1"/><rect x="134" y="99" width="8" height="6" rx="1"/><rect x="146" y="99" width="8" height="6" rx="1"/><rect x="158" y="99" width="8" height="6" rx="1"/><rect x="170" y="99" width="8" height="6" rx="1"/><rect x="182" y="99" width="8" height="6" rx="1"/><rect x="194" y="99" width="8" height="6" rx="1"/>
-</g>
-<rect x="34" y="58" width="208" height="14" rx="2" fill="#C8C8C6"/>
-<g fill="#5ABCDC" opacity="0.6"><rect x="44" y="61" width="26" height="9" rx="1"/><rect x="74" y="61" width="26" height="9" rx="1"/><rect x="104" y="61" width="26" height="9" rx="1"/><rect x="134" y="61" width="26" height="9" rx="1"/><rect x="164" y="61" width="26" height="9" rx="1"/><rect x="194" y="61" width="26" height="9" rx="1"/><rect x="224" y="61" width="14" height="9" rx="1"/></g>
-<rect x="50" y="44" width="178" height="16" rx="2" fill="#D0D0CE"/>
-<rect x="64" y="30" width="140" height="15" rx="2" fill="#C4C4C2"/>
-<rect x="80" y="18" width="106" height="13" rx="2" fill="#B8B8B6"/>
-<!-- MAST -->
-<rect x="128" y="5" width="5" height="26" rx="1" fill="#909090"/>
-<line x1="106" y1="10" x2="160" y2="10" stroke="#888" stroke-width="2"/>
-<circle cx="133" cy="5" r="4" fill="#A0A0A0"/>
-<!-- FUNNEL -->
-<path d="M 230,30 L 228,106 L 280,106 L 278,30 Z" fill="#CC7700"/>
-<path d="M 222,26 Q 226,17 254,17 Q 283,17 287,26 L 278,32 Q 274,22 254,22 Q 234,22 230,32 Z" fill="#AA5500"/>
-<ellipse cx="254" cy="17" rx="33" ry="8" fill="#1A1A2A"/>
-<rect x="228" y="52" width="52" height="18" fill="#CC1111"/>
-<rect x="226" y="98" width="64" height="10" rx="2" fill="#994400" opacity="0.8"/>
-<!-- LIFEBOATS -->
-<rect x="230" y="112" width="18" height="10" rx="3" fill="#E8D080" stroke="#C4A840" stroke-width="1"/>
-<rect x="252" y="112" width="18" height="10" rx="3" fill="#E8D080" stroke="#C4A840" stroke-width="1"/>
-<rect x="230" y="125" width="18" height="10" rx="3" fill="#DCC870" stroke="#B89830" stroke-width="1"/>
-<rect x="252" y="125" width="18" height="10" rx="3" fill="#DCC870" stroke="#B89830" stroke-width="1"/>
-<!-- CARGO DECK -->
-<rect x="234" y="126" width="660" height="8" rx="1" fill="#2A1A1A"/>
-<rect x="234" y="126" width="660" height="3" rx="1" fill="#3A2020"/>
-<!-- TANK DOMES -->
-<g>
-  <ellipse cx="295" cy="122" rx="22" ry="10" fill="#1A0808"/><ellipse cx="295" cy="120" rx="14" ry="6" fill="#140606"/>
-  <ellipse cx="360" cy="120" rx="22" ry="10" fill="#1A0808"/><ellipse cx="360" cy="118" rx="14" ry="6" fill="#140606"/>
-  <ellipse cx="425" cy="120" rx="22" ry="10" fill="#1A0808"/><ellipse cx="425" cy="118" rx="14" ry="6" fill="#140606"/>
-  <ellipse cx="490" cy="120" rx="22" ry="10" fill="#1A0808"/><ellipse cx="490" cy="118" rx="14" ry="6" fill="#140606"/>
-  <ellipse cx="555" cy="120" rx="22" ry="10" fill="#1A0808"/><ellipse cx="555" cy="118" rx="14" ry="6" fill="#140606"/>
-  <ellipse cx="620" cy="120" rx="22" ry="10" fill="#1A0808"/><ellipse cx="620" cy="118" rx="14" ry="6" fill="#140606"/>
-</g>
-<!-- TANK DIVIDERS -->
-<g stroke="#3A2828" stroke-width="2"><line x1="326" y1="128" x2="326" y2="148"/><line x1="392" y1="128" x2="392" y2="148"/><line x1="458" y1="128" x2="458" y2="148"/><line x1="524" y1="128" x2="524" y2="148"/><line x1="590" y1="128" x2="590" y2="148"/></g>
-<!-- PIPELINE -->
-<rect x="234" y="134" width="656" height="4" rx="2" fill="#4A6A8A"/>
-<rect x="234" y="140" width="656" height="3" rx="1.5" fill="#3A5878"/>
-<g fill="#3A6070"><rect x="292" y="132" width="6" height="8" rx="1"/><rect x="357" y="132" width="6" height="8" rx="1"/><rect x="422" y="132" width="6" height="8" rx="1"/><rect x="487" y="132" width="6" height="8" rx="1"/><rect x="552" y="132" width="6" height="8" rx="1"/><rect x="617" y="132" width="6" height="8" rx="1"/></g>
-<!-- MANIFOLD -->
-<rect x="468" y="116" width="44" height="22" rx="3" fill="#3A5060"/><rect x="462" y="124" width="56" height="6" rx="2" fill="#4A6270"/>
-<!-- RAILING -->
-<line x1="234" y1="126" x2="234" y2="114" stroke="#506070" stroke-width="1.5"/>
-<line x1="234" y1="114" x2="752" y2="100" stroke="#506070" stroke-width="1.5"/>
-<g stroke="#405060" stroke-width="1"><line x1="284" y1="126" x2="284" y2="116"/><line x1="344" y1="126" x2="344" y2="114"/><line x1="404" y1="126" x2="404" y2="112"/><line x1="464" y1="126" x2="464" y2="110"/><line x1="524" y1="126" x2="524" y2="108"/><line x1="584" y1="126" x2="584" y2="106"/><line x1="644" y1="126" x2="644" y2="104"/><line x1="704" y1="126" x2="704" y2="102"/></g>
-<!-- PUMP ROOM DECKHOUSE -->
-<rect x="614" y="98" width="84" height="38" rx="2" fill="#1A2A3A"/>
-<rect x="612" y="96" width="88" height="5" rx="1" fill="#2A3E4E"/>
-<g fill="#3A7898" opacity="0.8"><rect x="620" y="104" width="10" height="8" rx="1"/><rect x="634" y="104" width="10" height="8" rx="1"/><rect x="648" y="104" width="10" height="8" rx="1"/><rect x="662" y="104" width="10" height="8" rx="1"/><rect x="676" y="104" width="10" height="8" rx="1"/></g>
-<g fill="#2A4A5A" stroke="#3A5A6A" stroke-width="0.5"><rect x="622" y="88" width="4" height="10" rx="1"/><rect x="633" y="88" width="4" height="10" rx="1"/><rect x="644" y="88" width="4" height="10" rx="1"/></g>
-<!-- FORE MAST -->
-<rect x="732" y="58" width="5" height="76" rx="1" fill="#6A7A88"/>
-<line x1="710" y1="70" x2="758" y2="70" stroke="#6A7A88" stroke-width="2"/>
-<circle cx="734" cy="58" r="4" fill="#7A8A98"/>
-<!-- FORECASTLE -->
-<path d="M 754,130 L 754,118 Q 756,112 780,108 L 855,102 Q 894,100 914,112 L 924,130 L 924,132 Z" fill="#181E2C"/>
-<rect x="756" y="116" width="168" height="3" fill="#2A3444"/>
-<ellipse cx="784" cy="124" rx="14" ry="7" fill="#2A3A4A"/>
-<ellipse cx="824" cy="124" rx="14" ry="7" fill="#2A3A4A"/>
-<g fill="#1A2830"><rect x="764" y="128" width="8" height="6" rx="1"/><rect x="784" y="128" width="8" height="6" rx="1"/><rect x="804" y="128" width="8" height="6" rx="1"/><rect x="824" y="128" width="8" height="6" rx="1"/></g>
-<circle cx="916" cy="160" r="7" fill="#0C1418" stroke="#303A48" stroke-width="2"/>
-<circle cx="914" cy="176" r="6" fill="#0C1418" stroke="#303A48" stroke-width="2"/>`;
-
-  /* ── Zone overlays ── */
-  svg.appendChild(zone('bridge', 40, 50, 240, 155, '#FF9900', 'AKOMODASI & ANJUNGAN', -18));
-  svg.appendChild(zone('cargo', 282, 115, 330, 80, '#FF2233', 'CARGO TANK AREA', -18));
-  svg.appendChild(zone('engine', 40, 155, 240, 60, '#CC2200', 'KAMAR MESIN', 60));
-  svg.appendChild(zone('pump', 612, 90, 88, 105, '#FF10AA', 'PUMP ROOM', -18));
-  svg.appendChild(zone('fore', 752, 96, 178, 142, '#FF9900', 'HALUAN & MOORING', -18));
+  zone('bridge',0,0,145,266,'#FF9900','AKOMODASI & ANJUNGAN','top');
+  zone('cargo',145,64,477,175,'#FF2233','CARGO TANK AREA','top');
+  zone('engine',0,149,145,117,'#CC2200','KAMAR MESIN','bottom');
+  zone('pump',622,55,94,175,'#FF10AA','PUMP ROOM','top');
+  zone('fore',716,30,244,222,'#FF9900','HALUAN & MOORING','top');
 }
 
 function hcvRenderTop(){
   var svg=document.getElementById('hcvTopSVG');
   if(!svg)return;
   var S='http://www.w3.org/2000/svg';
+  var ns='http://www.w3.org/1999/xhtml';
+  var IMG='https://raw.githubusercontent.com/imperor21/IH-PPN-III/main/ship_topview.png';
+  svg.innerHTML='';
 
-  svg.innerHTML=`<defs>
-  <linearGradient id="cargoGT" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#C81820"/><stop offset="100%" stop-color="#A01018"/></linearGradient>
-  <linearGradient id="bridgeGT" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#CC8800"/><stop offset="100%" stop-color="#AA6600"/></linearGradient>
-  <linearGradient id="pumpGT" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#CC1080"/><stop offset="100%" stop-color="#AA0060"/></linearGradient>
-  <linearGradient id="foreGT" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#D48000"/><stop offset="100%" stop-color="#E89000"/></linearGradient>
-  <linearGradient id="bgGT" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0A1628"/><stop offset="100%" stop-color="#0E1E38"/></linearGradient>
-</defs>
-<rect width="960" height="210" fill="url(#bgGT)"/>
-<!-- SHIP BODY OUTLINE -->
-<path d="M 50,105 Q 48,55 100,30 L 200,20 L 700,18 Q 800,18 870,40 Q 920,58 935,80 Q 948,95 948,105 Q 948,120 935,132 Q 920,152 870,170 Q 800,188 700,190 L 200,188 L 100,178 Q 48,158 50,105 Z" fill="#0C1A2E" stroke="#2A4060" stroke-width="2"/>
-<!-- BRIDGE / ACCOMMODATION -->
-<path d="M 55,105 Q 54,70 88,48 L 165,34 L 196,28 L 198,68 Q 170,72 148,78 Q 120,84 108,94 L 102,110 L 108,120 Q 120,128 148,134 Q 170,140 198,144 L 196,184 L 165,178 Q 88,162 55,140 Q 53,128 55,105 Z" fill="url(#bridgeGT)" stroke="#FF9900" stroke-width="1.5"/>
-<!-- Bridge label -->
-<text x="124" y="93" text-anchor="middle" fill="#FFF" font-size="11" font-family="Arial" font-weight="800">Akomodasi</text>
-<text x="124" y="108" text-anchor="middle" fill="#FFF" font-size="11" font-family="Arial" font-weight="800">&amp; Anjungan</text>
-<!-- ENGINE ROOM (lower bridge) -->
-<path d="M 102,112 Q 120,130 150,136 Q 174,140 198,144 L 198,184 L 165,178 Q 88,162 55,140 Q 53,128 55,112 Z" fill="#AA6600" stroke="#FF9900" stroke-width="1" stroke-dasharray="4,2"/>
-<text x="124" y="158" text-anchor="middle" fill="#FFF" font-size="10" font-family="Arial" font-weight="700">Engine</text>
-<text x="124" y="171" text-anchor="middle" fill="#FFF" font-size="10" font-family="Arial" font-weight="700">(Bawah)</text>
-<!-- HELIPAD -->
-<ellipse cx="128" cy="58" rx="34" ry="28" fill="#1A3A1A" stroke="#44AA44" stroke-width="2"/>
-<ellipse cx="128" cy="58" rx="28" ry="22" fill="none" stroke="#44AA44" stroke-width="1.5"/>
-<text x="128" y="64" text-anchor="middle" fill="#44CC44" font-size="20" font-family="Arial" font-weight="900">H</text>
-<!-- CARGO TANK AREA -->
-<path d="M 200,22 L 700,20 L 700,190 L 200,188 L 198,144 L 198,68 Z" fill="url(#cargoGT)" stroke="#FF2233" stroke-width="1.5"/>
-<!-- Tank grid -->
-<g stroke="#E02030" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.55">
-  <line x1="320" y1="22" x2="320" y2="190"/><line x1="440" y1="20" x2="440" y2="190"/>
-  <line x1="560" y1="20" x2="560" y2="190"/><line x1="680" y1="20" x2="680" y2="190"/>
-  <line x1="200" y1="105" x2="700" y2="105"/>
-</g>
-<!-- Tank hatches -->
-<g>
-  <ellipse cx="260" cy="68" rx="22" ry="15" fill="#A00818" stroke="#CC1020" stroke-width="1.5"/>
-  <ellipse cx="260" cy="140" rx="22" ry="15" fill="#A00818" stroke="#CC1020" stroke-width="1.5"/>
-  <ellipse cx="380" cy="62" rx="22" ry="15" fill="#A00818" stroke="#CC1020" stroke-width="1.5"/>
-  <ellipse cx="380" cy="148" rx="22" ry="15" fill="#A00818" stroke="#CC1020" stroke-width="1.5"/>
-  <ellipse cx="500" cy="62" rx="22" ry="15" fill="#A00818" stroke="#CC1020" stroke-width="1.5"/>
-  <ellipse cx="500" cy="148" rx="22" ry="15" fill="#A00818" stroke="#CC1020" stroke-width="1.5"/>
-  <ellipse cx="620" cy="62" rx="22" ry="15" fill="#A00818" stroke="#CC1020" stroke-width="1.5"/>
-  <ellipse cx="620" cy="148" rx="22" ry="15" fill="#A00818" stroke="#CC1020" stroke-width="1.5"/>
-</g>
-<!-- Manifold -->
-<rect x="450" y="89" width="60" height="28" rx="4" fill="#3A1818" stroke="#CC2030" stroke-width="1.5"/>
-<rect x="444" y="99" width="72" height="9" rx="3" fill="#4A2020"/>
-<!-- Pipeline -->
-<rect x="200" y="101" width="500" height="7" rx="3" fill="#5A0A10" stroke="#801020" stroke-width="1"/>
-<!-- CARGO LABEL -->
-<text x="450" y="44" text-anchor="middle" fill="#FFF" font-size="15" font-family="Arial" font-weight="900">CARGO TANK AREA</text>
-<!-- PUMP ROOM -->
-<path d="M 702,20 L 790,22 L 790,188 L 702,188 Z" fill="url(#pumpGT)" stroke="#FF10AA" stroke-width="1.5"/>
-<circle cx="746" cy="74" r="22" fill="#AA0060" stroke="#FF10AA" stroke-width="1.5"/>
-<circle cx="746" cy="74" r="14" fill="none" stroke="#FF50CC" stroke-width="1.5"/>
-<circle cx="746" cy="74" r="6" fill="#FF10AA"/>
-<circle cx="746" cy="138" r="22" fill="#AA0060" stroke="#FF10AA" stroke-width="1.5"/>
-<circle cx="746" cy="138" r="14" fill="none" stroke="#FF50CC" stroke-width="1.5"/>
-<circle cx="746" cy="138" r="6" fill="#FF10AA"/>
-<rect x="738" y="97" width="16" height="39" rx="2" fill="#880050" stroke="#CC0080" stroke-width="1"/>
-<text x="746" y="107" text-anchor="middle" fill="#FFF" font-size="9" font-family="Arial" font-weight="800">PUMP</text>
-<text x="746" y="120" text-anchor="middle" fill="#FFF" font-size="9" font-family="Arial" font-weight="800">ROOM</text>
-<!-- FORECASTLE -->
-<path d="M 792,22 Q 870,20 920,50 Q 946,68 948,105 Q 946,142 920,162 Q 870,188 792,188 Z" fill="url(#foreGT)" stroke="#FF9900" stroke-width="1.5"/>
-<ellipse cx="832" cy="68" rx="24" ry="16" fill="#CC7700" stroke="#FFAA00" stroke-width="1.5"/>
-<ellipse cx="832" cy="68" rx="16" ry="10" fill="#AA5500" stroke="#FFAA00" stroke-width="1"/>
-<ellipse cx="832" cy="142" rx="24" ry="16" fill="#CC7700" stroke="#FFAA00" stroke-width="1.5"/>
-<ellipse cx="832" cy="142" rx="16" ry="10" fill="#AA5500" stroke="#FFAA00" stroke-width="1"/>
-<g fill="#AA6600" stroke="#FFCC00" stroke-width="1">
-  <rect x="872" y="62" width="10" height="8" rx="2"/><rect x="888" y="72" width="10" height="8" rx="2"/>
-  <rect x="898" y="90" width="10" height="8" rx="2"/><rect x="898" y="114" width="10" height="8" rx="2"/>
-  <rect x="888" y="132" width="10" height="8" rx="2"/><rect x="872" y="143" width="10" height="8" rx="2"/>
-</g>
-<text x="846" y="99" text-anchor="middle" fill="#FFF" font-size="10" font-family="Arial" font-weight="900">FORECASTLE</text>
-<text x="846" y="115" text-anchor="middle" fill="#FFF" font-size="10" font-family="Arial" font-weight="900">&amp; MOORING</text>
-<!-- ZONE DIVIDERS -->
-<line x1="198" y1="22" x2="198" y2="188" stroke="#FFF" stroke-width="2.5" opacity="0.5"/>
-<line x1="700" y1="20" x2="700" y2="190" stroke="#FFF" stroke-width="2.5" opacity="0.5"/>
-<line x1="790" y1="22" x2="790" y2="188" stroke="#FFF" stroke-width="2.5" opacity="0.5"/>
-<!-- Engine/Bridge divider -->
-<path d="M 102,112 Q 120,130 152,136 Q 176,140 198,144" fill="none" stroke="#FFAA00" stroke-width="1.5" stroke-dasharray="5,3" opacity="0.7"/>
-<!-- COMPASS -->
-<text x="926" y="16" text-anchor="middle" fill="#90CCFF" font-size="13" font-family="Arial" font-weight="700">N ↑</text>`;
+  function el(tag,attrs){var e=document.createElementNS(S,tag);Object.keys(attrs).forEach(function(k){e.setAttribute(k,attrs[k]);});return e;}
+  svg.appendChild(el('rect',{x:0,y:0,width:960,height:312,fill:'#081018'}));
 
-  /* ── Zone overlays (clickable) ── */
-  function tz(id,path_d,col,lx,ly,lbl){
+  var fo=document.createElementNS(S,'foreignObject');
+  fo.setAttribute('x','0');fo.setAttribute('y','0');fo.setAttribute('width','960');fo.setAttribute('height','312');
+  var div=document.createElementNS(ns,'div');
+  div.setAttribute('style','width:960px;height:312px;overflow:hidden;line-height:0;font-size:0;');
+  var img=document.createElementNS(ns,'img');
+  img.setAttribute('src',IMG);
+  img.setAttribute('style','width:960px;height:312px;display:block;');
+  div.appendChild(img);fo.appendChild(div);svg.appendChild(fo);
+
+  function zone(id,x,y,w,h,col){
     var g=document.createElementNS(S,'g');g.setAttribute('cursor','pointer');
-    var p=document.createElementNS(S,'path');
-    p.setAttribute('d',path_d);p.setAttribute('fill',col);p.setAttribute('opacity','0');
-    p.setAttribute('stroke',col);p.setAttribute('stroke-width','2');
-    g.appendChild(p);
-    /* label always visible */
-    var t=document.createElementNS(S,'text');
-    t.setAttribute('x',lx);t.setAttribute('y',ly);t.setAttribute('text-anchor','middle');
-    t.setAttribute('fill','rgba(255,255,255,0.0)');t.setAttribute('font-size','1');t.setAttribute('pointer-events','none');
-    g.appendChild(t);
+    var r=el('rect',{x:x,y:y,width:w,height:h,fill:col,opacity:'0',rx:'4',stroke:col,'stroke-width':'2.5','stroke-dasharray':'5,3'});
+    g.appendChild(r);
     g.addEventListener('click',function(){hcvZoneClick(id);});
-    g.addEventListener('mouseenter',function(){p.setAttribute('opacity','0.2');p.setAttribute('stroke-width','3');});
-    g.addEventListener('mouseleave',function(){p.setAttribute('opacity','0');p.setAttribute('stroke-width','2');});
-    return g;
+    g.addEventListener('mouseenter',function(){r.setAttribute('opacity','0.18');r.setAttribute('stroke-width','3');});
+    g.addEventListener('mouseleave',function(){r.setAttribute('opacity','0');r.setAttribute('stroke-width','2.5');});
+    svg.appendChild(g);
   }
-  svg.appendChild(tz('bridge','M 55,55 Q 54,70 88,48 L 165,34 L 198,28 L 198,68 Q 170,72 148,78 Q 120,84 108,94 L 102,108 L 55,105 Z','#FF9900',124,80,''));
-  svg.appendChild(tz('engine','M 102,112 Q 120,130 150,136 Q 174,140 198,144 L 198,184 L 165,178 Q 88,162 55,140 Q 53,128 55,112 Z','#CC2200',124,160,''));
-  svg.appendChild(tz('cargo','M 200,22 L 700,20 L 700,190 L 200,188 L 198,144 L 198,68 Z','#FF2233',450,105,''));
-  svg.appendChild(tz('pump','M 702,20 L 790,22 L 790,188 L 702,188 Z','#FF10AA',746,105,''));
-  svg.appendChild(tz('fore','M 792,22 Q 870,20 920,50 Q 946,68 948,105 Q 946,142 920,162 Q 870,188 792,188 Z','#FF9900',860,105,''));
+
+  zone('bridge',24,7,155,298,'#FF9900');
+  zone('engine',24,158,155,147,'#CC2200');
+  zone('cargo',179,5,527,304,'#FF2233');
+  zone('pump',706,7,111,302,'#FF10AA');
+  zone('fore',817,7,136,302,'#FF9900');
 }
+
 
 
 
