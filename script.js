@@ -1238,111 +1238,276 @@ var bioKapalChart=null,bioStatusChart=null;
 var bioKimiaSortCol=0,bioKimiaSortDir=-1;
 
 function renderBioKimiaSection(){
-  /* Gabungkan rawBiomarker + rawPersonal jadi satu list */
   var tipeF=(document.getElementById("bio-filter-tipe")||{}).value||"all";
   var tahunF=(document.getElementById("bio-filter-tahun")||{}).value||"";
   var kapalF=(document.getElementById("bio-filter-kapal")||{}).value||"";
 
-  /* Populate dropdown tahun & kapal */
-  var allData=[];
-  if(tipeF==="all"||tipeF==="biomarker") rawBiomarker.forEach(function(r){allData.push(Object.assign({},r,{tipe:"Biomarker",lokasi:r.lokasi||"Urin",nilai:r.kreatinin,batas:r.rujukan,satuan:"00b5g/g kreat."}));});
-  if(tipeF==="all"||tipeF==="personal")  rawPersonal.forEach(function(r){allData.push(Object.assign({},r,{tipe:"Personal",lokasi:r.lokasi||"Udara",nilai:r.hasil,batas:r.nab,satuan:"ppm"}));});
-
-  /* Populate tahun dropdown */
+  /* Populate dropdown tahun */
+  var allYears=[...new Set([...rawBiomarker,...rawPersonal].map(function(r){return r.tahun;}).filter(Boolean))].sort();
   var tahunSel=document.getElementById("bio-filter-tahun");
-  if(tahunSel){
-    var curT=tahunSel.value;
-    var tahuns=[...new Set(allData.map(function(r){return r.tahun;}).filter(Boolean))].sort();
-    tahunSel.innerHTML='<option value="">Semua Tahun</option>'+tahuns.map(function(t){return'<option'+(t===curT?' selected':'')+'>'+esc(t)+'</option>';}).join("");
-  }
-  /* Populate kapal dropdown */
+  if(tahunSel){var curT=tahunSel.value;tahunSel.innerHTML='<option value="">Semua Tahun</option>'+allYears.map(function(t){return'<option'+(t===curT?' selected':'')+'>'+esc(t)+'</option>';}).join("");}
+  var allKapals=[...new Set([...rawBiomarker,...rawPersonal].map(function(r){return r.kapal;}).filter(Boolean))].sort();
   var kapalSel=document.getElementById("bio-filter-kapal");
-  if(kapalSel){
-    var curK=kapalSel.value;
-    var kapals=[...new Set(allData.map(function(r){return r.kapal;}).filter(Boolean))].sort();
-    kapalSel.innerHTML='<option value="">Semua Kapal</option>'+kapals.map(function(k){return'<option'+(k===curK?' selected':'')+'>'+esc(k)+'</option>';}).join("");
-  }
+  if(kapalSel){var curK=kapalSel.value;kapalSel.innerHTML='<option value="">Semua Kapal</option>'+allKapals.map(function(k){return'<option'+(k===curK?' selected':'')+'>'+esc(k)+'</option>';}).join("");}
 
   /* Filter */
-  filteredBioKimia=allData.filter(function(r){
-    if(tahunF&&r.tahun!==tahunF)return false;
-    if(kapalF&&r.kapal!==kapalF)return false;
-    return true;
-  });
+  var bioData=rawBiomarker.filter(function(r){return(!tahunF||r.tahun===tahunF)&&(!kapalF||r.kapal===kapalF);});
+  var perData=rawPersonal.filter(function(r){return(!tahunF||r.tahun===tahunF)&&(!kapalF||r.kapal===kapalF);});
 
   /* KPI */
-  var total=filteredBioKimia.length;
-  var melebihi=filteredBioKimia.filter(function(r){return r.nilai>r.batas;}).length;
-  var normal=total-melebihi;
-  var kapalSet=new Set(filteredBioKimia.map(function(r){return r.kapal;}).filter(Boolean));
+  var totalBio=bioData.length;
+  var melBio=bioData.filter(function(r){return r.kreatinin>r.rujukan;}).length;
+  var totalPer=perData.length;
+  var melPer=perData.filter(function(r){return r.hasil>r.nab;}).length;
+  var kapalSet=new Set([...bioData,...perData].map(function(r){return r.kapal;}).filter(Boolean)).size;
+
   var setEl=function(id,v){var el=document.getElementById(id);if(el)el.textContent=v;};
-  setEl("bio-kpi-total",fmtNum(total));
-  setEl("bio-kpi-melebihi",fmtNum(melebihi));
-  setEl("bio-kpi-normal",fmtNum(normal));
-  setEl("bio-kpi-kapal",fmtNum(kapalSet.size));
+  setEl("bio-kpi-total",(tipeF==="personal"?totalPer:tipeF==="biomarker"?totalBio:(totalBio+totalPer)));
+  setEl("bio-kpi-melebihi",(tipeF==="personal"?melPer:tipeF==="biomarker"?melBio:(melBio+melPer)));
+  setEl("bio-kpi-normal",(tipeF==="personal"?(totalPer-melPer):tipeF==="biomarker"?(totalBio-melBio):((totalBio+totalPer)-(melBio+melPer))));
+  setEl("bio-kpi-kapal",kapalSet);
 
-  renderBioKapalChart(filteredBioKimia);
-  renderBioStatusChart(filteredBioKimia,melebihi,normal);
-  renderBioTable(filteredBioKimia);
+  _renderBioKimiaCharts(bioData,perData,tipeF);
+  _renderBioKimiaTable(bioData,perData,tipeF);
+  _renderBioKimiaRekomendasi(bioData,perData,melBio,melPer);
 }
 
-function renderBioKapalChart(data){
-  var ctx=document.getElementById("bioKapalChart");
-  if(!ctx)return;
-  if(bioKapalChart){bioKapalChart.destroy();bioKapalChart=null;}
-  if(!data.length){emptyChart("bioKapalChart","Belum ada data");return;}
-  clearEmptyChart("bioKapalChart");
-  var kapalMap={};
-  data.forEach(function(r){kapalMap[r.kapal]=(kapalMap[r.kapal]||[]);kapalMap[r.kapal].push(r.nilai);});
-  var labels=Object.keys(kapalMap).slice(0,12);
-  var avgs=labels.map(function(k){var arr=kapalMap[k];return+(arr.reduce(function(s,v){return s+v;},0)/arr.length).toFixed(2);});
-  var refs=data.filter(function(r){return labels.indexOf(r.kapal)!==-1;}).map(function(r){return r.batas;})[0]||25;
-  bioKapalChart=new Chart(ctx.getContext("2d"),{
-    type:"bar",
-    data:{labels:labels,datasets:[
-      {label:"Rata-rata Nilai",data:avgs,backgroundColor:avgs.map(function(v){return v>refs?"#E53935":"#8E24AA";}),borderRadius:5},
-      {label:"BEI/NAB",data:labels.map(function(){return refs;}),type:"line",borderColor:"#F59E0B",borderWidth:2,borderDash:[6,3],pointRadius:0,fill:false}
-    ]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"top",labels:{font:{size:11}}}},scales:{x:{ticks:{font:{size:9},maxRotation:35}},y:{beginAtZero:true,ticks:{font:{size:10}}}}}
-  });
+function _renderBioKimiaCharts(bioData,perData,tipeF){
+  /* Chart 1: Bar chart rata-rata per kapal */
+  var ctx1=document.getElementById("bioKapalChart");
+  if(ctx1){
+    if(window._bioKapalChart){window._bioKapalChart.destroy();window._bioKapalChart=null;}
+    var src=tipeF==="personal"?perData:bioData;
+    var isBio=tipeF!=="personal";
+    if(!src.length){emptyChart("bioKapalChart","Belum ada data");return;}
+    clearEmptyChart("bioKapalChart");
+    var kapalMap={};
+    src.forEach(function(r){
+      var v=isBio?r.kreatinin:r.hasil;
+      if(!kapalMap[r.kapal])kapalMap[r.kapal]=[];
+      kapalMap[r.kapal].push(v);
+    });
+    var labels=Object.keys(kapalMap).slice(0,12);
+    var avgs=labels.map(function(k){var arr=kapalMap[k];return+(arr.reduce(function(s,v){return s+v;},0)/arr.length).toFixed(2);});
+    /* NAB/BEI reference — ambil dari data aktual bukan hardcoded */
+    var ref=isBio?(bioData[0]?bioData[0].rujukan:25):(perData[0]?perData[0].nab:0.5);
+    window._bioKapalChart=new Chart(ctx1.getContext("2d"),{
+      type:"bar",
+      data:{labels:labels,datasets:[
+        {label:"Rata-rata nilai",data:avgs,
+          backgroundColor:avgs.map(function(v){return v>ref?"rgba(198,40,40,.8)":"rgba(123,31,162,.75)";}),
+          borderColor:avgs.map(function(v){return v>ref?"#C62828":"#7B1FA2";}),
+          borderWidth:1.5,borderRadius:5},
+        {label:(isBio?"BEI ACGIH 2024: "+ref+" µg/g kreat.":"NAB Kemenaker: "+ref+" ppm"),
+          data:labels.map(function(){return ref;}),
+          type:"line",borderColor:"#F59E0B",borderWidth:2,
+          borderDash:[6,3],pointRadius:0,fill:false}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{position:"top",labels:{font:{size:11},padding:12}}},
+        scales:{
+          x:{ticks:{font:{size:9},maxRotation:35}},
+          y:{beginAtZero:true,ticks:{font:{size:10}},
+            title:{display:true,text:isBio?"µg/g kreatinin":"ppm",font:{size:10}}}
+        }
+      }
+    });
+  }
+  /* Chart 2: Donut status */
+  var ctx2=document.getElementById("bioStatusChart");
+  if(ctx2){
+    if(window._bioStatusChart){window._bioStatusChart.destroy();window._bioStatusChart=null;}
+    var src2=tipeF==="personal"?perData:tipeF==="biomarker"?bioData:[...bioData,...perData];
+    if(!src2.length){emptyChart("bioStatusChart","Belum ada data");return;}
+    clearEmptyChart("bioStatusChart");
+    var isBio2=tipeF!=="personal";
+    var normal2=src2.filter(function(r){return(isBio2?r.kreatinin:r.hasil)<=(isBio2?r.rujukan:r.nab);}).length;
+    var mel2=src2.length-normal2;
+    window._bioStatusChart=new Chart(ctx2.getContext("2d"),{
+      type:"doughnut",
+      data:{labels:["Normal / Dalam Batas","Melebihi "+(isBio2?"BEI":"NAB")],
+        datasets:[{data:[normal2,mel2],backgroundColor:["#43A047","#C62828"],
+          borderColor:"#fff",borderWidth:3,hoverOffset:8}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:"62%",
+        plugins:{legend:{position:"bottom",labels:{font:{size:11},padding:12,boxWidth:12}}}}
+    });
+  }
 }
 
-function renderBioStatusChart(data,melebihi,normal){
-  var ctx=document.getElementById("bioStatusChart");
-  if(!ctx)return;
-  if(bioStatusChart){bioStatusChart.destroy();bioStatusChart=null;}
-  if(!data.length){emptyChart("bioStatusChart","Belum ada data");return;}
-  clearEmptyChart("bioStatusChart");
-  bioStatusChart=new Chart(ctx.getContext("2d"),{
-    type:"doughnut",
-    data:{labels:["Normal","Melebihi BEI/NAB"],datasets:[{data:[normal,melebihi],backgroundColor:["#43A047","#E53935"],borderColor:"#fff",borderWidth:3,hoverOffset:8}]},
-    options:{responsive:true,maintainAspectRatio:false,cutout:"62%",plugins:{legend:{position:"bottom",labels:{font:{size:11},padding:12,boxWidth:12}}}}
-  });
-}
-
-function renderBioTable(data){
+function _renderBioKimiaTable(bioData,perData,tipeF){
   var tbody=document.getElementById("bioTableBody");
   if(!tbody)return;
-  if(!data.length){tbody.innerHTML=emptyState("Belum ada data biomonitoring","fa-flask-vial");document.getElementById("bioTableFooter").textContent="Tidak ada data";return;}
-  tbody.innerHTML=data.map(function(r){
-    var over=r.nilai>r.batas;
-    var badge=over?'<span style="background:#FFEBEE;color:#C62828;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700"><i class="fas fa-circle-xmark"></i> Melebihi</span>':'<span style="background:#E8F5E9;color:#2E7D32;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700"><i class="fas fa-circle-check"></i> Normal</span>';
-    var tipeBadge=r.tipe==="Biomarker"?'<span style="background:#F3E5F5;color:#6A1B9A;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700">Biomarker</span>':'<span style="background:#E3F2FD;color:#1565C0;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700">Personal</span>';
+
+  /* Gabungkan sesuai filter tipe */
+  var rows=[];
+  if(tipeF==="all"||tipeF==="biomarker"){
+    bioData.forEach(function(r){
+      var over=r.kreatinin>r.rujukan;
+      rows.push({
+        tipe:"Biomarker",kapal:r.kapal,fleet:r.fleet,pekerja:r.pekerja,tahun:r.tahun,
+        lokasi:"Urin (Akhir Shift)",
+        nilai:r.kreatinin.toFixed(1),
+        satuan:"µg/g kreat.",
+        nab:r.rujukan,
+        nabLabel:r.rujukan+" µg/g kreat.",
+        nabRef:"BEI ACGIH 2024",
+        over:over,
+        pct:r.rujukan?Math.round(r.kreatinin/r.rujukan*100):0
+      });
+    });
+  }
+  if(tipeF==="all"||tipeF==="personal"){
+    perData.forEach(function(r){
+      var over=r.hasil>r.nab;
+      rows.push({
+        tipe:"Personal",kapal:r.kapal,fleet:r.fleet,pekerja:r.pekerja,tahun:r.tahun,
+        lokasi:r.lokasi||"Area Kerja",
+        nilai:r.hasil.toFixed(3),
+        satuan:"ppm",
+        nab:r.nab,
+        nabLabel:r.nab+" ppm (TWA)",
+        nabRef:"Kemenaker 05/2018",
+        over:over,
+        pct:r.nab?Math.round(r.hasil/r.nab*100):0
+      });
+    });
+  }
+
+  if(!rows.length){
+    tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--text-muted)">Tidak ada data untuk filter yang dipilih</td></tr>';
+    var ft=document.getElementById("bioTableFooter");if(ft)ft.textContent="Tidak ada data";
+    return;
+  }
+
+  tbody.innerHTML=rows.map(function(r){
+    var badge=r.over
+      ?'<span style="background:var(--red-soft);color:var(--red);padding:3px 9px;border-radius:99px;font-size:10.5px;font-weight:700"><i class="fas fa-circle-xmark" style="margin-right:3px"></i>Melebihi</span>'
+      :'<span style="background:var(--green-soft);color:var(--green-dark);padding:3px 9px;border-radius:99px;font-size:10.5px;font-weight:700"><i class="fas fa-circle-check" style="margin-right:3px"></i>Normal</span>';
+    var tipeBadge=r.tipe==="Biomarker"
+      ?'<span style="background:#F3E5F5;color:#7B1FA2;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700"><i class="fas fa-flask-vial" style="margin-right:3px"></i>Biomarker</span>'
+      :'<span style="background:var(--blue-soft);color:var(--blue);padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700"><i class="fas fa-wind" style="margin-right:3px"></i>Personal</span>';
+    var pctColor=r.pct>=100?"var(--red)":r.pct>=75?"#E65100":"var(--green-dark)";
     return'<tr>'
-      +'<td><strong>'+esc(r.tahun||"—")+'</strong></td>'
-      +'<td>'+esc(r.kapal||"—")+'</td>'
-      +'<td><span style="background:#E8F5E9;color:#2E7D32;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700">'+esc(r.fleet||"—")+'</span></td>'
-      +'<td>'+esc(r.pekerja||"—")+'</td>'
+      +'<td><strong style="color:var(--text)">'+esc(r.kapal)+'</strong></td>'
+      +'<td style="font-size:11.5px">'+esc(r.fleet)+'</td>'
+      +'<td>'+esc(r.pekerja)+'</td>'
+      +'<td><span style="background:var(--blue-bg);color:var(--blue);padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700">'+r.tahun+'</span></td>'
       +'<td>'+tipeBadge+'</td>'
-      +'<td style="font-size:11px;color:var(--text-muted)">'+esc(r.lokasi||"—")+'</td>'
-      +'<td style="font-weight:700;color:'+(over?"#C62828":"#2E7D32")+'">'+r.nilai+' <small style="font-weight:400;color:var(--text-muted)">'+esc(r.satuan)+'</small></td>'
-      +'<td style="color:var(--text-muted)">'+r.batas+' '+esc(r.satuan)+'</td>'
-      +'<td>'+badge+'</td>'
+      +'<td style="font-size:11.5px;color:var(--text-muted)">'+esc(r.lokasi)+'</td>'
+      +'<td style="font-weight:700;color:'+(r.over?"var(--red)":"var(--green-dark)")+'">'+r.nilai
+      +' <small style="font-weight:400;color:var(--text-muted);font-size:10px">'+r.satuan+'</small></td>'
+      +'<td style="font-size:11.5px">'
+      +'<div style="font-weight:700;color:var(--text-mid)">'+r.nabLabel+'</div>'
+      +'<div style="font-size:10px;color:var(--text-muted)">'+r.nabRef+'</div>'
+      +'</td>'
+      +'<td><div style="display:flex;align-items:center;gap:8px">'
+      +badge
+      +'<span style="font-size:10.5px;font-weight:700;color:'+pctColor+'">'+r.pct+'%</span>'
+      +'</div></td>'
       +'</tr>';
   }).join("");
+
   var ft=document.getElementById("bioTableFooter");
-  if(ft)ft.textContent="Menampilkan "+data.length+" entri";
+  if(ft)ft.textContent="Menampilkan "+rows.length+" data ("+bioData.length+" biomarker + "+perData.length+" personal sampling)";
 }
+
+function _renderBioKimiaRekomendasi(bioData,perData,melBio,melPer){
+  /* Cari atau buat container rekomendasi */
+  var el=document.getElementById("bioRekomendasiSection");
+  if(!el)return;
+
+  var totalMel=melBio+melPer;
+  var refBio=bioData[0]?bioData[0].rujukan:25;
+  var refPer=perData[0]?perData[0].nab:0.5;
+
+  /* Hitung nilai tertinggi */
+  var maxBio=bioData.length?Math.max.apply(null,bioData.map(function(r){return r.kreatinin;})):0;
+  var maxPer=perData.length?Math.max.apply(null,perData.map(function(r){return r.hasil;})):0;
+  var pctBio=refBio?Math.round(maxBio/refBio*100):0;
+  var pctPer=refPer?Math.round(maxPer/refPer*100):0;
+
+  var regs=[
+    {lbl:"BEI ACGIH 2024",val:refBio+" µg/g kreat.",tipe:"Biomarker (S-PMA Urin)"},
+    {lbl:"NAB Kemenaker No.5/2018",val:refPer+" ppm",tipe:"Personal Sampling (Udara)"},
+    {lbl:"TLV-C ACGIH 2024",val:"2.5 ppm",tipe:"Ceiling (tidak boleh dilampau sesaat)"},
+    {lbl:"IARC Classification",val:"Group 1",tipe:"Karsinogen manusia terbukti (AML)"},
+  ];
+
+  var reksData=[
+    {
+      judul: totalMel>0?"⚕ Tindak Lanjut Medis Segera":"✓ Pertahankan Program",
+      warna: totalMel>0?"var(--red)":"var(--green-dark)",
+      bg:    totalMel>0?"var(--red-soft)":"var(--green-soft)",
+      grad:  totalMel>0?"var(--grad-red)":"var(--grad-green)",
+      items:[
+        totalMel>0
+          ?"Pemeriksaan hematologi lengkap (CBC + diferensial) untuk "+totalMel+" pekerja yang melebihi batas — konsultasi SpOK untuk risk assessment individual"
+          :"Pertahankan program biomonitoring rutin — prinsip ALARA wajib diterapkan untuk benzene (IARC Group 1) meskipun nilai masih dalam batas",
+        melBio>0?"Nilai tertinggi biomarker: "+maxBio.toFixed(1)+" µg/g kreat. ("+pctBio+"% dari BEI) — perlu re-sampling dalam 3 bulan":"Biomarker benzene: semua "+bioData.length+" sampel dalam batas BEI ACGIH 2024 (≤"+refBio+" µg/g kreat.)",
+        melPer>0?"Nilai tertinggi personal sampling: "+maxPer.toFixed(3)+" ppm ("+pctPer+"% dari NAB) — audit sumber paparan segera":"Personal sampling benzene: semua "+perData.length+" titik dalam batas NAB Kemenaker (≤"+refPer+" ppm)",
+      ]
+    },
+    {
+      judul:"🔧 Pengendalian Teknis & Administratif",
+      warna:"var(--blue)",
+      bg:"var(--blue-soft)",
+      grad:"var(--grad-blue)",
+      items:[
+        "Verifikasi dan perbaiki sistem Local Exhaust Ventilation (LEV) di pump room, cargo manifold, dan area bunkering — standar minimum airflow 150 fpm",
+        "Terapkan closed-loop system untuk bunkering dan cargo handling — minimalkan pembukaan manhole saat proses transfer",
+        "Wajibkan permit-to-work untuk entry ke cargo tank dan pump room dengan gas monitoring real-time — batas intervensi 10% LEL benzene",
+        "Pastikan APD full-face respirator dengan cartridge OV/P100 tersedia dan digunakan di seluruh area berisiko tinggi paparan benzene",
+      ]
+    },
+    {
+      judul:"📋 Program Monitoring Jangka Panjang",
+      warna:"#7B1FA2",
+      bg:"#F3E5F5",
+      grad:"var(--grad-purple)",
+      items:[
+        "Jadwalkan biomonitoring benzene rutin setiap 6 bulan untuk seluruh ABK yang terpapar reguler — dokumentasikan tren nilai individu",
+        "Daftarkan ABK berisiko tinggi dalam program medical surveillance jangka panjang sesuai Permenaker 05/2018 Lampiran IV Tabel Hazard Kimia",
+        "Kompilasi laporan biomonitoring tahunan untuk audit ISM Code, biro klasifikasi, dan PSC — cantumkan dalam Health Record ABK",
+      ]
+    },
+  ];
+
+  var html='';
+
+  /* Regulasi reference strip */
+  html+='<div style="background:var(--blue-soft);border:1px solid var(--border);border-left:4px solid var(--blue);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:16px">'
+    +'<div style="font-size:12px;font-weight:700;color:var(--blue);margin-bottom:10px"><i class="fas fa-scale-balanced" style="margin-right:7px"></i>Nilai Ambang Batas (NAB) &amp; Biological Exposure Indices (BEI) — Acuan Resmi</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">'
+    +regs.map(function(r){
+      return'<div style="background:#fff;border-radius:var(--radius-xs);padding:10px 12px;border:1px solid var(--border)">'
+        +'<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">'+r.tipe+'</div>'
+        +'<div style="font-size:13px;font-weight:800;color:var(--blue);font-family:var(--font2)">'+r.val+'</div>'
+        +'<div style="font-size:10.5px;color:var(--text-mid);margin-top:2px">'+r.lbl+'</div>'
+        +'</div>';
+    }).join("")
+    +'</div></div>';
+
+  /* Rekomendasi cards */
+  html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">'
+    +reksData.map(function(rek){
+      return'<div style="background:#fff;border:1.5px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-xs);overflow:hidden">'
+        +'<div style="padding:13px 16px;background:'+rek.grad+'">'
+        +'<div style="font-size:13px;font-weight:700;color:#fff;line-height:1.3">'+rek.judul+'</div>'
+        +'</div>'
+        +'<div style="padding:14px 16px;display:flex;flex-direction:column;gap:9px">'
+        +rek.items.map(function(item){
+          return'<div style="display:flex;gap:9px;align-items:flex-start">'
+            +'<div style="width:6px;height:6px;background:'+rek.warna+';border-radius:50%;flex-shrink:0;margin-top:6px"></div>'
+            +'<div style="font-size:11.5px;color:var(--text-mid);line-height:1.65">'+item+'</div>'
+            +'</div>';
+        }).join("")
+        +'</div></div>';
+    }).join("")
+    +'</div>';
+
+  el.innerHTML=html;
+}
+
 
 function applyBioKimiaFilters(){renderBioKimiaSection();}
 function clearBioKimiaFilters(){
