@@ -3,15 +3,15 @@
 /* ✅ Pedoman PDF & Foto Dokumentasi → Google Drive (multi-device)    */
 /* ✅ IndexedDB dihapus — data terpusat di GAS/Drive                  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbwnDo6CfgQvbqh03p_GpY_y0Lh2ZDMxeyp4uWTWUXU80OjqTDf3R2JMeQl5PNvNxZo-rA/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxWscFjKrrqQgNwmeRLAfjBtWi05bnRLkW5ESrtVBWkNlIA5exFlTLhNid8VnGUoWMK2Q/exec";
 
 async function gasPost(payload) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 20000);
+  const timeout = setTimeout(() => controller.abort(), 30000); // 30 detik timeout
   try {
     const res = await fetch(API_URL, {
       method:"POST", redirect:"follow",
-      headers:{"Content-Type":"text/plain;charset=utf-8","Connection":"keep-alive"},
+      headers:{"Content-Type":"text/plain;charset=utf-8"},
       body:JSON.stringify(payload),
       signal: controller.signal
     });
@@ -27,7 +27,7 @@ async function gasPost(payload) {
   } catch(e) {
     clearTimeout(timeout);
     if (e.name === "AbortError") {
-      throw new Error("Request timeout (>20 detik). Server GAS tidak merespons.");
+      throw new Error("Request timeout (>30 detik). Server GAS tidak merespons.");
     }
     throw e;
   }
@@ -86,11 +86,6 @@ function setLoginLockedUntil(ts){localStorage.setItem("ppn_locked_until",ts.toSt
 var _otpUsername = "";
 var _otpTimer = null;
 
-
-/* ── GAS Warm-up: ping GAS saat halaman pertama dimuat ── */
-(function warmupGAS(){
-  fetch(API_URL,{method:"POST",redirect:"follow",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"ping"})}).catch(function(){});
-})();
 async function doLogin(){
   const username=document.getElementById("loginUsername").value.trim();
   const password=document.getElementById("loginPassword").value;
@@ -108,11 +103,10 @@ async function doLogin(){
       document.getElementById("loginError").style.display="none";
       document.getElementById("loginOverlay").classList.add("hidden");
       document.getElementById("sidebarUsername").textContent=getMappedName(data.displayName);
-      applyRoleUI();
-      /* loadData berjalan di background — dashboard langsung terlihat */
-      loadData();
+      applyRoleUI();loadData();
     }
     else if(data.status==="otp_required"){
+      /* Tampilkan panel OTP */
       _otpUsername=username;
       showOTPPanel(data.message);
     }
@@ -212,8 +206,7 @@ async function doVerifyOTP(){
       saveSession(data,data.token);
       document.getElementById("loginOverlay").classList.add("hidden");
       document.getElementById("sidebarUsername").textContent=getMappedName(data.displayName);
-      applyRoleUI();
-      loadData();
+      applyRoleUI();loadData();
     }else{
       var errEl=document.getElementById("otpError");
       var errMsg=document.getElementById("otpErrorMsg");
@@ -395,7 +388,6 @@ const TOTAL_KAPAL=85;
 const BULAN_ORDER=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 let rawHRA=[],rawDAT=[],rawPest=[],filteredHRA=[],filteredDAT=[],filteredPest=[];
 let rawFisika=[],rawKimia=[],rawBiologi=[],rawErgonomi=[],rawPsikososial=[];
-let rawAlkes=[],alkesDonutChart=null,alkesBarChart=null;
 let rawCloseout25=[];
 let filteredFisika=[],filteredKimia=[],filteredBiologi=[],filteredErgonomi=[],filteredPsikososial=[];
 let hraBarChart,hraDonutChart,datBarChart,datDonutChart,pestBarChart,pestDonutChart,pestTemuanChart,pestBiayaChart;
@@ -728,7 +720,6 @@ async function loadData(){
     initP3KData(data);
     rawFisika=data.fisika||[];rawKimia=data.kimia||[];rawBiologi=data.biologi||[];
     rawErgonomi=data.ergonomi||[];rawPsikososial=data.psikososial||[];
-    initAlkesData(data);
     filteredHRA=[...rawHRA];filteredDAT=[...rawDAT];filteredPest=[...rawPest];
     filteredFisika=[...rawFisika];filteredKimia=[...rawKimia];filteredBiologi=[...rawBiologi];
     filteredErgonomi=[...rawErgonomi];filteredPsikososial=[...rawPsikososial];
@@ -772,7 +763,6 @@ async function loadData(){
   }
   renderHRAPage();renderDATPage();renderPestPage();
   renderFisikaPage();renderKimiaPage();renderBiologiPage();renderErgonomiPage();renderPsikoPage();
-  try{initAlkesData(null);renderAlkesPage();}catch(e){console.warn("Alkes:",e);}
   showLoading(false);
   /* Update mobile KPI strip after data loaded */
   setTimeout(mUpdateKpiStrip,200);
@@ -1041,7 +1031,7 @@ function switchPage(menu) {
   var titles = {
     hra:'HRA & IH', dat:'Drugs & Alcohol Test',
     pest:'Pest & Rodent Control', p3k:'P3K & AED Office',
-    menu5:'Sebaran Alkes Kapal', alkes:'Sebaran Alkes Kapal', menu6:'Pedoman IH',
+    menu5:'Sebaran Alkes Kapal', menu6:'Pedoman IH',
     dokumentasi:'Dokumentasi',
     fisika:'Faktor Fisika', kimia:'Faktor Kimia',
     biologi:'Faktor Biologi', ergonomi:'Faktor Ergonomi',
@@ -2143,84 +2133,230 @@ function hcvRenderProfile(){
   var svg=document.getElementById('hcvProfileSVG');
   if(!svg)return;
   var S='http://www.w3.org/2000/svg';
-  var ns='http://www.w3.org/1999/xhtml';
-  var IMG='https://raw.githubusercontent.com/imperor21/IH-PPN-III/main/ship_profile.png';
   svg.innerHTML='';
-  function el(tag,attrs){var e=document.createElementNS(S,tag);Object.keys(attrs).forEach(function(k){e.setAttribute(k,attrs[k]);});return e;}
-  svg.appendChild(el('rect',{x:0,y:0,width:960,height:269,fill:'#081018'}));
-  var fo=document.createElementNS(S,'foreignObject');
-  fo.setAttribute('x','0');fo.setAttribute('y','0');fo.setAttribute('width','960');fo.setAttribute('height','269');
-  var div=document.createElementNS(ns,'div');
-  div.setAttribute('style','width:960px;height:269px;overflow:hidden;line-height:0;font-size:0;');
-  var imgEl=document.createElementNS(ns,'img');
-  imgEl.setAttribute('src',IMG);
-  imgEl.setAttribute('style','width:960px;height:269px;display:block;');
-  div.appendChild(imgEl);fo.appendChild(div);svg.appendChild(fo);
-  function zone(id,x,y,w,h,col,lbl,pos){
-    var g=document.createElementNS(S,'g');g.setAttribute('cursor','pointer');
-    var r=el('rect',{x:x,y:y,width:w,height:h,fill:col,opacity:'0',rx:'4',stroke:col,'stroke-width':'2','stroke-dasharray':'5,3'});
-    g.appendChild(r);
-    var lx=parseFloat(x)+parseFloat(w)/2;
-    var ly=(pos==='bottom')?parseFloat(y)+parseFloat(h)+30:parseFloat(y)-30;
-    var ly2=(pos==='bottom')?parseFloat(y)+parseFloat(h):parseFloat(y);
-    var line=el('line',{x1:lx,y1:ly2,x2:lx,y2:ly,stroke:col,'stroke-width':'1.5','stroke-dasharray':'4,3',opacity:'0.9'});
-    g.appendChild(line);
-    g.appendChild(el('circle',{cx:lx,cy:ly2,r:'3.5',fill:col,opacity:'0.9'}));
-    var BH=22;var PAD=10;var bw=lbl.length*7.6+PAD*2;
-    var bx=Math.max(2,Math.min(958-bw,lx-bw/2));
-    var by=(pos==='bottom')?ly+2:ly-BH-2;
-    g.appendChild(el('rect',{x:bx-1,y:by-1,width:bw+2,height:BH+2,fill:'#000',opacity:'0.45',rx:'12'}));
-    g.appendChild(el('rect',{x:bx,y:by,width:bw,height:BH,fill:col,rx:'11'}));
+  function el(tag,attrs){
+    var e=document.createElementNS(S,tag);
+    Object.keys(attrs).forEach(function(k){e.setAttribute(k,attrs[k]);});
+    return e;
+  }
+  function tx(x,y,txt,attrs){
     var t=document.createElementNS(S,'text');
-    t.setAttribute('x',String(lx));t.setAttribute('y',String(by+15));
-    t.setAttribute('text-anchor','middle');t.setAttribute('fill','#FFFFFF');
-    t.setAttribute('font-size','10');t.setAttribute('font-family','Arial,sans-serif');
-    t.setAttribute('font-weight','800');t.textContent=lbl;g.appendChild(t);
+    t.setAttribute('x',x);t.setAttribute('y',y);
+    Object.keys(attrs||{}).forEach(function(k){t.setAttribute(k,attrs[k]);});
+    t.textContent=txt;return t;
+  }
+  function zone(id,x,y,w,h,col,lbl,ly){
+    var g=document.createElementNS(S,'g');
+    g.setAttribute('cursor','pointer');
+    var r=el('rect',{x:x,y:y,width:w,height:h,fill:col,opacity:'.18',rx:3,stroke:col,'stroke-width':1.5});
+    g.appendChild(r);
+    g.appendChild(el('rect',{x:x+1,y:y+1,width:5,height:h-2,fill:col,rx:3}));
+    /* leader line up */
+    g.appendChild(el('line',{x1:x+w/2,y1:y,x2:x+w/2,y2:ly+11,stroke:col,'stroke-width':1,'stroke-dasharray':'3,2',opacity:'.7'}));
+    /* label box */
+    var bw=lbl.length*6.5+14; var bh=12;
+    var bx=Math.max(2,Math.min(896-bw,x+w/2-bw/2));
+    g.appendChild(el('rect',{x:bx,y:ly-1,width:bw,height:bh,fill:'#060E1E',stroke:col,'stroke-width':1.2,rx:3,opacity:'.94'}));
+    var t=document.createElementNS(S,'text');
+    t.setAttribute('x',bx+bw/2);t.setAttribute('y',ly+8);t.setAttribute('text-anchor','middle');
+    t.setAttribute('fill',col);t.setAttribute('font-size','8');t.setAttribute('font-family','Arial');t.setAttribute('font-weight','700');
+    t.textContent=lbl;g.appendChild(t);
     g.addEventListener('click',function(){hcvZoneClick(id);});
-    g.addEventListener('mouseenter',function(){r.setAttribute('opacity','0.2');r.setAttribute('stroke-width','2.5');});
-    g.addEventListener('mouseleave',function(){r.setAttribute('opacity','0');r.setAttribute('stroke-width','2');});
+    g.addEventListener('mouseenter',function(){r.setAttribute('opacity','.36');});
+    g.addEventListener('mouseleave',function(){r.setAttribute('opacity','.18');});
     svg.appendChild(g);
   }
-  zone('bridge',0,0,145,266,'#FF9900','AKOMODASI & ANJUNGAN','top');
-  zone('cargo',145,64,477,175,'#FF2233','CARGO TANK AREA','top');
-  zone('engine',0,149,145,117,'#CC2200','KAMAR MESIN','bottom');
-  zone('pump',622,55,94,175,'#FF10AA','PUMP ROOM','top');
-  zone('fore',716,30,244,222,'#FF9900','HALUAN & MOORING','top');
+
+  /* Sky */
+  svg.appendChild(el('rect',{x:0,y:0,width:900,height:195,fill:'#C8D8E8'}));
+  svg.appendChild(el('rect',{x:0,y:175,width:900,height:20,fill:'#B8CCDC'}));
+  /* Water */
+  svg.appendChild(el('rect',{x:0,y:195,width:900,height:50,fill:'#2E6E9E'}));
+  svg.appendChild(el('rect',{x:0,y:195,width:900,height:4,fill:'#3A80B8'}));
+  svg.appendChild(el('line',{x1:0,y1:206,x2:900,y2:206,stroke:'#3A80B8','stroke-width':1,opacity:'.6'}));
+  svg.appendChild(el('line',{x1:0,y1:218,x2:900,y2:218,stroke:'#3A80B8','stroke-width':.8,opacity:'.35'}));
+
+  /* HULL */
+  svg.appendChild(el('path',{d:'M 30,198 L 30,160 L 52,157 L 795,143 Q 830,140 848,150 L 854,168 L 854,198 Z',fill:'#181818'}));
+  /* Red anti-fouling */
+  svg.appendChild(el('path',{d:'M 31,198 L 31,210 Q 32,220 60,222 L 798,218 Q 826,216 840,210 L 852,202 L 854,195 Q 840,195 830,196 L 35,196 Z',fill:'#8C1A14'}));
+  /* White waterline */
+  svg.appendChild(el('line',{x1:31,y1:198,x2:795,y2:198,stroke:'#D8DDD5','stroke-width':2.5}));
+  svg.appendChild(el('line',{x1:795,y1:198,x2:843,y2:192,stroke:'#D8DDD5','stroke-width':2.5}));
+  /* Hull sheer line */
+  svg.appendChild(el('line',{x1:52,y1:157,x2:795,y2:143,stroke:'#252E38','stroke-width':1.5}));
+  /* Stern */
+  svg.appendChild(el('rect',{x:22,y:155,width:9,height:46,fill:'#101010',rx:1}));
+  svg.appendChild(el('rect',{x:22,y:198,width:9,height:24,fill:'#6A1210',rx:1}));
+  /* Bow */
+  svg.appendChild(el('path',{d:'M 844,150 Q 855,148 862,158 L 868,175 L 868,198 L 854,198 L 852,168 Z',fill:'#181818'}));
+  svg.appendChild(el('path',{d:'M 854,198 L 868,198 L 868,212 Q 858,220 838,222 L 798,222 Q 822,220 836,214 Z',fill:'#8C1A14'}));
+  svg.appendChild(el('ellipse',{cx:866,cy:212,rx:12,ry:8,fill:'#6A1210',opacity:'.65'}));
+
+  /* SUPERSTRUCTURE */
+  svg.appendChild(el('rect',{x:30,y:66,width:185,height:96,fill:'#D8DCDE',rx:1}));
+  [78,90,102,114,126,138,150].forEach(function(y){
+    svg.appendChild(el('line',{x1:30,y1:y,x2:215,y2:y,stroke:'#BCC0C4','stroke-width':1.2}));
+  });
+  /* Windows */
+  [[68,11],[80,10],[92,10],[104,9],[116,9],[128,8],[140,8],[152,7]].forEach(function(row,fi){
+    var y=row[0],h=row[1];
+    for(var x=36;x<213;x+=14){
+      svg.appendChild(el('rect',{x:x,y:y,width:10,height:h,fill:'#7AAEC2',rx:1,opacity:String(0.95-fi*0.08)}));
+    }
+  });
+  /* Bridge deck */
+  svg.appendChild(el('rect',{x:18,y:50,width:208,height:18,fill:'#CDD2D6',rx:1}));
+  svg.appendChild(el('rect',{x:24,y:53,width:196,height:12,fill:'#7ABCD0',rx:1,opacity:'.6'}));
+  [52,84,116,148,180,208].forEach(function(x){
+    svg.appendChild(el('line',{x1:x,y1:53,x2:x,y2:65,stroke:'#9CC8D8','stroke-width':1}));
+  });
+  svg.appendChild(el('rect',{x:40,y:36,width:152,height:15,fill:'#C0C6CC',rx:1}));
+  svg.appendChild(el('rect',{x:62,y:22,width:108,height:15,fill:'#B4BAC0',rx:1}));
+
+  /* FUNNEL (orange/amber) */
+  svg.appendChild(el('path',{d:'M 222,22 L 220,100 L 270,100 L 268,22 Z',fill:'#D4780A'}));
+  svg.appendChild(el('path',{d:'M 215,18 Q 218,12 245,12 Q 272,12 274,18 L 268,24 Q 265,18 245,18 Q 225,18 222,24 Z',fill:'#B86808'}));
+  svg.appendChild(el('ellipse',{cx:245,cy:12,rx:31,ry:6.5,fill:'#0A1218'}));
+  /* Red stripe */
+  svg.appendChild(el('rect',{x:220,y:42,width:50,height:14,fill:'#CC2200'}));
+  svg.appendChild(el('rect',{x:218,y:93,width:62,height:8,fill:'#A86006',rx:1}));
+
+  /* Mast */
+  svg.appendChild(el('line',{x1:124,y1:36,x2:124,y2:6,stroke:'#7A8A94','stroke-width':3}));
+  svg.appendChild(el('line',{x1:96,y1:13,x2:154,y2:13,stroke:'#7A8A94','stroke-width':2}));
+  svg.appendChild(el('circle',{cx:124,cy:6,r:3.5,fill:'#909AA4'}));
+
+  /* Lifeboats */
+  [[222,106,15,9],[240,106,15,9],[222,118,15,9],[240,118,15,9]].forEach(function(b){
+    svg.appendChild(el('rect',{x:b[0],y:b[1],width:b[2],height:b[3],fill:'#E8D8A8',rx:2,stroke:'#C4A870','stroke-width':.8}));
+  });
+
+  /* CARGO DECK */
+  svg.appendChild(el('rect',{x:276,y:157,width:466,height:14,fill:'#2A3A28'}));
+  svg.appendChild(el('rect',{x:276,y:157,width:466,height:3,fill:'#364A34'}));
+
+  /* CARGO TANK DOMES */
+  [[288,157,310,138],[322,157,352,140],[368,157,396,142],[412,157,438,144],[454,157,478,146]].forEach(function(t){
+    svg.appendChild(el('path',{d:'M '+t[0]+','+t[1]+' Q '+t[0]+','+t[2]+' '+t[3]+','+t[2]+' Q '+(t[3]+((t[3]-t[0])*1))+','+t[2]+' '+(t[3]+((t[3]-t[0])*1))+','+t[1],fill:'#1C2C38'}));
+    var cx=t[3]; var cy=t[2];
+    svg.appendChild(el('ellipse',{cx:cx,cy:cy,rx:String(t[3]-t[0]),ry:'8',fill:'#182230'}));
+    svg.appendChild(el('ellipse',{cx:cx,cy:cy,rx:String((t[3]-t[0])/2),ry:'3.5',fill:'#1C2A36'}));
+  });
+
+  /* Tank dividers */
+  [318,370,414,456,508].forEach(function(x){
+    svg.appendChild(el('rect',{x:x,y:157,width:3,height:20,fill:'#364852'}));
+  });
+
+  /* Manifold */
+  svg.appendChild(el('rect',{x:456,y:143,width:32,height:24,fill:'#3A5060',rx:2}));
+  svg.appendChild(el('rect',{x:452,y:150,width:40,height:5,fill:'#4A6272',rx:1}));
+
+  /* Pipelines */
+  svg.appendChild(el('rect',{x:278,y:163,width:464,height:4,fill:'#3A5A6E',rx:1.5}));
+  svg.appendChild(el('rect',{x:278,y:168,width:464,height:3,fill:'#2E4A5A',rx:1}));
+
+  /* Railing */
+  svg.appendChild(el('line',{x1:278,y1:162,x2:280,y2:150,stroke:'#446070','stroke-width':1.2}));
+  svg.appendChild(el('line',{x1:280,y1:150,x2:720,y2:138,stroke:'#446070','stroke-width':1.2}));
+  [300,344,386,430,474,516,560,604,648,692].forEach(function(x){
+    var y2=150-(x-280)*12/440;
+    svg.appendChild(el('line',{x1:x,y1:162-(x-280)*12/440+6,x2:x,y2:y2,stroke:'#446070','stroke-width':1}));
+  });
+
+  /* Pump room deckhouse */
+  svg.appendChild(el('rect',{x:548,y:126,width:76,height:46,fill:'#1E2E3A',rx:1}));
+  svg.appendChild(el('rect',{x:546,y:126,width:80,height:4,fill:'#2A3E4E'}));
+  [556,570,584,598,612].forEach(function(x){
+    svg.appendChild(el('rect',{x:x,y:134,width:9,height:8,fill:'#4A8098',rx:1,opacity:'.8'}));
+  });
+  [558,572,588].forEach(function(x){
+    svg.appendChild(el('rect',{x:x,y:114,width:5,height:13,fill:'#2A3E4E',rx:1}));
+  });
+
+  /* Fore mast */
+  svg.appendChild(el('line',{x1:658,y1:157,x2:658,y2:102,stroke:'#5A6A78','stroke-width':3}));
+  svg.appendChild(el('line',{x1:636,y1:113,x2:680,y2:113,stroke:'#5A6A78','stroke-width':2}));
+  svg.appendChild(el('circle',{cx:658,cy:102,r:3.5,fill:'#6A7880'}));
+
+  /* Forecastle */
+  svg.appendChild(el('path',{d:'M 726,157 L 726,146 Q 728,143 748,141 L 808,139 Q 826,138 832,143 L 836,153 L 836,157 Z',fill:'#1E2C38'}));
+  svg.appendChild(el('rect',{x:726,y:145,width:112,height:3,fill:'#2A3E4E'}));
+  [744,766].forEach(function(x){svg.appendChild(el('ellipse',{cx:x,cy:153,rx:11,ry:5,fill:'#2E4050'}));});
+  [732,750,768,786,804,820].forEach(function(x){svg.appendChild(el('rect',{x:x,y:157,width:7,height:7,fill:'#2A3C4E',rx:1}));});
+  svg.appendChild(el('circle',{cx:838,cy:168,r:5.5,fill:'#101820',stroke:'#384858','stroke-width':1.5}));
+  svg.appendChild(el('circle',{cx:836,cy:180,r:4.5,fill:'#101820',stroke:'#384858','stroke-width':1.5}));
+
+  /* ZONE OVERLAYS */
+  zone('bridge', 18,  18, 204, 145, '#FF8F00', 'AKOMODASI & ANJUNGAN', 18);
+  zone('cargo',  278, 128, 268, 86,  '#B71C1C', 'CARGO TANK AREA',      18);
+  zone('engine', 22,  164, 256, 72,  '#C62828', 'KAMAR MESIN',          222);
+  zone('pump',   544, 118, 90,  96,  '#E63946', 'PUMP ROOM',            18);
+  zone('fore',   722, 132, 130, 98,  '#FF8F00', 'HALUAN & MOORING',     18);
+
+  /* Waterline label */
+  svg.appendChild(tx(880,240,'STARBOARD VIEW',{'text-anchor':'end',fill:'#607888','font-size':'8','font-family':'Arial','font-style':'italic'}));
 }
 
+/* ── TOP VIEW SVG ── */
 function hcvRenderTop(){
   var svg=document.getElementById('hcvTopSVG');
   if(!svg)return;
   var S='http://www.w3.org/2000/svg';
-  var ns='http://www.w3.org/1999/xhtml';
-  var IMG='https://raw.githubusercontent.com/imperor21/IH-PPN-III/main/ship_topview.png';
   svg.innerHTML='';
-  function el(tag,attrs){var e=document.createElementNS(S,tag);Object.keys(attrs).forEach(function(k){e.setAttribute(k,attrs[k]);});return e;}
-  svg.appendChild(el('rect',{x:0,y:0,width:960,height:312,fill:'#081018'}));
-  var fo=document.createElementNS(S,'foreignObject');
-  fo.setAttribute('x','0');fo.setAttribute('y','0');fo.setAttribute('width','960');fo.setAttribute('height','312');
-  var div=document.createElementNS(ns,'div');
-  div.setAttribute('style','width:960px;height:312px;overflow:hidden;line-height:0;font-size:0;');
-  var imgEl=document.createElementNS(ns,'img');
-  imgEl.setAttribute('src',IMG);
-  imgEl.setAttribute('style','width:960px;height:312px;display:block;');
-  div.appendChild(imgEl);fo.appendChild(div);svg.appendChild(fo);
-  function zone(id,x,y,w,h,col){
-    var g=document.createElementNS(S,'g');g.setAttribute('cursor','pointer');
-    var r=el('rect',{x:x,y:y,width:w,height:h,fill:col,opacity:'0',rx:'4',stroke:col,'stroke-width':'2.5','stroke-dasharray':'5,3'});
-    g.appendChild(r);
-    g.addEventListener('click',function(){hcvZoneClick(id);});
-    g.addEventListener('mouseenter',function(){r.setAttribute('opacity','0.18');r.setAttribute('stroke-width','3');});
-    g.addEventListener('mouseleave',function(){r.setAttribute('opacity','0');r.setAttribute('stroke-width','2.5');});
-    svg.appendChild(g);
+  function el(tag,attrs){
+    var e=document.createElementNS(S,tag);
+    Object.keys(attrs).forEach(function(k){e.setAttribute(k,attrs[k]);});
+    return e;
   }
-  zone('bridge',24,7,155,298,'#FF9900');
-  zone('engine',24,158,155,147,'#CC2200');
-  zone('cargo',179,5,527,304,'#FF2233');
-  zone('pump',706,7,111,302,'#FF10AA');
-  zone('fore',817,7,136,302,'#FF9900');
+  svg.appendChild(el('rect',{x:0,y:0,width:900,height:170,fill:'#0D1E36'}));
+  svg.appendChild(el('path',{d:'M 38 15 L 38 155 L 738 155 Q 848 155 868 85 Q 848 15 738 15 Z',fill:'#1A2E40',stroke:'#2A3E54','stroke-width':1.5}));
+  var tZones=[
+    {id:'bridge',path:'M 38 15 L 38 155 L 180 155 L 180 15 Z',col:'#FF8F00',lbls:['Akomodasi','& Anjungan'],lx:108,ly:85},
+    {id:'cargo', path:'M 184 15 L 184 155 L 592 155 L 592 15 Z',col:'#B71C1C',lbls:['CARGO TANKS'],lx:388,ly:85},
+    {id:'pump',  path:'M 596 15 L 596 155 L 686 155 L 686 15 Z',col:'#E63946',lbls:['Pump','Room'],lx:640,ly:85},
+    {id:'engine',path:'M 38 90 L 38 155 L 180 155 L 180 90 Z',col:'#C62828',lbls:['Engine','(Bawah)'],lx:108,ly:120},
+    {id:'fore',  path:'M 690 15 L 690 155 L 738 155 Q 848 155 868 85 Q 848 15 738 15 Z',col:'#FF8F00',lbls:['Forecastle'],lx:778,ly:85},
+  ];
+  tZones.forEach(function(z){
+    var g=document.createElementNS(S,'g');g.setAttribute('cursor','pointer');
+    var p=el('path',{d:z.path,fill:z.col,opacity:'.28',stroke:z.col,'stroke-width':1.2});
+    g.appendChild(p);
+    g.addEventListener('click',function(){hcvZoneClick(z.id);});
+    g.addEventListener('mouseenter',function(){p.setAttribute('opacity','.45');});
+    g.addEventListener('mouseleave',function(){p.setAttribute('opacity','.28');});
+    svg.appendChild(g);
+    z.lbls.forEach(function(line,li){
+      var t=document.createElementNS(S,'text');
+      t.setAttribute('x',z.lx);t.setAttribute('y',z.ly-((z.lbls.length-1)*8)+li*16);
+      t.setAttribute('text-anchor','middle');t.setAttribute('fill','#fff');
+      t.setAttribute('font-size',z.lbls.length>1?'8':'10');
+      t.setAttribute('font-family','Arial');t.setAttribute('font-weight','700');
+      t.textContent=line;svg.appendChild(t);
+    });
+  });
+  [340,490,592].forEach(function(x){svg.appendChild(el('line',{x1:x,y1:15,x2:x,y2:155,stroke:'rgba(0,180,216,.25)','stroke-width':1.5}));});
+  [184,686,690].forEach(function(x){svg.appendChild(el('line',{x1:x,y1:15,x2:x,y2:155,stroke:'rgba(0,180,216,.3)','stroke-width':1.5}));});
+  /* Void strips */
+  svg.appendChild(el('rect',{x:184,y:15,width:408,height:14,fill:'#455A64',opacity:'.35'}));
+  svg.appendChild(el('rect',{x:184,y:141,width:408,height:14,fill:'#455A64',opacity:'.35'}));
+  var vt=document.createElementNS(S,'text');
+  vt.setAttribute('x','388');vt.setAttribute('y','26');vt.setAttribute('text-anchor','middle');
+  vt.setAttribute('fill','rgba(144,164,174,.7)');vt.setAttribute('font-size','8');vt.setAttribute('font-family','Arial');
+  vt.textContent='VOID / BALLAST SPACE';svg.appendChild(vt);
+  /* Manifold */
+  svg.appendChild(el('rect',{x:386,y:70,width:56,height:24,fill:'#4A6070',rx:3,opacity:'.7'}));
+  var mt=document.createElementNS(S,'text');
+  mt.setAttribute('x','414');mt.setAttribute('y','85');mt.setAttribute('text-anchor','middle');
+  mt.setAttribute('fill','#7FC3E8');mt.setAttribute('font-size','8');mt.setAttribute('font-family','Arial');
+  mt.textContent='MANIFOLD';svg.appendChild(mt);
+  var nt=document.createElementNS(S,'text');
+  nt.setAttribute('x','886');nt.setAttribute('y','18');nt.setAttribute('text-anchor','end');
+  nt.setAttribute('fill','rgba(0,180,216,.55)');nt.setAttribute('font-size','11');
+  nt.setAttribute('font-weight','700');nt.setAttribute('font-family','Arial');
+  nt.textContent='N \u2191';svg.appendChild(nt);
 }
-
 
 /* ── ZONE CLICK — show detail ── */
 function hcvZoneClick(zoneId){
@@ -3819,13 +3955,79 @@ function getSummaryData(){
   var bioD=rawBiomarker||[];
   var bioMel=bioD.filter(function(r){return r.kreatinin>r.rujukan;}).length;
 
+  /* P3K & AED Office */
+  var p3kAll=typeof rawP3K!=="undefined"?rawP3K:[];
+  var p3kLokTot=typeof P3K_LOKASI!=="undefined"?P3K_LOKASI.length:14;
+  var p3kCekCount=p3kAll.filter(function(r){return r.p3kStatus&&r.p3kStatus.toLowerCase()!=="tidak diperiksa";}).length;
+  var aedCekCount=p3kAll.filter(function(r){return r.aedStatus&&r.aedStatus.toLowerCase()!=="tidak diperiksa";}).length;
+  var p3kMasalah=p3kAll.filter(function(r){
+    var ps=(r.p3kStatus||"").toLowerCase();
+    var as=(r.aedStatus||"").toLowerCase();
+    return ps.includes("expired")||ps.includes("tidak lengkap")||ps.includes("restock")
+        ||as.includes("rusak")||as.includes("servis")||as.includes("expired");
+  }).length;
+  var p3kExpired=p3kAll.filter(function(r){return(r.p3kExp||r.aedExp);}).length;
+  /* Lokasi unik yg sudah diperiksa */
+  var p3kLokCek=new Set(p3kAll.filter(function(r){return r.p3kStatus;}).map(function(r){return r.lantai+"|"+r.fungsi;})).size;
+  var p3kCovPct=p3kLokTot>0?Math.round((p3kLokCek/p3kLokTot)*100):0;
+  /* Distribusi status P3K per lokasi */
+  var p3kStatusDist={lengkap:0,tidakLengkap:0,expired:0,belum:0};
+  p3kAll.forEach(function(r){
+    var ps=(r.p3kStatus||"").toLowerCase();
+    if(!r.p3kStatus||ps.includes("tidak diperiksa"))p3kStatusDist.belum++;
+    else if(ps.includes("expired"))p3kStatusDist.expired++;
+    else if(ps.includes("tidak lengkap")||ps.includes("restock"))p3kStatusDist.tidakLengkap++;
+    else p3kStatusDist.lengkap++;
+  });
+  /* Distribusi status AED */
+  var aedStatusDist={baik:0,perluServis:0,belum:0};
+  p3kAll.forEach(function(r){
+    var as=(r.aedStatus||"").toLowerCase();
+    if(!r.aedStatus||as.includes("tidak diperiksa"))aedStatusDist.belum++;
+    else if(as.includes("rusak")||as.includes("servis")||as.includes("expired"))aedStatusDist.perluServis++;
+    else aedStatusDist.baik++;
+  });
+  /* Temuan terkini */
+  var p3kTemuan=p3kAll.filter(function(r){return r.p3kTemuan||r.aedTemuan;}).slice(0,3);
+
+  /* Sebaran Alkes Kapal (placeholder — data akan diisi dari modul mendatang) */
+  /* Mengacu pada data HRA sebagai proxy kapal yang sudah diinventarisir */
+  var alkesKapalTot=typeof TOTAL_KAPAL!=="undefined"?TOTAL_KAPAL:85;
+  var alkesKapalCek=0;/* belum ada modul alkes — tampilkan status Coming Soon dengan progress HRA */
+  var alkesHasData=false;
+  /* Jika nantinya ada rawAlkes dari GAS */
+  if(typeof rawAlkes!=="undefined"&&rawAlkes&&rawAlkes.length){
+    alkesHasData=true;
+    alkesKapalCek=new Set(rawAlkes.map(function(r){return r.kapal||r["Nama Kapal"]||"";})).size;
+  }
+  /* Kategori alkes standar kapal berdasarkan IMO MSC/Circ.1351 */
+  var alkesKategori=[
+    {nama:"Obat-obatan Esensial",icon:"fa-pills",regulasi:"SOLAS Ch.III"},
+    {nama:"Peralatan Resusitasi",icon:"fa-lungs",regulasi:"MLC 2006 Reg.4.1"},
+    {nama:"AED & Defibrilator",icon:"fa-heart-pulse",regulasi:"PERKI 2023"},
+    {nama:"Stretcher & Immobilisasi",icon:"fa-bed-pulse",regulasi:"IMO Med Guide"},
+    {nama:"Pemeriksaan Diagnostik",icon:"fa-stethoscope",regulasi:"MLC 2006"},
+    {nama:"APD Medis & Steril",icon:"fa-hand-sparkles",regulasi:"IMO MSC.1351"},
+  ];
+
   return{
     fleet:fleet,bulan:bulan,
     hra:{done:hraDone,total:hraTot,coverage:hraCov,budget:hraBudget,data:hraD},
     dat:{kapal:datKapal,crew:datCrew,positif:datPos,rate:datRate,biaya:datBiaya,bulanList:datBulanList},
     pest:{count:pestCount,lokasi:pestLokasi,biaya:pestBiaya,bulanList:pestBulanList},
     hazard:{total:hazTot,melebihi:hazMel,fisika:{total:fisD.length,melebihi:fisMel},kimia:{total:kimD.length,melebihi:kimMel},biologi:{total:bioloD.length,melebihi:bioloMel},ergonomi:{total:ergD.length,tinggi:ergTin},psiko:{total:psiD.length,tinggi:psiTin}},
-    bio:{total:bioD.length,melebihi:bioMel}
+    bio:{total:bioD.length,melebihi:bioMel},
+    p3k:{
+      lokTot:p3kLokTot,lokCek:p3kLokCek,covPct:p3kCovPct,
+      p3kCek:p3kCekCount,aedCek:aedCekCount,
+      masalah:p3kMasalah,expired:p3kExpired,
+      statusDist:p3kStatusDist,aedDist:aedStatusDist,
+      temuan:p3kTemuan,hasData:p3kAll.length>0
+    },
+    alkes:{
+      kapalTot:alkesKapalTot,kapalCek:alkesKapalCek,
+      hasData:alkesHasData,kategori:alkesKategori
+    }
   };
 }
 
@@ -3950,7 +4152,8 @@ function _buildSummary(el,cKey){
   var stOvr=d.dat.positif>0||d.hazard.melebihi>0
     ?{l:"PERHATIAN",c:"#E65100",bg:"#FFF3E0"}
     :(parseFloat(d.hra.coverage)<50?{l:"KRITIS",c:"#C62828",bg:"#FFEBEE"}:{l:"BAIK",c:"#2E7D32",bg:"#E8F5E9"});
-  var totalPages=nomBio?7:6;
+  /* totalPages: 1 Cover + HRA + DAT + Pest + Hazard + P3K&AED + Alkes + [Bio?] + Rek */
+  var totalPages=nomBio?9:8;
 
   /* ══════════════ HALAMAN 1: COVER ══════════════ */
   var pg1='<div style="background:linear-gradient(150deg,#071929 0%,#0F2A4A 50%,#1A3A5C 100%);'
@@ -4203,10 +4406,170 @@ function _buildSummary(el,cKey){
     +regStrip(["Permenaker 05/2018 Pasal 7-11","ACGIH TLV 2024","ISO 45001:2018 Klausul 8.1.2","PP No.88/2019 Kesehatan Kerja"])
     +pftr;
 
-  /* ══════════════ HALAMAN 6 (opsional): BIOMARKER ══════════════ */
+  /* ══════════════ HALAMAN 6: P3K & AED ══════════════ */
+  var pg6p3k=phdr(6,totalPages)
+    +shdr("fa-kit-medical","VI. P3K & AED — Kantor & Fasilitas Darat","#C62828")
+    /* KPI 4 box */
+    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">'
+    +kpi("Total Lokasi",d.p3k.lokTot,"lokasi (kantor)","#1565C0","#EBF5FF")
+    +kpi("Lokasi Diperiksa",d.p3k.lokCek,(d.p3k.covPct+"% coverage"),"#2E7D32","#E8F5E9",d.p3k.covPct)
+    +kpi("Ada Masalah",d.p3k.masalah,"lokasi bermasalah",d.p3k.masalah>0?"#C62828":"#2E7D32",d.p3k.masalah>0?"#FFEBEE":"#E8F5E9")
+    +kpi("Item Expired",d.p3k.expired,"item kedaluwarsa",d.p3k.expired>0?"#E65100":"#2E7D32",d.p3k.expired>0?"#FFF3E0":"#E8F5E9")
+    +'</div>'
+    /* Status grid P3K vs AED */
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">'
+    /* P3K Status Box */
+    +'<div style="background:#fff;border:1px solid #E2E8F0;border-radius:10px;padding:14px 16px">'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #F1F5F9">'
+    +'<div style="width:28px;height:28px;background:#C62828;border-radius:6px;display:flex;align-items:center;justify-content:center">'
+    +'<i class="fas fa-kit-medical" style="color:#fff;font-size:12px"></i></div>'
+    +'<div style="font-size:13px;font-weight:700;color:#1E293B">Status Kotak P3K</div>'
+    +'<div style="margin-left:auto;font-size:9px;font-weight:700;color:#64748B">Permenakertrans No.15/MEN/VIII/2008</div>'
+    +'</div>'
+    +'<div style="display:flex;flex-direction:column;gap:7px">'
+    +[
+      {lbl:"Lengkap & Baik",val:d.p3k.statusDist.lengkap,col:"#2E7D32",bg:"#E8F5E9"},
+      {lbl:"Tidak Lengkap / Perlu Restock",val:d.p3k.statusDist.tidakLengkap,col:"#E65100",bg:"#FFF3E0"},
+      {lbl:"Ada Item Expired",val:d.p3k.statusDist.expired,col:"#C62828",bg:"#FFEBEE"},
+      {lbl:"Belum Diperiksa",val:d.p3k.statusDist.belum,col:"#64748B",bg:"#F8FAFC"},
+    ].map(function(s){
+      var tot=d.p3k.p3kCek||1;
+      var pct=Math.round((s.val/d.p3k.lokTot)*100);
+      return'<div style="display:flex;align-items:center;gap:8px">'
+        +'<div style="width:10px;height:10px;background:'+s.col+';border-radius:3px;flex-shrink:0"></div>'
+        +'<div style="font-size:11px;color:#475569;flex:1">'+s.lbl+'</div>'
+        +'<div style="font-size:12px;font-weight:700;color:'+s.col+'">'+s.val+'</div>'
+        +'<div style="font-size:10px;color:#94A3B8;min-width:28px;text-align:right">'+pct+'%</div>'
+        +'</div>'
+        +bar(pct,s.col);
+    }).join("")
+    +'</div></div>'
+    /* AED Status Box */
+    +'<div style="background:#fff;border:1px solid #E2E8F0;border-radius:10px;padding:14px 16px">'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #F1F5F9">'
+    +'<div style="width:28px;height:28px;background:#1565C0;border-radius:6px;display:flex;align-items:center;justify-content:center">'
+    +'<i class="fas fa-heart-pulse" style="color:#fff;font-size:12px"></i></div>'
+    +'<div style="font-size:13px;font-weight:700;color:#1E293B">Status AED</div>'
+    +'<div style="margin-left:auto;font-size:9px;font-weight:700;color:#64748B">PERKI 2023 · AHA Guidelines 2020</div>'
+    +'</div>'
+    +'<div style="display:flex;flex-direction:column;gap:7px">'
+    +[
+      {lbl:"Siap Pakai (Ready)",val:d.p3k.aedDist.baik,col:"#2E7D32",bg:"#E8F5E9"},
+      {lbl:"Perlu Servis / Elektrode Expired",val:d.p3k.aedDist.perluServis,col:"#C62828",bg:"#FFEBEE"},
+      {lbl:"Belum Diperiksa Periode Ini",val:d.p3k.aedDist.belum,col:"#64748B",bg:"#F8FAFC"},
+    ].map(function(s){
+      var pct=Math.round((s.val/d.p3k.lokTot)*100);
+      return'<div style="display:flex;align-items:center;gap:8px">'
+        +'<div style="width:10px;height:10px;background:'+s.col+';border-radius:3px;flex-shrink:0"></div>'
+        +'<div style="font-size:11px;color:#475569;flex:1">'+s.lbl+'</div>'
+        +'<div style="font-size:12px;font-weight:700;color:'+s.col+'">'+s.val+'</div>'
+        +'<div style="font-size:10px;color:#94A3B8;min-width:28px;text-align:right">'+pct+'%</div>'
+        +'</div>'
+        +bar(pct,s.col);
+    }).join("")
+    /* Info AED standar */
+    +'<div style="background:#EBF5FF;border-radius:8px;padding:10px 12px;margin-top:10px">'
+    +'<div style="font-size:10px;font-weight:700;color:#1565C0;margin-bottom:4px"><i class="fas fa-circle-info" style="margin-right:4px"></i>Standar Pemeliharaan AED</div>'
+    +'<div style="font-size:10px;color:#334155;line-height:1.65">'
+    +'Elektrode: ganti setiap <strong>2 tahun</strong> atau setelah digunakan. '
+    +'Baterai: ganti setiap <strong>4–5 tahun</strong>. '
+    +'Pemeriksaan visual wajib <strong>setiap bulan</strong>. '
+    +'Self-test otomatis harian (model digital).</div>'
+    +'</div>'
+    +'</div></div>'
+    +'</div>'
+    /* Temuan terkini */
+    +(d.p3k.temuan&&d.p3k.temuan.length?
+      '<div style="margin-bottom:14px">'
+      +'<div style="font-size:12px;font-weight:700;color:#1E293B;margin-bottom:8px"><i class="fas fa-triangle-exclamation" style="color:#E65100;margin-right:6px"></i>Temuan Terkini yang Perlu Tindak Lanjut</div>'
+      +'<div style="display:grid;grid-template-columns:repeat('+Math.min(d.p3k.temuan.length,3)+',1fr);gap:8px">'
+      +d.p3k.temuan.map(function(r){
+        return'<div style="background:#FFF3E0;border:1px solid #FFE0B2;border-left:3px solid #E65100;border-radius:8px;padding:10px 12px">'
+          +'<div style="font-size:11px;font-weight:700;color:#BF360C;margin-bottom:3px">'+r.lantai+' — '+r.fungsi+'</div>'
+          +(r.p3kTemuan?'<div style="font-size:10.5px;color:#475569;margin-bottom:2px"><i class="fas fa-kit-medical" style="margin-right:4px;color:#C62828"></i>'+r.p3kTemuan+'</div>':"")
+          +(r.aedTemuan?'<div style="font-size:10.5px;color:#475569"><i class="fas fa-heart-pulse" style="margin-right:4px;color:#1565C0"></i>'+r.aedTemuan+'</div>':"")
+          +'</div>';
+      }).join("")
+      +'</div></div>'
+    :"")
+    /* Analisis & Regulasi */
+    +anaBox("#C62828","#FFEBEE","#FFCDD2","Analisis",
+      d.p3k.masalah>0?
+      'Ditemukan <strong>'+d.p3k.masalah+' lokasi bermasalah</strong> dari '+d.p3k.lokTot+' titik pemeriksaan. '
+      +(d.p3k.expired>0?'<strong>'+d.p3k.expired+' item</strong> kedaluwarsa — wajib diganti segera sebelum digunakan dalam keadaan darurat. ':'')
+      +'Ketersediaan P3K & AED adalah lini pertama respons darurat medis. Ketidaklengkapan dapat meningkatkan risiko fatalitas saat insiden terjadi.':
+      'Coverage pemeriksaan P3K & AED mencapai <strong>'+d.p3k.covPct+'%</strong> dari '+d.p3k.lokTot+' lokasi. '
+      +(d.p3k.masalah===0?'Tidak ditemukan lokasi bermasalah pada periode ini. Pertahankan frekuensi inspeksi bulanan sesuai regulasi.':'Lanjutkan perbaikan pada '+d.p3k.masalah+' lokasi bermasalah.'))
+    +regStrip(["Permenakertrans No.Per.15/MEN/VIII/2008","PERKI 2023","AHA Guidelines 2020","PP 50/2012 SMK3","ISO 45001:2018"])
+    +pftr;
+
+  /* ══════════════ HALAMAN 7: SEBARAN ALKES KAPAL ══════════════ */
+  var pg7alkes=phdr(7,totalPages)
+    +shdr("fa-ship","VII. Sebaran Alkes Kapal — Medical Equipment Inventory","#1565C0")
+    /* Status modul */
+    +(d.alkes.hasData?
+      /* === ADA DATA === */
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">'
+      +kpi("Total Armada",d.alkes.kapalTot,"unit kapal","#1565C0","#EBF5FF")
+      +kpi("Sudah Inventarisir",d.alkes.kapalCek,"kapal","#2E7D32","#E8F5E9",Math.round((d.alkes.kapalCek/d.alkes.kapalTot)*100))
+      +kpi("Belum Inventarisir",d.alkes.kapalTot-d.alkes.kapalCek,"kapal",(d.alkes.kapalTot-d.alkes.kapalCek)>0?"#E65100":"#2E7D32",(d.alkes.kapalTot-d.alkes.kapalCek)>0?"#FFF3E0":"#E8F5E9")
+      +'</div>'
+      :
+      /* === BELUM ADA DATA / COMING SOON === */
+      '<div style="background:linear-gradient(135deg,#EBF5FF,#E8F0FE);border:1.5px dashed #90CAF9;border-radius:12px;padding:28px 24px;text-align:center;margin-bottom:16px">'
+      +'<div style="width:56px;height:56px;background:linear-gradient(135deg,#1565C0,#0D47A1);border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px">'
+      +'<i class="fas fa-ship" style="color:#fff;font-size:22px"></i></div>'
+      +'<div style="font-size:18px;font-weight:700;color:#1565C0;margin-bottom:6px">Modul Sebaran Alkes Kapal</div>'
+      +'<div style="font-size:12px;color:#475569;margin-bottom:10px">Inventarisasi alat kesehatan di <strong>'+d.alkes.kapalTot+' unit armada</strong> — modul dalam pengembangan</div>'
+      +'<span style="background:linear-gradient(135deg,#C9973A,#E6AC3A);color:#fff;padding:4px 14px;border-radius:20px;font-size:10px;font-weight:700">Fase 1 — Roadmap 2026</span>'
+      +'</div>'
+    )
+    /* Standar IMO: kategori alkes kapal */
+    +'<div style="background:#fff;border:1px solid #E2E8F0;border-radius:10px;padding:14px 16px;margin-bottom:14px">'
+    +'<div style="font-size:12px;font-weight:700;color:#1E293B;margin-bottom:12px;display:flex;align-items:center;gap:8px">'
+    +'<i class="fas fa-list-check" style="color:#1565C0;font-size:13px"></i>Kategori Alkes Wajib Kapal — Standar IMO MSC/Circ.1351</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">'
+    +d.alkes.kategori.map(function(k){
+      return'<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:10px 12px;display:flex;align-items:flex-start;gap:9px">'
+        +'<div style="width:28px;height:28px;background:#1565C0;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0">'
+        +'<i class="fas '+k.icon+'" style="color:#fff;font-size:11px"></i></div>'
+        +'<div><div style="font-size:11px;font-weight:600;color:#1E293B;line-height:1.4">'+k.nama+'</div>'
+        +'<div style="font-size:9.5px;color:#64748B;margin-top:2px">'+k.regulasi+'</div></div>'
+        +'</div>';
+    }).join("")
+    +'</div></div>'
+    /* Roadmap pengembangan */
+    +'<div style="background:#0F2A4A;border-radius:12px;padding:14px 18px;margin-bottom:14px">'
+    +'<div style="font-size:12px;font-weight:700;color:#fff;margin-bottom:12px;display:flex;align-items:center;gap:8px">'
+    +'<i class="fas fa-map" style="color:#C9973A;font-size:13px"></i>Roadmap Pengembangan Modul Sebaran Alkes</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">'
+    +[
+      {fase:"Fase 1 (2026)",col:"#C9973A",items:["Input inventaris alkes per kapal","Mapping standar IMO & MLC 2006","Dashboard sebaran & status alkes","Alert kadaluarsa & maintenance"]},
+      {fase:"Fase 2 (2026–27)",col:"#60B4F4",items:["Integrasi data PSC inspection","Medical surveillance ABK terpadu","APD medis tracking per kapal","Compliance gap analysis"]},
+      {fase:"Fase 3 / AI (2027)",col:"#A78BFA",items:["Predictive restocking (AI)",  "Auto-generate inventory report","OCR input dari dokumen kapal","Cross-fleet analytics & benchmark"]},
+    ].map(function(f){
+      return'<div style="background:rgba(255,255,255,.06);border-radius:8px;padding:12px">'
+        +'<div style="font-size:10px;font-weight:700;color:'+f.col+';margin-bottom:8px;letter-spacing:.5px">'+f.fase+'</div>'
+        +f.items.map(function(i){
+          return'<div style="display:flex;gap:6px;margin-bottom:5px">'
+            +'<div style="width:4px;height:4px;background:'+f.col+';border-radius:50%;flex-shrink:0;margin-top:5px"></div>'
+            +'<div style="font-size:10.5px;color:rgba(255,255,255,.8);line-height:1.5">'+i+'</div></div>';
+        }).join("")
+        +'</div>';
+    }).join("")
+    +'</div></div>'
+    /* Analisis & Regulasi */
+    +anaBox("#1565C0","#EBF5FF","#90CAF9","Urgensi & Regulasi",
+      'Inventarisasi alat kesehatan kapal merupakan kewajiban regulasi di bawah <strong>MLC 2006 Regulation 4.1</strong>, <strong>SOLAS Chapter III</strong>, dan <strong>IMO MSC/Circ.1351 (Medical First Aid Guide for Use in Accidents Involving Dangerous Goods — MFAG)</strong>. '
+      +'Ketersediaan alkes yang memadai adalah komponen kritis dalam manajemen darurat medis maritim. '
+      +'Modul Sebaran Alkes akan mengintegrasikan '+d.alkes.kapalTot+' unit armada dengan sistem monitoring terpusat real-time.')
+    +regStrip(["MLC 2006 Reg.4.1","SOLAS Ch.III","IMO MSC/Circ.1351","Permenkes 340/2010","ILO C164 (Health Protection)"])
+    +pftr;
+
+  /* ══════════════ HALAMAN 8 (opsional): BIOMARKER ══════════════ */
   var pg6bio="";
   if(nomBio){
-    pg6bio=phdr(6,totalPages)
+    pg6bio=phdr(8,totalPages)
       +shdr("fa-flask","V. Biomonitoring Benzene (ACGIH BEI 2024)","#7B1FA2")
       +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">'
       +kpi("Total Sampel",d.bio.total,"sampel urin","#7B1FA2","#F3E5F5")
@@ -4241,7 +4604,7 @@ function _buildSummary(el,cKey){
   }
 
   /* ══════════════ HALAMAN TERAKHIR: REKOMENDASI AI ══════════════ */
-  var pgRekN=nomBio?7:6;
+  var pgRekN=nomBio?9:8;
   var reks=[];
   if(parseFloat(d.hra.coverage)<80)
     reks.push({p:"HRA",t:"Akselerasi Coverage HRA",
@@ -4265,13 +4628,24 @@ function _buildSummary(el,cKey){
   if(nomBio&&d.bio.melebihi>0) reks.push({p:"BIOMARKER",t:"Medical Surveillance "+d.bio.melebihi+" ABK",
     b:'<strong>'+d.bio.melebihi+' sampel</strong> melebihi BEI ACGIH 2024. Benzene IARC Group 1 — wajib pemeriksaan hematologi dan evaluasi SpOK. Perbaiki ventilasi LEV dan terapkan APD full-face respirator.',
     c:"#7B1FA2",bg:"#F3E5F5",ic:"fa-flask"});
+  /* P3K & AED rekomendasi */
+  if(d.p3k.masalah>0||d.p3k.expired>0) reks.push({p:"P3K & AED",t:"Perbaikan "+d.p3k.masalah+" Lokasi Bermasalah",
+    b:'Ditemukan <strong>'+d.p3k.masalah+' lokasi bermasalah</strong>'+(d.p3k.expired>0?' dan <strong>'+d.p3k.expired+' item kedaluwarsa</strong>':'')+' dari '+d.p3k.lokTot+' titik pemeriksaan. Penggantian item expired dan restocking wajib dilakukan sebelum insiden terjadi sesuai Permenakertrans 15/2008.',
+    c:"#C62828",bg:"#FFEBEE",ic:"fa-kit-medical"});
+  else if(d.p3k.hasData) reks.push({p:"P3K & AED",t:"Coverage "+d.p3k.covPct+"% — Pertahankan Inspeksi",
+    b:'Coverage inspeksi P3K & AED mencapai <strong>'+d.p3k.covPct+'%</strong> dari '+d.p3k.lokTot+' lokasi tanpa temuan bermasalah. Pertahankan jadwal inspeksi bulanan dan pastikan AED self-test terlaksana setiap hari.',
+    c:"#2E7D32",bg:"#E8F5E9",ic:"fa-heart-pulse"});
+  /* Alkes rekomendasi */
+  if(!d.alkes.hasData) reks.push({p:"SEBARAN ALKES",t:"Inisiasi Inventarisasi Alkes "+d.alkes.kapalTot+" Kapal",
+    b:'Modul Sebaran Alkes Kapal belum memiliki data. Inventarisasi alat kesehatan wajib untuk <strong>'+d.alkes.kapalTot+' unit armada</strong> sesuai <strong>MLC 2006 Reg.4.1</strong> dan <strong>IMO MSC/Circ.1351</strong>. Jadwalkan pendataan Fase 1 pada Roadmap 2026.',
+    c:"#1565C0",bg:"#EBF5FF",ic:"fa-ship"});
 
-  var pgRek=phdr(pgRekN,totalPages+(nomBio?1:0))
+  var pgRek=phdr(pgRekN,totalPages)
     +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;padding-bottom:12px;border-bottom:2px solid #0F2A4A">'
     +'<div style="width:32px;height:32px;background:linear-gradient(135deg,#6A1B9A,#1565C0);border-radius:8px;display:flex;align-items:center;justify-content:center">'
     +'<i class="fas fa-brain" style="color:#fff;font-size:14px"></i></div>'
     +'<div style="font-size:16px;font-weight:700;color:#0F2A4A">Rekomendasi AI — Berbasis Data Aktual Dashboard</div>'
-    +'<div style="margin-left:auto"><span style="background:linear-gradient(135deg,#6A1B9A,#1565C0);color:#fff;padding:3px 10px;border-radius:20px;font-size:9px;font-weight:700">AI Generated</span></div>'
+    
     +'</div>'
     +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px">'
     +reks.slice(0,3).map(function(r){
@@ -4329,6 +4703,8 @@ function _buildSummary(el,cKey){
     +pg("pg-dat",pg3)
     +pg("pg-pest",pg4)
     +pg("pg-hazard",pg5)
+    +pg("pg-p3k",pg6p3k)
+    +pg("pg-alkes",pg7alkes)
     +(nomBio?pg("pg-bio",pg6bio):"")
     +pg("pg-rek",pgRek)
     +'</div>';
@@ -5231,388 +5607,4 @@ function _renderP3KMasalah(){
 
 function exportP3KPPT(){
   showToast("Export PPT P3K & AED akan segera hadir.","info");
-}
-
-
-
-/* ═══════════════════════════════════════════════════════════════
-   SEBARAN ALKES KAPAL — MODULE
-   8 Alat Kesehatan Wajib per MLC 2006 & SOLAS Reg. III/7
-═══════════════════════════════════════════════════════════════ */
-
-/* ── Static data embedded dari CSV Master (update via Google Sheets) ── */
-var RAW_ALKES_STATIC = [
-  {kapal:'PIS BELITUNG',   fleet:'FP I', aed:'',        tandu:'',    basket:'ADA',  spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'GAS ARAR',       fleet:'FGP',  aed:'BELUM ADA',tandu:'',   basket:'ADA',  spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'SERUI',          fleet:'FP I', aed:'ADA',      tandu:'',   basket:'ADA',  spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'GAMKONORA',      fleet:'FP I', aed:'',         tandu:'',   basket:'ADA',  spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'PASAMAN',        fleet:'FP I', aed:'ADA',      tandu:'',   basket:'ADA',  spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'GALUNGGUNG',     fleet:'FP I', aed:'',         tandu:'ADA',basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'GEULISH',        fleet:'FP II',aed:'',         tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'PIS MENTAWAI',   fleet:'FP I', aed:'',         tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'PIS NIAS',       fleet:'FP I', aed:'',         tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'PIS BANGKA',     fleet:'FP I', aed:'',         tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'GAS ARJUNA',     fleet:'FGP',  aed:'',         tandu:'ADA',basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'GAS RAMA',       fleet:'FGP',  aed:'',         tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'GAS SHINTA',     fleet:'FGP',  aed:'',         tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'SANGGAU',        fleet:'FP I', aed:'',         tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'PIS NATUNA',     fleet:'FP II',aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'PIS ROKAN',      fleet:'FP II',aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'PRIMA XP',       fleet:'FP II',aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'PATRA TANKER II',fleet:'FP I', aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'PATRA TANKER I', fleet:'FP I', aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'PEGADEN',        fleet:'FP I', aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'SUNGAI GERONG',  fleet:'FP I', aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'GAMALAMA',       fleet:'FP II',aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'PIS PRABUMULIH', fleet:'FP I', aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'PIS JATIBARANG', fleet:'FP I', aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'PIS CEPU',       fleet:'FP I', aed:'BELUM ADA',tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'PIS CINTA',      fleet:'FP I', aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'KASIM',          fleet:'FP II',aed:'',         tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'SEI PAKNING',    fleet:'FP I', aed:'',         tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'SENIPAH',        fleet:'FP I', aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'PATRA TANKER III',fleet:'FP I',aed:'',         tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'KAKAP',          fleet:'FP II',aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'SAMBU',          fleet:'FP I', aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'PERTAMINA GAS 2',fleet:'FGP',  aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'PANGKALAN BRANDAN',fleet:'FP I',aed:'BELUM ADA',tandu:'',  basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'PIS PATRIOT',    fleet:'FP I', aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'PAGERUNGAN',     fleet:'FP II',aed:'DOUBLE',   tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'TRANSKO BIMA',   fleet:'FC',   aed:'BELUM ADA',tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'KAMOJANG',       fleet:'FP II',aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'PANDAN',         fleet:'FP I', aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'MAUHAU',         fleet:'FP I', aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'PALU SIPAT',     fleet:'FP I', aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'PIS MAHAKAM',    fleet:'FP I', aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'KLASOGUN',       fleet:'FP I', aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'GAS ARIMBI',     fleet:'FGP',  aed:'BELUM ADA',tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'PANDERMAN',      fleet:'FP II',aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'GAS AMBALAT',    fleet:'FGP',  aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'PANGRANGO',      fleet:'FP I', aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'GEDE',           fleet:'FP I', aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'PARIGI',         fleet:'FP I', aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'GAS PATRA 3',    fleet:'FGP',  aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'KRASAK',         fleet:'FP I', aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'KLAWOTONG',      fleet:'FP I', aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'PLAJU',          fleet:'FP I', aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'MATINDOK',       fleet:'FP I', aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'BALONGAN',       fleet:'FP I', aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'PERTAMINA GAS 1',fleet:'FGP',  aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'KUANG',          fleet:'FP II',aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'TRANSKO ANTASENA',fleet:'FC',  aed:'',         tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'TRANSKO ARAFURA',fleet:'FC',   aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'GAS PATRA 2',    fleet:'FGP',  aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'MERAUKE',        fleet:'FP I', aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'MUNDU',          fleet:'FP I', aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'TRANSKO AQUILA', fleet:'FC',   aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'TRANSKO TAURUS', fleet:'FC',   aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'KATOMAS',        fleet:'FP II',aed:'DOUBLE',   tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'MUSI',           fleet:'FP I', aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'MEDITRAN',       fleet:'FP I', aed:'',         tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'KETALING',       fleet:'FP I', aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'PAPANDAYAN',     fleet:'FP I', aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'TRANSKO ARIES',  fleet:'FC',   aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'PANJANG',        fleet:'FP I', aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'GAS ATTAKA',     fleet:'FGP',  aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'FASTRON',        fleet:'FP II',aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'PERTAMINA GAS DAHLIA',fleet:'FGP',aed:'ADA',   tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'PANGALENGAN',    fleet:'FP I', aed:'',         tandu:'ADA',basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'GAS WALIO',      fleet:'FGP',  aed:'BELUM ADA',tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-  {kapal:'GAS WIDURI',     fleet:'FGP',  aed:'ADA',      tandu:'',   basket:'',     spinal:'',     oksigen:'',     thermo:'',    bp:'',    spiro:''},
-];
-
-var ALKES_8 = [
-  {key:'aed',    label:'AED',              icon:'fa-heart-pulse',   color:'#E53935', reg:'SOLAS Ch.III, MLC 4.1', darurat:true},
-  {key:'tandu',  label:'Tandu Biasa',       icon:'fa-person-walking', color:'#FB8C00', reg:'Permenkes 40/2012',    darurat:true},
-  {key:'basket', label:'Basket Stretcher',  icon:'fa-person-falling', color:'#F59E0B', reg:'SOLAS Ch.III Reg.7',   darurat:true},
-  {key:'spinal', label:'Long Spinal Board', icon:'fa-bed-pulse',     color:'#8E24AA', reg:'SOLAS Reg.III/7.4',    darurat:true},
-  {key:'oksigen',label:'Tabung Oksigen',    icon:'fa-lungs',         color:'#0288D1', reg:'MLC 2006 Std.A4.1.4',  darurat:true},
-  {key:'thermo', label:'Body Thermometer',  icon:'fa-thermometer',   color:'#00897B', reg:'MLC 2006 Reg.4.1',     darurat:false},
-  {key:'bp',     label:'Tensimeter (BP)',   icon:'fa-stethoscope',   color:'#3949AB', reg:'MLC 2006 Reg.4.1',     darurat:false},
-  {key:'spiro',  label:'Spirometry',        icon:'fa-wind',          color:'#7B1FA2', reg:'Permenker 05/2018',     darurat:false},
-];
-
-var ALKES_DAMPAK = [
-  {alat:'AED', icon:'fa-heart-pulse', color:'#E53935', bg:'#FEF2F2',
-   regulasi:'SOLAS Ch.III, MLC 2006 Reg.4.1, ISM Code Reg.10',
-   dampak:'Kematian akibat henti jantung mendadak (SCA) pada ABK — peluang hidup turun 10% setiap menit tanpa defibrilasi. Tanpa AED, PSC inspector dapat mengeluarkan Detention Notice dan kapal tidak boleh berlayar.',
-   sanksi:'Penahanan kapal (Detention) — PSC MOU Tokyo/Paris. Denda minimal USD 10.000–50.000.'},
-  {alat:'Tandu & Stretcher', icon:'fa-person-falling', color:'#FB8C00', bg:'#FFF7ED',
-   regulasi:'SOLAS Reg.III/7.4, Permenkes 40/2012',
-   dampak:'ABK cedera tidak dapat dievakuasi dengan aman saat kondisi darurat di laut (man overboard, kecelakaan kerja, kebakaran). Risiko cedera sekunder saat evakuasi manual tanpa alat yang tepat.',
-   sanksi:'Deficiency Notice PSC — catatan permanen di sistem THETIS/Equasis. Berpengaruh ke rating TMSA 3.'},
-  {alat:'Long Spinal Board', icon:'fa-bed-pulse', color:'#8E24AA', bg:'#F3E5F5',
-   regulasi:'SOLAS Reg.III/7.4, STCW A-VI/4',
-   dampak:'Cedera tulang belakang ABK tidak dapat ditangani dengan benar. Penanganan tanpa spinal board dapat menyebabkan kelumpuhan permanen. Wajib dalam STCW Basic First Aid training.',
-   sanksi:'Deficiency PSC — dapat memicu audit ISM Code oleh Flag State.'},
-  {alat:'Tabung Oksigen', icon:'fa-lungs', color:'#0288D1', bg:'#E1F5FE',
-   regulasi:'MLC 2006 Standard A4.1 para.4(b), SOLAS',
-   dampak:'Tidak dapat memberikan penanganan darurat untuk sesak napas, keracunan gas H2S/CO di cargo tank, atau korban tenggelam. Gas H2S di VLCC dapat mematikan dalam 3–5 menit tanpa O2 rescue.',
-   sanksi:'Pelanggaran MLC 2006 — dapat dilaporkan ke ITF (International Transport Workers\' Federation). Denda dan sanksi Flag State.'},
-  {alat:'Body Thermometer', icon:'fa-thermometer', color:'#00897B', bg:'#E0F2F1',
-   regulasi:'MLC 2006 Reg.4.1, WHO IDHR (Health on Ships)',
-   dampak:'Tidak dapat deteksi dini demam tinggi ABK di kapal — risiko penyebaran penyakit infeksi (COVID-19, dengue, malaria) di lingkungan terbatas kapal. Wajib dalam ship sanitation certificate.',
-   sanksi:'Penolakan masuk pelabuhan jika ada outbreak penyakit (Port Health Regulation). Ship Sanitation Certificate bisa ditarik.'},
-  {alat:'Tensimeter (BP Monitor)', icon:'fa-stethoscope', color:'#3949AB', bg:'#EFF6FF',
-   regulasi:'MLC 2006 Reg.4.1, Permenkes 40/2012',
-   dampak:'Tidak dapat memantau tekanan darah ABK dengan riwayat hipertensi — risiko stroke/serangan jantung di laut tanpa penanganan awal. Hipertensi tidak terdeteksi → medical emergency di tengah laut.',
-   sanksi:'Non-compliance MLC 2006 dalam ship medical audit.'},
-  {alat:'Spirometry', icon:'fa-wind', color:'#7B1FA2', bg:'#F3E5F5',
-   regulasi:'Permenaker 05/2018, ACGIH TLV, ILO OSH-MS',
-   dampak:'Tidak dapat skrining dan monitoring fungsi paru ABK yang terpapar hazard kimia (benzene, VOC) dan debu di cargo tank. Tanpa spirometry, program biomonitoring tidak lengkap dan paparan kronik tidak terdeteksi.',
-   sanksi:'Gap dalam program IH — non-compliance audit TMSA 3 Element 6, ISM Code Reg.7.'},
-];
-
-/* rawAlkes declared at top */
-
-function isAda(val){
-  if(!val)return false;
-  return ['ADA','DOUBLE'].indexOf(val.toUpperCase().trim())!==-1;
-}
-function isBelum(val){
-  if(!val)return false;
-  return val.toUpperCase().indexOf('BELUM')!==-1;
-}
-function getAlkesScore(k){
-  return ALKES_8.reduce(function(s,a){return s+(isAda(k[a.key])?1:0);},0);
-}
-
-function initAlkesData(apiData){
-  /* Sheet "Sebaran Alkes Kapal" — 2 baris header:
-     Row 1: NAMA KAPAL | (blank) | Status Device (merged)
-     Row 2: (blank) | FLEET | Aed | Expired Date AED | Tandu Biasa |
-             Basket Stretcher | Long Spinal Board | Tabung Oksigen |
-             Body Thermometer | Blood Pressure Monitor | Spirometry
-     Data : mulai row 3
-     GAS mengembalikan array of objects dengan key dari row 2.
-  */
-  if(apiData&&apiData.alkes&&apiData.alkes.length>0){
-    rawAlkes=apiData.alkes
-      .map(function(r){
-        var nama=(r['NAMA KAPAL']||r['Nama Kapal']||r['nama_kapal']||r['kapal']||'').toString().trim();
-        if(!nama||nama==='ON BUILDING KOREA'||nama==='NAMA KAPAL')return null;
-        return {
-          kapal:  nama,
-          fleet:  (r['FLEET']||r['Fleet']||r['fleet']||'').toString().trim(),
-          aed:    (r['Aed']||r['AED']||r['aed']||'').toString().trim(),
-          expAed: (r['Expired Date AED']||r['Expired_Date_AED']||'').toString().trim(),
-          tandu:  (r['Tandu Biasa']||r['tandu']||'').toString().trim(),
-          basket: (r['Basket Stretcher']||r['basket']||'').toString().trim(),
-          spinal: (r['Long Spinal Board']||r['spinal']||'').toString().trim(),
-          oksigen:(r['Tabung Oksigen']||r['oksigen']||'').toString().trim(),
-          thermo: (r['Body Thermometer']||r['thermo']||'').toString().trim(),
-          bp:     (r['Blood Pressure Monitor']||r['bp']||'').toString().trim(),
-          spiro:  (r['Spirometry']||r['spiro']||'').toString().trim(),
-        };
-      })
-      .filter(function(r){return r&&r.kapal;});
-    if(rawAlkes.length>0){
-      console.log('Alkes: '+rawAlkes.length+' kapal dari Google Sheets ✅');
-    }
-  } else {
-    rawAlkes=[...RAW_ALKES_STATIC];
-    console.log('Alkes: pakai data statis ('+rawAlkes.length+' kapal)');
-  }
-}
-
-function renderAlkesPage(){
-  if(!rawAlkes.length){rawAlkes=[...RAW_ALKES_STATIC];}
-
-  var fleet=document.getElementById('alkes-filter-fleet');
-  var fleetVal=fleet?fleet.value:'';
-  var statusEl=document.getElementById('alkes-filter-status');
-  var statusVal=statusEl?statusEl.value:'';
-
-  var data=rawAlkes.filter(function(k){
-    if(!k.kapal||!k.kapal.trim())return false;
-    if(fleetVal&&k.fleet!==fleetVal)return false;
-    var sc=getAlkesScore(k);
-    if(statusVal==='lengkap'&&sc!==8)return false;
-    if(statusVal==='sebagian'&&(sc===0||sc===8))return false;
-    if(statusVal==='kosong'&&sc!==0)return false;
-    return true;
-  });
-
-  var total=data.length;
-  var lengkap=data.filter(function(k){return getAlkesScore(k)===8;}).length;
-  var sebagian=data.filter(function(k){var s=getAlkesScore(k);return s>0&&s<8;}).length;
-  var kosong=data.filter(function(k){return getAlkesScore(k)===0;}).length;
-  var avgPct=total?Math.round(data.reduce(function(s,k){return s+getAlkesScore(k);},0)/total/8*100):0;
-
-  var se=function(id,v){var el=document.getElementById(id);if(el)el.textContent=v;};
-  se('alkes-total-kapal',total);
-  se('alkes-lengkap',lengkap);
-  se('alkes-sebagian',sebagian);
-  se('alkes-kosong',kosong);
-  se('alkes-avg-pct',avgPct+'%');
-
-  /* Legend grid */
-  var lg=document.getElementById('alkesLegendGrid');
-  if(lg){
-    lg.innerHTML=ALKES_8.map(function(a){
-      var cnt=data.filter(function(k){return isAda(k[a.key]);}).length;
-      var pct=total?Math.round(cnt/total*100):0;
-      var clr=pct>=80?'#22c55e':pct>=50?'#F59E0B':'#EF4444';
-      return '<div style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 9px">'+
-        '<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px">'+
-        '<i class="fas '+a.icon+'" style="font-size:11px;color:'+a.color+'"></i>'+
-        '<span style="font-size:9.5px;font-weight:600;color:#fff">'+a.label+'</span>'+
-        '</div>'+
-        '<div style="background:rgba(255,255,255,0.12);border-radius:3px;height:5px;overflow:hidden;margin-bottom:3px">'+
-        '<div style="width:'+pct+'%;background:'+clr+';height:100%;border-radius:3px"></div></div>'+
-        '<span style="font-size:9px;color:'+clr+'">'+cnt+'/'+total+' kapal ('+pct+'%)</span>'+
-        '</div>';
-    }).join('');
-  }
-
-  renderAlkesCharts(data,total);
-  renderAlkesDampak();
-  renderAlkesTable(data);
-}
-
-function renderAlkesCharts(data,total){
-  /* Donut: distribusi kelengkapan */
-  var lengkap=data.filter(function(k){return getAlkesScore(k)===8;}).length;
-  var sebagian=data.filter(function(k){var s=getAlkesScore(k);return s>0&&s<8;}).length;
-  var kosong=data.filter(function(k){return getAlkesScore(k)===0;}).length;
-  var ctxD=document.getElementById('alkesDonutChart');
-  if(ctxD){
-    if(alkesDonutChart)alkesDonutChart.destroy();
-    alkesDonutChart=new Chart(ctxD.getContext('2d'),{
-      type:'doughnut',
-      data:{
-        labels:['Lengkap (100%)','Sebagian (1-7)','Kosong (0%)'],
-        datasets:[{
-          data:[lengkap,sebagian,kosong],
-          backgroundColor:['#22c55e','#F59E0B','#EF4444'],
-          borderColor:getComputedStyle(document.documentElement).getPropertyValue('--card').trim()||'#fff',
-          borderWidth:3,hoverOffset:6
-        }]
-      },
-      options:{...donutOpts(),plugins:{...donutOpts().plugins,legend:{display:true,position:'bottom',labels:{font:{size:10},padding:8}}}}
-    });
-  }
-
-  /* Bar: ketersediaan per alat */
-  var ctxB=document.getElementById('alkesBarChart');
-  if(ctxB){
-    if(alkesBarChart)alkesBarChart.destroy();
-    var labels=ALKES_8.map(function(a){return a.label;});
-    var counts=ALKES_8.map(function(a){
-      return total?Math.round(data.filter(function(k){return isAda(k[a.key]);}).length/total*100):0;
-    });
-    var bgColors=ALKES_8.map(function(a){return a.color;});
-    alkesBarChart=new Chart(ctxB.getContext('2d'),{
-      type:'bar',
-      data:{
-        labels:labels,
-        datasets:[{
-          label:'% Kapal yang Memiliki',
-          data:counts,
-          backgroundColor:bgColors.map(function(c){return c+'CC';}),
-          borderColor:bgColors,
-          borderWidth:1.5,
-          borderRadius:6,
-        }]
-      },
-      options:{
-        ...chartOpts(),
-        indexAxis:'y',
-        scales:{
-          x:{beginAtZero:true,max:100,ticks:{callback:function(v){return v+'%';}},grid:{color:'rgba(0,0,0,0.05)'}},
-          y:{ticks:{font:{size:10}}}
-        },
-        plugins:{
-          legend:{display:false},
-          tooltip:{callbacks:{label:function(ctx){return ' '+ctx.parsed.x+'% kapal';}}}
-        }
-      }
-    });
-  }
-}
-
-function renderAlkesDampak(){
-  var el=document.getElementById('alkesDampakGrid');
-  if(!el)return;
-  el.innerHTML=ALKES_DAMPAK.map(function(d){
-    return '<div style="background:'+d.bg+';border:1px solid '+d.color+'40;border-left:4px solid '+d.color+';border-radius:10px;padding:11px 13px">'+
-      '<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px">'+
-      '<i class="fas '+d.icon+'" style="font-size:14px;color:'+d.color+'"></i>'+
-      '<span style="font-size:11.5px;font-weight:700;color:'+d.color+'">'+esc(d.alat)+'</span>'+
-      '</div>'+
-      '<div style="font-size:9.5px;font-weight:600;color:'+d.color+';margin-bottom:4px;opacity:0.8">'+esc(d.regulasi)+'</div>'+
-      '<div style="font-size:10.5px;color:#374151;line-height:1.55;margin-bottom:6px">'+esc(d.dampak)+'</div>'+
-      '<div style="background:rgba(0,0,0,0.04);border-radius:5px;padding:5px 8px;font-size:9.5px;color:#6B7280">'+
-      '<i class="fas fa-gavel" style="margin-right:4px;color:'+d.color+'"></i><b>Sanksi:</b> '+esc(d.sanksi)+'</div>'+
-      '</div>';
-  }).join('');
-}
-
-function renderAlkesTable(data){
-  var d=data;
-  if(!d){
-    /* panggil ulang dengan filter */
-    var fleet=document.getElementById('alkes-filter-fleet');
-    var fleetVal=fleet?fleet.value:'';
-    d=rawAlkes.filter(function(k){
-      if(!k.kapal||!k.kapal.trim())return false;
-      if(fleetVal&&k.fleet!==fleetVal)return false;
-      return true;
-    });
-  }
-  var search=document.getElementById('alkes-search');
-  var sq=search?search.value.toLowerCase().trim():'';
-  if(sq)d=d.filter(function(k){return k.kapal.toLowerCase().indexOf(sq)!==-1;});
-
-  var tbody=document.getElementById('alkesTableBody');
-  if(!tbody)return;
-
-  function cellIcon(val){
-    if(isAda(val)){
-      var extra=val.toUpperCase()==='DOUBLE'?' <span style="font-size:9px;color:#0277BD">(×2)</span>':'';
-      return '<span style="color:#22c55e;font-size:14px">✓</span>'+extra;
-    }
-    if(isBelum(val))return '<span style="color:#EF4444;font-size:12px;font-weight:700">✗</span>';
-    return '<span style="color:#9CA3AF;font-size:11px">—</span>';
-  }
-
-  function rekomen(k){
-    var missing=ALKES_8.filter(function(a){return !isAda(k[a.key]);});
-    var darurat=missing.filter(function(a){return a.darurat;});
-    if(!missing.length)return '<span style="color:#22c55e;font-size:10px;font-weight:600">✓ Lengkap</span>';
-    if(darurat.length>=5)return '<span style="color:#EF4444;font-size:10px;font-weight:600">Segera lengkapi semua alat darurat</span>';
-    return '<span style="color:#F59E0B;font-size:10px">Lengkapi: '+darurat.slice(0,2).map(function(a){return a.label;}).join(', ')+(darurat.length>2?', +'+( darurat.length-2)+' lainnya':'')+'</span>';
-  }
-
-  function scoreBar(sc){
-    var pct=Math.round(sc/8*100);
-    var col=pct===100?'#22c55e':pct>=50?'#F59E0B':'#EF4444';
-    return '<div style="display:flex;align-items:center;gap:6px">'+
-      '<div style="flex:1;background:#E5E7EB;border-radius:3px;height:6px;overflow:hidden">'+
-      '<div style="width:'+pct+'%;background:'+col+';height:100%;border-radius:3px"></div></div>'+
-      '<span style="font-size:10px;font-weight:700;color:'+col+';min-width:28px">'+pct+'%</span></div>';
-  }
-
-  var sorted=d.slice().sort(function(a,b){return getAlkesScore(b)-getAlkesScore(a);});
-  tbody.innerHTML=sorted.map(function(k){
-    var sc=getAlkesScore(k);
-    return '<tr>'+
-      '<td><strong style="color:var(--text);font-size:12px">'+esc(k.kapal)+'</strong>'+
-      (k.fleet?'<div style="font-size:10px;color:var(--text-muted)">'+esc(k.fleet)+'</div>':'')+
-      '</td>'+
-      '<td style="min-width:100px">'+scoreBar(sc)+'</td>'+
-      '<td style="text-align:center">'+cellIcon(k.aed)+'</td>'+
-      '<td style="text-align:center">'+cellIcon(k.tandu)+'</td>'+
-      '<td style="text-align:center">'+cellIcon(k.basket)+'</td>'+
-      '<td style="text-align:center">'+cellIcon(k.spinal)+'</td>'+
-      '<td style="text-align:center">'+cellIcon(k.oksigen)+'</td>'+
-      '<td style="text-align:center">'+cellIcon(k.thermo)+'</td>'+
-      '<td style="text-align:center">'+cellIcon(k.bp)+'</td>'+
-      '<td style="text-align:center">'+cellIcon(k.spiro)+'</td>'+
-      '<td>'+rekomen(k)+'</td>'+
-      '</tr>';
-  }).join('');
-
-  var footer=document.getElementById('alkesTableFooter');
-  if(footer)footer.textContent='Menampilkan '+sorted.length+' dari '+rawAlkes.length+' kapal';
 }
