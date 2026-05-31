@@ -198,12 +198,12 @@ Kirim ulang kode OTP
     <a href="#" class="nav-item" data-menu="p3k" data-title="P3K & AED Office" data-group="monitoring">
       <span class="nav-icon"><i class="fas fa-kit-medical"></i></span>
       <span class="nav-text">P3K & AED Office</span>
-      <span class="nav-badge">Soon</span>
+      
     </a>
-    <a href="#" class="nav-item" data-menu="alkes" data-title="Sebaran Alkes Kapal" data-group="monitoring">
+    <a href="#" class="nav-item placeholder" data-menu="menu5" data-title="Sebaran Alkes Kapal" data-group="monitoring">
       <span class="nav-icon"><i class="fas fa-chart-pie"></i></span>
       <span class="nav-text">Sebaran Alkes Kapal</span>
-      <span class="nav-badge">Soon</span>
+      
     </a>
   </div>
 </div>
@@ -615,128 +615,7 @@ Kirim ulang kode OTP
   <div id="p3k-content-masalah" style="display:none"></div>
 
 </section>
-<section class="page-content" id="page-alkes">
-<div class="page-header-row">
-  <div>
-    <h2 class="page-title-main"><i class="fas fa-kit-medical" style="color:#0277BD"></i> Sebaran Alat Kesehatan Kapal</h2>
-    <p class="page-subtitle">Monitoring kelengkapan 8 alat kesehatan wajib per kapal — berbasis MLC 2006 &amp; SOLAS Reg. III/7</p>
-  </div>
-  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-    <select id="alkes-filter-fleet" onchange="renderAlkesPage()" class="filter-select" style="min-width:130px">
-      <option value="">Semua Fleet</option>
-      <option value="FP I">FP I</option>
-      <option value="FP II">FP II</option>
-      <option value="FC">FC</option>
-      <option value="FGP">FGP</option>
-    </select>
-    <select id="alkes-filter-status" onchange="renderAlkesPage()" class="filter-select">
-      <option value="">Semua Status</option>
-      <option value="lengkap">Lengkap (100%)</option>
-      <option value="sebagian">Sebagian (&gt;0%)</option>
-      <option value="kosong">Kosong (0%)</option>
-    </select>
-    <button class="btn-refresh" onclick="renderAlkesPage()"><i class="fas fa-rotate-right"></i> Refresh</button>
-  </div>
-</div>
-
-<!-- REGULASI INFO PANEL -->
-<div style="background:linear-gradient(135deg,#0A2540 0%,#0D3B6E 100%);border-radius:14px;padding:14px 18px;margin-bottom:14px;border:1px solid rgba(2,119,189,0.3)">
-  <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">
-    <div style="flex:1;min-width:260px">
-      <div style="font-size:12px;font-weight:700;color:#fff;margin-bottom:5px;display:flex;align-items:center;gap:7px">
-        <i class="fas fa-scale-balanced" style="color:#4FC3F7"></i> Dasar Regulasi Alat Kesehatan Kapal
-      </div>
-      <div style="font-size:10.5px;color:rgba(255,255,255,0.72);line-height:1.7">
-        Setiap kapal wajib dilengkapi alat kesehatan sesuai <b style="color:#4FC3F7">SOLAS 1974 Chapter III Regulation 7</b>, 
-        <b style="color:#4FC3F7">MLC 2006 Regulation 4.1 Standard A4.1</b>, dan <b style="color:#4FC3F7">Permenkes 40/2012</b> tentang pedoman pelayanan kesehatan di kapal. 
-        Kelengkapan alat adalah prasyarat <b style="color:#FCD34D">Port State Control (PSC) inspection</b> dan wajib dalam audit TMSA 3 Element 6.
-      </div>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
-      <div style="background:rgba(79,195,247,0.15);border:1px solid rgba(79,195,247,0.3);border-radius:7px;padding:4px 10px;font-size:9.5px;font-weight:700;color:#4FC3F7">SOLAS Ch.III Reg.7</div>
-      <div style="background:rgba(105,219,124,0.12);border:1px solid rgba(105,219,124,0.3);border-radius:7px;padding:4px 10px;font-size:9.5px;font-weight:700;color:#69DB7C">MLC 2006 Reg.4.1</div>
-      <div style="background:rgba(252,211,77,0.12);border:1px solid rgba(252,211,77,0.3);border-radius:7px;padding:4px 10px;font-size:9.5px;font-weight:700;color:#FCD34D">ISM Code Reg.10</div>
-    </div>
-  </div>
-  <!-- 8 alat grid -->
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px;margin-top:12px" id="alkesLegendGrid"></div>
-</div>
-
-<!-- KPI CARDS -->
-<div class="kpi-row" style="grid-template-columns:repeat(5,1fr)">
-  <div class="kpi-card" style="border-top:3px solid #0277BD">
-    <div class="kpi-icon" style="background:#E1F5FE"><i class="fas fa-ship" style="color:#0277BD"></i></div>
-    <div class="kpi-body"><div class="kpi-value" id="alkes-total-kapal" style="color:#0277BD">—</div><div class="kpi-label">Total Kapal</div><div style="font-size:9.5px;color:var(--text-muted)">Terdata dalam sistem</div></div>
-  </div>
-  <div class="kpi-card" style="border-top:3px solid #22c55e">
-    <div class="kpi-icon" style="background:#F0FDF4"><i class="fas fa-circle-check" style="color:#22c55e"></i></div>
-    <div class="kpi-body"><div class="kpi-value" id="alkes-lengkap" style="color:#22c55e">—</div><div class="kpi-label">Lengkap (100%)</div><div style="font-size:9.5px;color:var(--text-muted)">Semua 8 alat ada</div></div>
-  </div>
-  <div class="kpi-card" style="border-top:3px solid #F59E0B">
-    <div class="kpi-icon" style="background:#FFFBEB"><i class="fas fa-circle-exclamation" style="color:#F59E0B"></i></div>
-    <div class="kpi-body"><div class="kpi-value" id="alkes-sebagian" style="color:#F59E0B">—</div><div class="kpi-label">Sebagian</div><div style="font-size:9.5px;color:var(--text-muted)">1–7 alat tersedia</div></div>
-  </div>
-  <div class="kpi-card" style="border-top:3px solid #EF4444">
-    <div class="kpi-icon" style="background:#FEF2F2"><i class="fas fa-triangle-exclamation" style="color:#EF4444"></i></div>
-    <div class="kpi-body"><div class="kpi-value" id="alkes-kosong" style="color:#EF4444">—</div><div class="kpi-label">Kosong (0%)</div><div style="font-size:9.5px;color:var(--text-muted)">Tidak ada data alat</div></div>
-  </div>
-  <div class="kpi-card" style="border-top:3px solid #7B1FA2">
-    <div class="kpi-icon" style="background:#F3E5F5"><i class="fas fa-percent" style="color:#7B1FA2"></i></div>
-    <div class="kpi-body"><div class="kpi-value" id="alkes-avg-pct" style="color:#7B1FA2">—</div><div class="kpi-label">Rata-rata Kelengkapan</div><div style="font-size:9.5px;color:var(--text-muted)">Dari seluruh armada</div></div>
-  </div>
-</div>
-
-<!-- CHARTS ROW -->
-<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px">
-  <!-- Donut: distribusi kelengkapan -->
-  <div class="chart-card">
-    <div class="chart-title">Distribusi Kelengkapan Armada</div>
-    <div class="chart-body"><canvas id="alkesDonutChart"></canvas></div>
-  </div>
-  <!-- Bar: kepemilikan per alat -->
-  <div class="chart-card" style="grid-column:span 2">
-    <div class="chart-title">Ketersediaan Per Jenis Alat (% dari total kapal)</div>
-    <div class="chart-body"><canvas id="alkesBarChart"></canvas></div>
-  </div>
-</div>
-
-<!-- DAMPAK REGULASI -->
-<div style="margin-bottom:14px">
-  <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px;display:flex;align-items:center;gap:6px">
-    <i class="fas fa-exclamation-triangle" style="color:#EF4444"></i> Prediksi Dampak Ketidaklengkapan Alat — Per Regulasi
-  </div>
-  <div id="alkesDampakGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px"></div>
-</div>
-
-<!-- TABLE -->
-<div class="table-card">
-  <div class="table-header-row">
-    <div class="table-title"><i class="fas fa-table"></i> Detail Kelengkapan Per Kapal</div>
-    <div style="display:flex;gap:8px">
-      <input type="text" id="alkes-search" class="filter-select" placeholder="Cari nama kapal..." oninput="renderAlkesTable()" style="min-width:180px">
-    </div>
-  </div>
-  <div class="table-responsive">
-    <table class="data-table" id="alkesTable">
-      <thead><tr>
-        <th>Nama Kapal</th>
-        <th style="text-align:center">Kelengkapan</th>
-        <th style="text-align:center">AED</th>
-        <th style="text-align:center">Tandu</th>
-        <th style="text-align:center">Basket<br>Stretcher</th>
-        <th style="text-align:center">Long Spinal<br>Board</th>
-        <th style="text-align:center">Tabung<br>O₂</th>
-        <th style="text-align:center">Thermometer</th>
-        <th style="text-align:center">Tensimeter</th>
-        <th style="text-align:center">Spirometry</th>
-        <th>Rekomendasi</th>
-      </tr></thead>
-      <tbody id="alkesTableBody"></tbody>
-    </table>
-  </div>
-  <div class="table-footer" id="alkesTableFooter"></div>
-</div>
-</section>
+<section class="page-content" id="page-menu5"><div class="placeholder-page"><div class="placeholder-icon"><i class="fas fa-chart-pie"></i></div><h2>Sebaran Alkes Kapal</h2><p>Modul belum tersedia.</p></div></section>
 
 <!-- ===== PAGE PEDOMAN IH ===== -->
 <section class="page-content" id="page-menu6">
@@ -1278,8 +1157,8 @@ Kirim ulang kode OTP
 <section class="page-content" id="page-riskprediction">
 <div class="page-header-row">
   <div>
-    <h2 class="page-title-main"><i class="fas fa-chart-line" style="color:#7B1FA2"></i> Health Risk Prediction</h2>
-    <p class="page-subtitle">Penilaian risiko kesehatan kerja berbasis data IH aktual — skor otomatis per kapal</p>
+    <h2 class="page-title-main"><i class="fas fa-brain" style="color:#7B1FA2"></i> Health Risk Prediction</h2>
+    <p class="page-subtitle">Prediksi risiko kesehatan berbasis data IH — skor otomatis per kapal</p>
   </div>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <select id="rp-filter-fleet" onchange="renderRiskPage()" class="filter-select" style="min-width:130px">
@@ -1300,75 +1179,43 @@ Kirim ulang kode OTP
   </div>
 </div>
 
-<!-- Panel Penjelasan Metodologi -->
-<div style="background:linear-gradient(135deg,#0F2A4A 0%,#1A3A5C 100%);border-radius:14px;padding:20px 22px;margin-bottom:16px;border:1px solid rgba(96,180,244,0.2)">
-  <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px">
-    <div>
-      <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:4px;display:flex;align-items:center;gap:8px">
-        <i class="fas fa-shield-halved" style="color:#60B4F4"></i> Apa itu Health Risk Prediction?
-      </div>
-      <div style="font-size:11.5px;color:rgba(255,255,255,0.75);line-height:1.75;max-width:720px">
-        Sistem penilaian risiko kesehatan kerja berbasis data IH aktual. Setiap kapal mendapat <b style="color:#FCD34D">skor 0–100</b> dari 4 dimensi:
-        <b style="color:#60B4F4">HRA</b>, <b style="color:#69DB7C">Pengukuran Hazard NAB</b>, <b style="color:#FDBA74">DAT</b>, dan <b style="color:#CE93D8">Biomonitoring</b>.
-      </div>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0">
-      <div style="background:rgba(96,180,244,0.15);border:1px solid rgba(96,180,244,0.35);border-radius:8px;padding:5px 10px;font-size:10px;font-weight:700;color:#60B4F4"><i class="fas fa-book" style="margin-right:5px"></i>ACGIH TLV &amp; BEI 2024</div>
-      <div style="background:rgba(105,219,124,0.12);border:1px solid rgba(105,219,124,0.3);border-radius:8px;padding:5px 10px;font-size:10px;font-weight:700;color:#69DB7C"><i class="fas fa-gavel" style="margin-right:5px"></i>Permenaker No.5 Tahun 2018</div>
-      <div style="background:rgba(206,147,216,0.12);border:1px solid rgba(206,147,216,0.3);border-radius:8px;padding:5px 10px;font-size:10px;font-weight:700;color:#CE93D8"><i class="fas fa-ship" style="margin-right:5px"></i>IMO / ISM Code</div>
-    </div>
-  </div>
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">
-    <div style="background:rgba(96,180,244,0.1);border:1px solid rgba(96,180,244,0.25);border-radius:10px;padding:10px 12px">
-      <div style="font-size:10px;font-weight:700;color:#60B4F4;margin-bottom:5px"><i class="fas fa-clipboard-check" style="margin-right:5px"></i>HRA Coverage</div>
-      <div style="font-size:20px;font-weight:700;color:#fff;margin-bottom:2px">30 <span style="font-size:10px;color:rgba(255,255,255,0.5);font-weight:400">poin</span></div>
-      <div style="font-size:10px;color:rgba(255,255,255,0.6);line-height:1.5">Belum pernah HRA = skor penuh (risiko tertinggi)</div>
-    </div>
-    <div style="background:rgba(105,219,124,0.1);border:1px solid rgba(105,219,124,0.25);border-radius:10px;padding:10px 12px">
-      <div style="font-size:10px;font-weight:700;color:#69DB7C;margin-bottom:5px"><i class="fas fa-radiation" style="margin-right:5px"></i>Pengukuran Hazard (5 Faktor)</div>
-      <div style="font-size:20px;font-weight:700;color:#fff;margin-bottom:2px">35 <span style="font-size:10px;color:rgba(255,255,255,0.5);font-weight:400">poin</span></div>
-      <div style="font-size:10px;color:rgba(255,255,255,0.6);line-height:1.5">Parameter melebihi NAB/TLV dari pengukuran aktual</div>
-    </div>
-    <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);border-radius:10px;padding:10px 12px">
-      <div style="font-size:10px;font-weight:700;color:#FDBA74;margin-bottom:5px"><i class="fas fa-vial" style="margin-right:5px"></i>Drug &amp; Alcohol Test</div>
-      <div style="font-size:20px;font-weight:700;color:#fff;margin-bottom:2px">20 <span style="font-size:10px;color:rgba(255,255,255,0.5);font-weight:400">poin</span></div>
-      <div style="font-size:10px;color:rgba(255,255,255,0.6);line-height:1.5">Riwayat hasil positif DAT pada ABK kapal</div>
-    </div>
-    <div style="background:rgba(206,147,216,0.1);border:1px solid rgba(206,147,216,0.25);border-radius:10px;padding:10px 12px">
-      <div style="font-size:10px;font-weight:700;color:#CE93D8;margin-bottom:5px"><i class="fas fa-dna" style="margin-right:5px"></i>Biomonitoring Benzene</div>
-      <div style="font-size:20px;font-weight:700;color:#fff;margin-bottom:2px">15 <span style="font-size:10px;color:rgba(255,255,255,0.5);font-weight:400">poin</span></div>
-      <div style="font-size:10px;color:rgba(255,255,255,0.6);line-height:1.5">Nilai S-PMA urin melebihi BEI ACGIH 2024</div>
-    </div>
-  </div>
-  <div style="background:rgba(255,193,7,0.1);border:1px solid rgba(255,193,7,0.25);border-radius:8px;padding:8px 12px;display:flex;align-items:flex-start;gap:8px">
-    <i class="fas fa-circle-info" style="color:#FCD34D;margin-top:1px;flex-shrink:0;font-size:12px"></i>
-    <div style="font-size:10.5px;color:rgba(255,255,255,0.7);line-height:1.6">
-      <b style="color:#FCD34D">Catatan:</b> Kapal yang <b style="color:#FCD34D">belum memiliki data 2026</b> mendapat skor berbasis nilai default — sebagai <b style="color:#FCD34D">sinyal prioritas</b> penjadwalan program IH, bukan bukti bahwa kapal sudah terbukti berisiko. Data diperbarui otomatis seiring pelaksanaan program IH 2026.
-    </div>
-  </div>
-</div>
-
 <!-- KPI Risk Overview -->
 <div class="kpi-row" style="grid-template-columns:repeat(5,1fr)">
   <div class="kpi-card" style="border-top:3px solid #B71C1C">
     <div class="kpi-icon" style="background:#FFEBEE"><i class="fas fa-skull-crossbones" style="color:#B71C1C"></i></div>
-    <div class="kpi-body"><div class="kpi-value" id="rp-kritis" style="color:#B71C1C">—</div><div class="kpi-label">Kritis (&gt;75)</div><div style="font-size:9.5px;color:var(--text-muted)">Intervensi segera</div></div>
+    <div class="kpi-body"><div class="kpi-value" id="rp-kritis" style="color:#B71C1C">—</div><div class="kpi-label">Kritis (&gt;75)</div></div>
   </div>
   <div class="kpi-card" style="border-top:3px solid #E65100">
     <div class="kpi-icon" style="background:#FFF3E0"><i class="fas fa-triangle-exclamation" style="color:#E65100"></i></div>
-    <div class="kpi-body"><div class="kpi-value" id="rp-tinggi" style="color:#E65100">—</div><div class="kpi-label">Tinggi (51–75)</div><div style="font-size:9.5px;color:var(--text-muted)">Jadwalkan IH prioritas</div></div>
+    <div class="kpi-body"><div class="kpi-value" id="rp-tinggi" style="color:#E65100">—</div><div class="kpi-label">Tinggi (51–75)</div></div>
   </div>
   <div class="kpi-card" style="border-top:3px solid #F59E0B">
     <div class="kpi-icon" style="background:#FEF3C7"><i class="fas fa-circle-exclamation" style="color:#F59E0B"></i></div>
-    <div class="kpi-body"><div class="kpi-value" id="rp-sedang" style="color:#F59E0B">—</div><div class="kpi-label">Sedang (26–50)</div><div style="font-size:9.5px;color:var(--text-muted)">Monitor &amp; rencanakan</div></div>
+    <div class="kpi-body"><div class="kpi-value" id="rp-sedang" style="color:#F59E0B">—</div><div class="kpi-label">Sedang (26–50)</div></div>
   </div>
   <div class="kpi-card" style="border-top:3px solid #2E7D32">
     <div class="kpi-icon" style="background:#E8F5E9"><i class="fas fa-circle-check" style="color:#2E7D32"></i></div>
-    <div class="kpi-body"><div class="kpi-value" id="rp-rendah" style="color:#2E7D32">—</div><div class="kpi-label">Rendah (0–25)</div><div style="font-size:9.5px;color:var(--text-muted)">Program IH baik</div></div>
+    <div class="kpi-body"><div class="kpi-value" id="rp-rendah" style="color:#2E7D32">—</div><div class="kpi-label">Rendah (0–25)</div></div>
   </div>
   <div class="kpi-card" style="border-top:3px solid #7B1FA2">
     <div class="kpi-icon" style="background:#F3E5F5"><i class="fas fa-ship" style="color:#7B1FA2"></i></div>
-    <div class="kpi-body"><div class="kpi-value" id="rp-total" style="color:#7B1FA2">—</div><div class="kpi-label">Total Kapal</div><div style="font-size:9.5px;color:var(--text-muted)">Dari dataset IH aktif</div></div>
+    <div class="kpi-body"><div class="kpi-value" id="rp-total" style="color:#7B1FA2">—</div><div class="kpi-label">Total Kapal</div></div>
+  </div>
+</div>
+
+<!-- Info metodologi -->
+<div style="background:linear-gradient(135deg,#0F2A4A,#1C3A5A);border-radius:12px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:flex-start;gap:14px">
+  <i class="fas fa-circle-info" style="color:#60B4F4;font-size:18px;margin-top:2px;flex-shrink:0"></i>
+  <div>
+    <div style="font-size:12px;font-weight:700;color:#fff;margin-bottom:4px">Metodologi Scoring — Berbasis Data IH Aktual</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.65);line-height:1.7">
+      Skor risiko dihitung otomatis per kapal dari 4 dimensi:
+      <b style="color:#60B4F4">HRA Coverage (30 poin)</b> — lama sejak HRA terakhir atau belum pernah HRA;
+      <b style="color:#69DB7C">5 Hazard (35 poin)</b> — jumlah parameter melebihi NAB;
+      <b style="color:#F59E0B">DAT (20 poin)</b> — riwayat hasil positif;
+      <b style="color:#CE93D8">Biomarker Benzene (15 poin)</b> — nilai di atas BEI ACGIH.
+      Total 0–100 → <b style="color:#F87171">Kritis</b> / <b style="color:#FDBA74">Tinggi</b> / <b style="color:#FCD34D">Sedang</b> / <b style="color:#86EFAC">Rendah</b>
+    </div>
   </div>
 </div>
 
@@ -1549,7 +1396,7 @@ Kirim ulang kode OTP
       <div class="hcv-center">
         <div class="hcv-view-label"><i class="fas fa-chevron-right"></i> PROFILE VIEW (STARBOARD) — Klik zona untuk detail hazard kapal yang dipilih</div>
         <div class="hcv-svg-wrap" id="hcvProfileWrap">
-          <svg id="hcvProfileSVG" viewBox="0 0 960 269" preserveAspectRatio="xMidYMid meet" style="display:block;width:100%;border-radius:8px;overflow:hidden"></svg>
+          <svg id="hcvProfileSVG" viewBox="0 0 900 245" preserveAspectRatio="xMidYMid meet" style="display:block;width:100%"></svg>
         </div>
 
         <!-- Zone summary cards -->
@@ -1557,7 +1404,7 @@ Kirim ulang kode OTP
 
         <div class="hcv-view-label" style="margin-top:8px"><i class="fas fa-chevron-right"></i> MAIN DECK PLAN (TOP VIEW)</div>
         <div class="hcv-svg-wrap">
-          <svg id="hcvTopSVG" viewBox="0 0 960 312" preserveAspectRatio="xMidYMid meet" style="display:block;width:100%"></svg>
+          <svg id="hcvTopSVG" viewBox="0 0 900 170" preserveAspectRatio="xMidYMid meet" style="display:block;width:100%"></svg>
         </div>
       </div>
 
