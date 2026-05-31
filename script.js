@@ -3,7 +3,7 @@
 /* ✅ Pedoman PDF & Foto Dokumentasi → Google Drive (multi-device)    */
 /* ✅ IndexedDB dihapus — data terpusat di GAS/Drive                  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycby49zy7T5QvrHNScf5uFNJjJeXbk0EKdaOLeQcz3ZMM_8bkdDfsjDrWMGWRVE2O1R-RGQ/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxWscFjKrrqQgNwmeRLAfjBtWi05bnRLkW5ESrtVBWkNlIA5exFlTLhNid8VnGUoWMK2Q/exec";
 
 async function gasPost(payload) {
   const controller = new AbortController();
@@ -392,6 +392,8 @@ let rawCloseout25=[];
 /* Medical Surveillance — MCU Pelaut (v5.1) */
 let rawMCU=[],filteredMCU=[],mcuSummary={};
 var mcuTab="overview",mcuSortCol=-1,mcuSortDir=1;
+/* Sebaran Alkes Kapal — v5.2 */
+let rawAlkes=[],filteredAlkes=[];
 let filteredFisika=[],filteredKimia=[],filteredBiologi=[],filteredErgonomi=[],filteredPsikososial=[];
 let hraBarChart,hraDonutChart,datBarChart,datDonutChart,pestBarChart,pestDonutChart,pestTemuanChart,pestBiayaChart;
 let fisikaBarChart,fisikaDonutChart,kimiaBarChart,kimiaDonutChart,biologiBarChart,biologiDonutChart;
@@ -440,6 +442,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   document.querySelectorAll('.nav-item[data-menu="dokumentasi"]').forEach(item=>{item.addEventListener("click",()=>{currentDokFolder="hra_ih";setTimeout(renderDokGallery,80);});});
   document.querySelectorAll('.nav-item[data-menu="biomonitoring"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(initBiomonitoring,80));});
   document.querySelectorAll('.nav-item[data-menu="medsurv"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(renderMCUPage,80));});
+  document.querySelectorAll('.nav-item[data-menu="menu5"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(renderAlkesPage,80));});
   /* ── Dashboard age counter ── */
   function updateDashboardAge(){
     var start=new Date("2026-04-25T00:00:00");
@@ -694,6 +697,7 @@ async function loadData(){
     filteredFisika=[];filteredKimia=[];filteredBiologi=[];filteredErgonomi=[];filteredPsikososial=[];
     rawCloseout25=[...RAW_CLOSEOUT_2025];filteredCO25=[...RAW_CLOSEOUT_2025];
     rawMCU=[];filteredMCU=[];mcuSummary={};
+    rawAlkes=[];filteredAlkes=[];
     const lastEl=document.getElementById("lastUpdated");
     if(lastEl)lastEl.textContent="Mode Demo";
     try{renderHRAPage();}catch(e){}
@@ -725,6 +729,7 @@ async function loadData(){
     initP3KData(data);
     rawFisika=data.fisika||[];rawKimia=data.kimia||[];rawBiologi=data.biologi||[];
     rawErgonomi=data.ergonomi||[];rawPsikososial=data.psikososial||[];
+    rawAlkes=data.alkes||[];filteredAlkes=[...rawAlkes];
     filteredHRA=[...rawHRA];filteredDAT=[...rawDAT];filteredPest=[...rawPest];
     filteredFisika=[...rawFisika];filteredKimia=[...rawKimia];filteredBiologi=[...rawBiologi];
     filteredErgonomi=[...rawErgonomi];filteredPsikososial=[...rawPsikososial];
@@ -764,6 +769,7 @@ async function loadData(){
     rawCloseout25=[...RAW_CLOSEOUT_2025];
     filteredCO25=[...RAW_CLOSEOUT_2025];
     rawMCU=[];filteredMCU=[];mcuSummary={};
+    rawAlkes=[];filteredAlkes=[];
     const lastEl=document.getElementById("lastUpdated");
     if(lastEl)lastEl.textContent="Gagal terhubung";
   }
@@ -3963,13 +3969,68 @@ function getSummaryData(){
   var bioD=rawBiomarker||[];
   var bioMel=bioD.filter(function(r){return r.kreatinin>r.rujukan;}).length;
 
+  /* P3K & AED Office */
+  var p3kAll=typeof rawP3K!=="undefined"?rawP3K:[];
+  var p3kLokTot=typeof P3K_LOKASI!=="undefined"?P3K_LOKASI.length:14;
+  var p3kMasalah=p3kAll.filter(function(r){
+    var ps=(r.p3kStatus||"").toLowerCase();
+    var as=(r.aedStatus||"").toLowerCase();
+    return ps.includes("expired")||ps.includes("tidak lengkap")||ps.includes("restock")
+        ||as.includes("rusak")||as.includes("servis")||as.includes("expired");
+  }).length;
+  var p3kExpired=p3kAll.filter(function(r){return(r.p3kExp||r.aedExp);}).length;
+  var p3kLokCek=new Set(p3kAll.filter(function(r){return r.p3kStatus;}).map(function(r){return r.lantai+"|"+r.fungsi;})).size;
+  var p3kCovPct=p3kLokTot>0?Math.round((p3kLokCek/p3kLokTot)*100):0;
+  var p3kStatusDist={lengkap:0,tidakLengkap:0,expired:0,belum:0};
+  p3kAll.forEach(function(r){
+    var ps=(r.p3kStatus||"").toLowerCase();
+    if(!r.p3kStatus||ps.includes("tidak diperiksa"))p3kStatusDist.belum++;
+    else if(ps.includes("expired"))p3kStatusDist.expired++;
+    else if(ps.includes("tidak lengkap")||ps.includes("restock"))p3kStatusDist.tidakLengkap++;
+    else p3kStatusDist.lengkap++;
+  });
+  var aedStatusDist={baik:0,perluServis:0,belum:0};
+  p3kAll.forEach(function(r){
+    var as=(r.aedStatus||"").toLowerCase();
+    if(!r.aedStatus||as.includes("tidak diperiksa"))aedStatusDist.belum++;
+    else if(as.includes("rusak")||as.includes("servis")||as.includes("expired"))aedStatusDist.perluServis++;
+    else aedStatusDist.baik++;
+  });
+  var p3kTemuan=p3kAll.filter(function(r){return r.p3kTemuan||r.aedTemuan;}).slice(0,3);
+
+  /* Sebaran Alkes Kapal */
+  var alkesKapalTot=typeof TOTAL_KAPAL!=="undefined"?TOTAL_KAPAL:85;
+  var alkesHasData=rawAlkes&&rawAlkes.length>0;
+  var alkesKapalCek=alkesHasData?rawAlkes.length:0;
+  var alkesLengkap=alkesHasData?rawAlkes.filter(function(r){return r._status==="LENGKAP";}).length:0;
+  var alkesTidakLengkap=alkesHasData?rawAlkes.filter(function(r){return r._status!=="LENGKAP";}).length:0;
+  var alkesKategori=[
+    {nama:"Obat-obatan Esensial",    icon:"fa-pills",       regulasi:"SOLAS Ch.III"},
+    {nama:"Peralatan Resusitasi",    icon:"fa-lungs",       regulasi:"MLC 2006 Reg.4.1"},
+    {nama:"AED & Defibrilator",      icon:"fa-heart-pulse", regulasi:"PERKI 2023"},
+    {nama:"Stretcher & Immobilisasi",icon:"fa-bed-pulse",   regulasi:"IMO Med Guide"},
+    {nama:"Pemeriksaan Diagnostik",  icon:"fa-stethoscope", regulasi:"MLC 2006"},
+    {nama:"APD Medis & Steril",      icon:"fa-hand-sparkles",regulasi:"IMO MSC.1351"},
+  ];
+
   return{
     fleet:fleet,bulan:bulan,
     hra:{done:hraDone,total:hraTot,coverage:hraCov,budget:hraBudget,data:hraD},
     dat:{kapal:datKapal,crew:datCrew,positif:datPos,rate:datRate,biaya:datBiaya,bulanList:datBulanList},
     pest:{count:pestCount,lokasi:pestLokasi,biaya:pestBiaya,bulanList:pestBulanList},
     hazard:{total:hazTot,melebihi:hazMel,fisika:{total:fisD.length,melebihi:fisMel},kimia:{total:kimD.length,melebihi:kimMel},biologi:{total:bioloD.length,melebihi:bioloMel},ergonomi:{total:ergD.length,tinggi:ergTin},psiko:{total:psiD.length,tinggi:psiTin}},
-    bio:{total:bioD.length,melebihi:bioMel}
+    bio:{total:bioD.length,melebihi:bioMel},
+    p3k:{
+      lokTot:p3kLokTot,lokCek:p3kLokCek,covPct:p3kCovPct,
+      masalah:p3kMasalah,expired:p3kExpired,
+      statusDist:p3kStatusDist,aedDist:aedStatusDist,
+      temuan:p3kTemuan,hasData:p3kAll.length>0
+    },
+    alkes:{
+      kapalTot:alkesKapalTot,kapalCek:alkesKapalCek,
+      lengkap:alkesLengkap,tidakLengkap:alkesTidakLengkap,
+      hasData:alkesHasData,kategori:alkesKategori
+    }
   };
 }
 
@@ -4094,7 +4155,8 @@ function _buildSummary(el,cKey){
   var stOvr=d.dat.positif>0||d.hazard.melebihi>0
     ?{l:"PERHATIAN",c:"#E65100",bg:"#FFF3E0"}
     :(parseFloat(d.hra.coverage)<50?{l:"KRITIS",c:"#C62828",bg:"#FFEBEE"}:{l:"BAIK",c:"#2E7D32",bg:"#E8F5E9"});
-  var totalPages=nomBio?7:6;
+  /* totalPages: Cover + HRA + DAT + Pest + Hazard + P3K&AED + Alkes + [Bio?] + Rek */
+  var totalPages=nomBio?9:8;
 
   /* ══════════════ HALAMAN 1: COVER ══════════════ */
   var pg1='<div style="background:linear-gradient(150deg,#071929 0%,#0F2A4A 50%,#1A3A5C 100%);'
@@ -4347,10 +4409,145 @@ function _buildSummary(el,cKey){
     +regStrip(["Permenaker 05/2018 Pasal 7-11","ACGIH TLV 2024","ISO 45001:2018 Klausul 8.1.2","PP No.88/2019 Kesehatan Kerja"])
     +pftr;
 
-  /* ══════════════ HALAMAN 6 (opsional): BIOMARKER ══════════════ */
+  /* ══════════════ HALAMAN 6: P3K & AED ══════════════ */
+  var pg6p3k=phdr(6,totalPages)
+    +shdr("fa-kit-medical","VI. P3K & AED — Kantor & Fasilitas Darat","#C62828")
+    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">'
+    +kpi("Total Lokasi",d.p3k.lokTot,"lokasi (kantor)","#1565C0","#EBF5FF")
+    +kpi("Lokasi Diperiksa",d.p3k.lokCek,(d.p3k.covPct+"% coverage"),"#2E7D32","#E8F5E9",d.p3k.covPct)
+    +kpi("Ada Masalah",d.p3k.masalah,"lokasi bermasalah",d.p3k.masalah>0?"#C62828":"#2E7D32",d.p3k.masalah>0?"#FFEBEE":"#E8F5E9")
+    +kpi("Item Expired",d.p3k.expired,"item kedaluwarsa",d.p3k.expired>0?"#E65100":"#2E7D32",d.p3k.expired>0?"#FFF3E0":"#E8F5E9")
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">'
+    /* P3K Status */
+    +'<div style="background:#fff;border:1px solid #E2E8F0;border-radius:10px;padding:14px 16px">'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #F1F5F9">'
+    +'<div style="width:28px;height:28px;background:#C62828;border-radius:6px;display:flex;align-items:center;justify-content:center">'
+    +'<i class="fas fa-kit-medical" style="color:#fff;font-size:12px"></i></div>'
+    +'<div style="font-size:13px;font-weight:700;color:#1E293B">Status Kotak P3K</div>'
+    +'<div style="margin-left:auto;font-size:9px;font-weight:700;color:#64748B">Permenakertrans No.15/MEN/VIII/2008</div>'
+    +'</div>'
+    +'<div style="display:flex;flex-direction:column;gap:7px">'
+    +[
+      {lbl:"Lengkap & Baik",val:d.p3k.statusDist.lengkap,col:"#2E7D32"},
+      {lbl:"Tidak Lengkap / Perlu Restock",val:d.p3k.statusDist.tidakLengkap,col:"#E65100"},
+      {lbl:"Ada Item Expired",val:d.p3k.statusDist.expired,col:"#C62828"},
+      {lbl:"Belum Diperiksa",val:d.p3k.statusDist.belum,col:"#64748B"},
+    ].map(function(s){
+      var pct=Math.round((s.val/Math.max(d.p3k.lokTot,1))*100);
+      return'<div style="display:flex;align-items:center;gap:8px">'
+        +'<div style="width:10px;height:10px;background:'+s.col+';border-radius:3px;flex-shrink:0"></div>'
+        +'<div style="font-size:11px;color:#475569;flex:1">'+s.lbl+'</div>'
+        +'<div style="font-size:12px;font-weight:700;color:'+s.col+'">'+s.val+'</div>'
+        +'</div>'
+        +bar(pct,s.col);
+    }).join("")
+    +'</div></div>'
+    /* AED Status */
+    +'<div style="background:#fff;border:1px solid #E2E8F0;border-radius:10px;padding:14px 16px">'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #F1F5F9">'
+    +'<div style="width:28px;height:28px;background:#1565C0;border-radius:6px;display:flex;align-items:center;justify-content:center">'
+    +'<i class="fas fa-heart-pulse" style="color:#fff;font-size:12px"></i></div>'
+    +'<div style="font-size:13px;font-weight:700;color:#1E293B">Status AED</div>'
+    +'<div style="margin-left:auto;font-size:9px;font-weight:700;color:#64748B">PERKI 2023 · AHA 2020</div>'
+    +'</div>'
+    +'<div style="display:flex;flex-direction:column;gap:7px">'
+    +[
+      {lbl:"Siap Pakai (Ready)",val:d.p3k.aedDist.baik,col:"#2E7D32"},
+      {lbl:"Perlu Servis / Elektrode Expired",val:d.p3k.aedDist.perluServis,col:"#C62828"},
+      {lbl:"Belum Diperiksa Periode Ini",val:d.p3k.aedDist.belum,col:"#64748B"},
+    ].map(function(s){
+      var pct=Math.round((s.val/Math.max(d.p3k.lokTot,1))*100);
+      return'<div style="display:flex;align-items:center;gap:8px">'
+        +'<div style="width:10px;height:10px;background:'+s.col+';border-radius:3px;flex-shrink:0"></div>'
+        +'<div style="font-size:11px;color:#475569;flex:1">'+s.lbl+'</div>'
+        +'<div style="font-size:12px;font-weight:700;color:'+s.col+'">'+s.val+'</div>'
+        +'</div>'
+        +bar(pct,s.col);
+    }).join("")
+    +'<div style="background:#EBF5FF;border-radius:8px;padding:8px 12px;margin-top:8px;font-size:10px;color:#334155;line-height:1.65">'
+    +'<strong style="color:#1565C0">Standar Pemeliharaan AED:</strong> Elektrode ganti tiap <strong>2 tahun</strong>, baterai <strong>4–5 tahun</strong>, inspeksi visual <strong>setiap bulan</strong>.</div>'
+    +'</div></div>'
+    +'</div>'
+    +(d.p3k.temuan&&d.p3k.temuan.length?
+      '<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:700;color:#1E293B;margin-bottom:8px"><i class="fas fa-triangle-exclamation" style="color:#E65100;margin-right:6px"></i>Temuan Terkini — Perlu Tindak Lanjut</div>'
+      +'<div style="display:grid;grid-template-columns:repeat('+Math.min(d.p3k.temuan.length,3)+',1fr);gap:8px">'
+      +d.p3k.temuan.map(function(r){
+        return'<div style="background:#FFF3E0;border:1px solid #FFE0B2;border-left:3px solid #E65100;border-radius:8px;padding:10px 12px">'
+          +'<div style="font-size:11px;font-weight:700;color:#BF360C;margin-bottom:3px">'+(r.lantai||"")+(r.fungsi?" — "+r.fungsi:"")+'</div>'
+          +(r.p3kTemuan?'<div style="font-size:10.5px;color:#475569;margin-bottom:2px"><i class="fas fa-kit-medical" style="margin-right:4px;color:#C62828"></i>'+r.p3kTemuan+'</div>':"")
+          +(r.aedTemuan?'<div style="font-size:10.5px;color:#475569"><i class="fas fa-heart-pulse" style="margin-right:4px;color:#1565C0"></i>'+r.aedTemuan+'</div>':"")
+          +'</div>';
+      }).join("")+'</div></div>':"")
+    +anaBox("#C62828","#FFEBEE","#FFCDD2","Analisis",
+      d.p3k.masalah>0?
+      'Ditemukan <strong>'+d.p3k.masalah+' lokasi bermasalah</strong> dari '+d.p3k.lokTot+' titik. '
+      +(d.p3k.expired>0?'<strong>'+d.p3k.expired+' item kedaluwarsa</strong> — wajib diganti segera. ':'')
+      +'Ketersediaan P3K & AED adalah lini pertama respons darurat medis.':
+      'Coverage pemeriksaan P3K & AED mencapai <strong>'+d.p3k.covPct+'%</strong> dari '+d.p3k.lokTot+' lokasi. '
+      +'Tidak ditemukan lokasi bermasalah. Pertahankan inspeksi bulanan.')
+    +regStrip(["Permenakertrans No.Per.15/MEN/VIII/2008","PERKI 2023","AHA Guidelines 2020","PP 50/2012 SMK3"])
+    +pftr;
+
+  /* ══════════════ HALAMAN 7: SEBARAN ALKES KAPAL ══════════════ */
+  var pg7alkes=phdr(7,totalPages)
+    +shdr("fa-ship","VII. Sebaran Alkes Kapal — Medical Equipment Inventory","#1565C0")
+    +(d.alkes.hasData?
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">'
+      +kpi("Total Armada",d.alkes.kapalTot,"unit kapal","#1565C0","#EBF5FF")
+      +kpi("Sudah Inventarisir",d.alkes.kapalCek,"kapal","#2E7D32","#E8F5E9",Math.round((d.alkes.kapalCek/Math.max(d.alkes.kapalTot,1))*100))
+      +kpi("Belum Inventarisir",d.alkes.kapalTot-d.alkes.kapalCek,"kapal","#E65100","#FFF3E0")
+      +'</div>'
+      :
+      '<div style="background:linear-gradient(135deg,#EBF5FF,#E8F0FE);border:1.5px dashed #90CAF9;border-radius:12px;padding:28px 24px;text-align:center;margin-bottom:16px">'
+      +'<div style="width:56px;height:56px;background:linear-gradient(135deg,#1565C0,#0D47A1);border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px">'
+      +'<i class="fas fa-ship" style="color:#fff;font-size:22px"></i></div>'
+      +'<div style="font-size:18px;font-weight:700;color:#1565C0;margin-bottom:6px">Modul Sebaran Alkes Kapal</div>'
+      +'<div style="font-size:12px;color:#475569;margin-bottom:10px">Inventarisasi alat kesehatan di <strong>'+d.alkes.kapalTot+' unit armada</strong> — modul dalam pengembangan</div>'
+      +'<span style="background:linear-gradient(135deg,#C9973A,#E6AC3A);color:#fff;padding:4px 14px;border-radius:20px;font-size:10px;font-weight:700">Fase 1 — Roadmap 2026</span>'
+      +'</div>'
+    )
+    +'<div style="background:#fff;border:1px solid #E2E8F0;border-radius:10px;padding:14px 16px;margin-bottom:14px">'
+    +'<div style="font-size:12px;font-weight:700;color:#1E293B;margin-bottom:12px;display:flex;align-items:center;gap:8px">'
+    +'<i class="fas fa-list-check" style="color:#1565C0;font-size:13px"></i>Kategori Alkes Wajib Kapal — Standar IMO MSC/Circ.1351</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">'
+    +d.alkes.kategori.map(function(k){
+      return'<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:10px 12px;display:flex;align-items:flex-start;gap:9px">'
+        +'<div style="width:28px;height:28px;background:#1565C0;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0">'
+        +'<i class="fas '+k.icon+'" style="color:#fff;font-size:11px"></i></div>'
+        +'<div><div style="font-size:11px;font-weight:600;color:#1E293B;line-height:1.4">'+k.nama+'</div>'
+        +'<div style="font-size:9.5px;color:#64748B;margin-top:2px">'+k.regulasi+'</div></div>'
+        +'</div>';
+    }).join("")
+    +'</div></div>'
+    +'<div style="background:#0F2A4A;border-radius:12px;padding:14px 18px;margin-bottom:14px">'
+    +'<div style="font-size:12px;font-weight:700;color:#fff;margin-bottom:12px;display:flex;align-items:center;gap:8px">'
+    +'<i class="fas fa-map" style="color:#C9973A;font-size:13px"></i>Roadmap Pengembangan Modul Sebaran Alkes</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">'
+    +[
+      {fase:"Fase 1 (2026)",col:"#C9973A",items:["Input inventaris alkes per kapal","Mapping standar IMO & MLC 2006","Dashboard sebaran & status alkes","Alert kadaluarsa & maintenance"]},
+      {fase:"Fase 2 (2026–27)",col:"#60B4F4",items:["Integrasi data PSC inspection","Medical surveillance ABK terpadu","APD medis tracking per kapal","Compliance gap analysis"]},
+      {fase:"Fase 3 / AI (2027)",col:"#A78BFA",items:["Predictive restocking","Auto-generate inventory report","OCR input dari dokumen kapal","Cross-fleet analytics"]},
+    ].map(function(f){
+      return'<div style="background:rgba(255,255,255,.06);border-radius:8px;padding:12px">'
+        +'<div style="font-size:10px;font-weight:700;color:'+f.col+';margin-bottom:8px;letter-spacing:.5px">'+f.fase+'</div>'
+        +f.items.map(function(it){
+          return'<div style="display:flex;gap:6px;margin-bottom:5px">'
+            +'<div style="width:4px;height:4px;background:'+f.col+';border-radius:50%;flex-shrink:0;margin-top:5px"></div>'
+            +'<div style="font-size:10.5px;color:rgba(255,255,255,.8);line-height:1.5">'+it+'</div></div>';
+        }).join("")+'</div>';
+    }).join("")
+    +'</div></div>'
+    +anaBox("#1565C0","#EBF5FF","#90CAF9","Urgensi & Regulasi",
+      'Inventarisasi alat kesehatan kapal wajib berdasarkan <strong>MLC 2006 Regulation 4.1</strong>, <strong>SOLAS Chapter III</strong>, dan <strong>IMO MSC/Circ.1351</strong>. '
+      +'Modul Sebaran Alkes akan mengintegrasikan '+d.alkes.kapalTot+' unit armada dengan sistem monitoring terpusat real-time.')
+    +regStrip(["MLC 2006 Reg.4.1","SOLAS Ch.III","IMO MSC/Circ.1351","Permenkes 340/2010"])
+    +pftr;
+
+  /* ══════════════ HALAMAN 8 (opsional): BIOMARKER ══════════════ */
   var pg6bio="";
   if(nomBio){
-    pg6bio=phdr(6,totalPages)
+    pg6bio=phdr(8,totalPages)
       +shdr("fa-flask","V. Biomonitoring Benzene (ACGIH BEI 2024)","#7B1FA2")
       +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">'
       +kpi("Total Sampel",d.bio.total,"sampel urin","#7B1FA2","#F3E5F5")
@@ -4385,7 +4582,7 @@ function _buildSummary(el,cKey){
   }
 
   /* ══════════════ HALAMAN TERAKHIR: REKOMENDASI AI ══════════════ */
-  var pgRekN=nomBio?7:6;
+  var pgRekN=nomBio?9:8;
   var reks=[];
   if(parseFloat(d.hra.coverage)<80)
     reks.push({p:"HRA",t:"Akselerasi Coverage HRA",
@@ -4409,13 +4606,21 @@ function _buildSummary(el,cKey){
   if(nomBio&&d.bio.melebihi>0) reks.push({p:"BIOMARKER",t:"Medical Surveillance "+d.bio.melebihi+" ABK",
     b:'<strong>'+d.bio.melebihi+' sampel</strong> melebihi BEI ACGIH 2024. Benzene IARC Group 1 — wajib pemeriksaan hematologi dan evaluasi SpOK. Perbaiki ventilasi LEV dan terapkan APD full-face respirator.',
     c:"#7B1FA2",bg:"#F3E5F5",ic:"fa-flask"});
+  if(d.p3k.masalah>0||d.p3k.expired>0) reks.push({p:"P3K & AED",t:"Perbaikan "+d.p3k.masalah+" Lokasi Bermasalah",
+    b:'Ditemukan <strong>'+d.p3k.masalah+' lokasi bermasalah</strong>'+(d.p3k.expired>0?' dan <strong>'+d.p3k.expired+' item kedaluwarsa</strong>':'')+' dari '+d.p3k.lokTot+' titik. Penggantian item expired dan restocking wajib dilakukan segera.',
+    c:"#C62828",bg:"#FFEBEE",ic:"fa-kit-medical"});
+  else if(d.p3k.hasData) reks.push({p:"P3K & AED",t:"Coverage "+d.p3k.covPct+"% — Pertahankan Inspeksi",
+    b:'Coverage inspeksi P3K & AED mencapai <strong>'+d.p3k.covPct+'%</strong> dari '+d.p3k.lokTot+' lokasi tanpa temuan bermasalah. Pertahankan jadwal inspeksi bulanan.',
+    c:"#2E7D32",bg:"#E8F5E9",ic:"fa-heart-pulse"});
+  if(!d.alkes.hasData) reks.push({p:"SEBARAN ALKES",t:"Inisiasi Inventarisasi Alkes "+d.alkes.kapalTot+" Kapal",
+    b:'Inventarisasi alat kesehatan untuk <strong>'+d.alkes.kapalTot+' unit armada</strong> belum terlaksana. Wajib berdasarkan <strong>MLC 2006 Reg.4.1</strong> dan <strong>IMO MSC/Circ.1351</strong>. Jadwalkan Fase 1 Roadmap 2026.',
+    c:"#1565C0",bg:"#EBF5FF",ic:"fa-ship"});
 
-  var pgRek=phdr(pgRekN,totalPages+(nomBio?1:0))
+  var pgRek=phdr(pgRekN,totalPages)
     +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;padding-bottom:12px;border-bottom:2px solid #0F2A4A">'
     +'<div style="width:32px;height:32px;background:linear-gradient(135deg,#6A1B9A,#1565C0);border-radius:8px;display:flex;align-items:center;justify-content:center">'
     +'<i class="fas fa-brain" style="color:#fff;font-size:14px"></i></div>'
-    +'<div style="font-size:16px;font-weight:700;color:#0F2A4A">Rekomendasi AI — Berbasis Data Aktual Dashboard</div>'
-    +'<div style="margin-left:auto"><span style="background:linear-gradient(135deg,#6A1B9A,#1565C0);color:#fff;padding:3px 10px;border-radius:20px;font-size:9px;font-weight:700">AI Generated</span></div>'
+    +'<div style="font-size:16px;font-weight:700;color:#0F2A4A">Rekomendasi — Berbasis Data Aktual Dashboard</div>'
     +'</div>'
     +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px">'
     +reks.slice(0,3).map(function(r){
@@ -4473,6 +4678,8 @@ function _buildSummary(el,cKey){
     +pg("pg-dat",pg3)
     +pg("pg-pest",pg4)
     +pg("pg-hazard",pg5)
+    +pg("pg-p3k",pg6p3k)
+    +pg("pg-alkes",pg7alkes)
     +(nomBio?pg("pg-bio",pg6bio):"")
     +pg("pg-rek",pgRek)
     +'</div>';
@@ -5962,4 +6169,268 @@ function searchMCUTable(){
 
 function exportMCUPPT(){
   showToast("Export PPT Medical Surveillance akan segera hadir.","info");
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SEBARAN ALKES KAPAL — v5.2
+   Data: sheet "Sebaran Alkes Kapal" via GAS action "getData" (alkes)
+   Struktur: Nama Kapal | Fleet | [status alkes per kolom]
+═══════════════════════════════════════════════════════════════ */
+
+/* ── Status color map ── */
+var ALKES_STATUS_COLOR={
+  "LENGKAP":       {bg:"var(--green-soft)",c:"var(--green)",   icon:"fa-circle-check"},
+  "PARSIAL":       {bg:"#FFFDE7",          c:"#F57F17",        icon:"fa-circle-half-stroke"},
+  "TIDAK LENGKAP": {bg:"var(--red-soft)",  c:"var(--red)",     icon:"fa-circle-xmark"},
+  "EXPIRED":       {bg:"var(--red-soft)",  c:"var(--red)",     icon:"fa-clock"},
+};
+
+/* ── Helper: deteksi kolom alkes dari header ── */
+function _alkesGetItemCols(data){
+  if(!data||!data.length)return[];
+  var sample=data[0];
+  return Object.keys(sample).filter(function(k){
+    var kl=k.toLowerCase();
+    return !["nama kapal","fleet","_kapal","_fleet","_alkestotal","_alkesada",
+             "_alkesbelum","_alkesexpired","_alkeskosong","_kelengkapanpct","_status"].includes(kl)
+        && !k.startsWith("_");
+  });
+}
+
+/* ── Filter ── */
+function applyAlkesFilters(){
+  var fleet=(document.getElementById("alkes-filter-fleet")||{}).value||"";
+  var status=(document.getElementById("alkes-filter-status")||{}).value||"";
+  var kapal=((document.getElementById("alkes-filter-kapal")||{}).value||"").toLowerCase();
+  filteredAlkes=rawAlkes.filter(function(r){
+    if(fleet&&(r._fleet||"")!==fleet)return false;
+    if(status&&(r._status||"")!==status)return false;
+    if(kapal&&!(r._kapal||"").toLowerCase().includes(kapal))return false;
+    return true;
+  });
+  renderAlkesPage();
+}
+
+function clearAlkesFilters(){
+  ["alkes-filter-fleet","alkes-filter-status"].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.value="";
+  });
+  var kEl=document.getElementById("alkes-filter-kapal");if(kEl)kEl.value="";
+  filteredAlkes=[...rawAlkes];
+  renderAlkesPage();
+}
+
+/* ── Main render ── */
+function renderAlkesPage(){
+  var container=document.getElementById("page-menu5");
+  if(!container)return;
+
+  /* Belum ada data */
+  if(!rawAlkes||!rawAlkes.length){
+    container.innerHTML=
+      '<div class="placeholder-page">'
+      +'<div class="placeholder-icon"><i class="fas fa-ship"></i></div>'
+      +'<h2>Sebaran Alkes Kapal</h2>'
+      +'<p>Data belum tersedia atau sedang dimuat dari Google Sheets.</p>'
+      +'<p style="font-size:12px;color:var(--text-muted)">Pastikan sheet <strong>"Sebaran Alkes Kapal"</strong> sudah terisi dan GAS sudah di-redeploy.</p>'
+      +'</div>';
+    return;
+  }
+
+  /* Inisialisasi filtered jika belum */
+  if(!filteredAlkes.length&&rawAlkes.length)filteredAlkes=[...rawAlkes];
+
+  /* Hitung summary */
+  var tot=filteredAlkes.length;
+  var lengkap=filteredAlkes.filter(function(r){return r._status==="LENGKAP";}).length;
+  var parsial=filteredAlkes.filter(function(r){return r._status==="PARSIAL";}).length;
+  var tidakLengkap=filteredAlkes.filter(function(r){return r._status==="TIDAK LENGKAP";}).length;
+  var expired=filteredAlkes.filter(function(r){return r._status==="EXPIRED";}).length;
+  var avgKelengkapan=tot>0?Math.round(filteredAlkes.reduce(function(s,r){return s+(r._kelengkapanPct||0);},0)/tot):0;
+
+  /* Kolom alkes item */
+  var itemCols=_alkesGetItemCols(rawAlkes);
+
+  /* Per fleet */
+  var fleetMap={};
+  filteredAlkes.forEach(function(r){
+    var fl=r._fleet||"—";
+    if(!fleetMap[fl])fleetMap[fl]={total:0,lengkap:0};
+    fleetMap[fl].total++;
+    if(r._status==="LENGKAP")fleetMap[fl].lengkap++;
+  });
+
+  /* Render HTML */
+  container.innerHTML=
+    /* Filter bar */
+    '<div class="filter-bar">'
+    +'<div class="filter-group"><label>Jenis Fleet</label>'
+    +'<select id="alkes-filter-fleet" onchange="applyAlkesFilters()">'
+    +'<option value="">Semua Fleet</option>'
+    +['FP I','FP II','FC','FGP'].map(function(f){return'<option value="'+f+'">'+f+'</option>';}).join("")
+    +'</select></div>'
+    +'<div class="filter-group"><label>Status Alkes</label>'
+    +'<select id="alkes-filter-status" onchange="applyAlkesFilters()">'
+    +'<option value="">Semua Status</option>'
+    +'<option value="LENGKAP">Lengkap</option>'
+    +'<option value="PARSIAL">Parsial</option>'
+    +'<option value="TIDAK LENGKAP">Tidak Lengkap</option>'
+    +'<option value="EXPIRED">Ada Expired</option>'
+    +'</select></div>'
+    +'<div class="filter-group"><label>Nama Kapal</label>'
+    +'<input type="text" id="alkes-filter-kapal" placeholder="Cari nama kapal..." oninput="applyAlkesFilters()"></div>'
+    +'<button class="btn-clear" onclick="clearAlkesFilters()"><i class="fas fa-rotate-left"></i> Reset</button>'
+    +'</div>'
+
+    /* KPI */
+    +'<div class="kpi-grid" style="margin-bottom:18px">'
+    +_alkesKpi("Total Kapal",tot,"unit armada","blue","fa-ship")
+    +_alkesKpi("Lengkap",lengkap,"alkes semua tersedia","green","fa-circle-check")
+    +_alkesKpi("Parsial",parsial,"sebagian tersedia","orange","fa-circle-half-stroke")
+    +_alkesKpi("Tidak Lengkap",tidakLengkap,"alkes kurang","red","fa-circle-xmark")
+    +_alkesKpi("Ada Expired",expired,"item kadaluarsa","red","fa-clock")
+    +_alkesKpi("Avg Kelengkapan",avgKelengkapan+"%","rata-rata per kapal","teal","fa-percent")
+    +'</div>'
+
+    /* Grid: distribusi per fleet + tabel */
+    +'<div style="display:grid;grid-template-columns:260px 1fr;gap:16px;margin-bottom:18px">'
+    /* Fleet sidebar */
+    +'<div class="chart-card"><div class="chart-header"><span class="chart-title"><i class="fas fa-ship"></i> Per Fleet</span></div>'
+    +'<div style="padding:14px">'
+    +Object.keys(fleetMap).sort().map(function(fl){
+      var fd=fleetMap[fl];
+      var pct=fd.total>0?Math.round((fd.lengkap/fd.total)*100):0;
+      return'<div style="margin-bottom:10px">'
+        +'<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">'
+        +'<span style="font-weight:700;color:var(--text)">'+esc(fl)+'</span>'
+        +'<span style="color:var(--text-muted)">'+fd.lengkap+'/'+fd.total+' lengkap</span></div>'
+        +'<div style="background:var(--border);border-radius:4px;height:6px">'
+        +'<div style="width:'+pct+'%;background:'+(pct===100?"var(--green)":pct>=50?"#F57F17":"var(--red)")+';height:6px;border-radius:4px;transition:width .6s"></div>'
+        +'</div>'
+        +'<div style="font-size:10px;color:var(--text-muted);margin-top:2px">'+pct+'% lengkap</div>'
+        +'</div>';
+    }).join("")
+    +'</div></div>'
+    /* Tabel utama */
+    +'<div class="table-card">'
+    +'<div class="chart-header" style="flex-wrap:wrap;gap:8px">'
+    +'<span class="chart-title"><i class="fas fa-table-list"></i> Status Alkes per Kapal</span>'
+    +'<span id="alkes-count" style="font-size:11px;color:var(--text-muted)">'+filteredAlkes.length+' kapal</span>'
+    +'</div>'
+    +'<div style="overflow-x:auto;max-height:420px">'
+    +_alkesRenderTable(filteredAlkes,itemCols)
+    +'</div></div>'
+    +'</div>'
+
+    /* Card detail per kapal yang bermasalah */
+    +_alkesRenderMasalah(filteredAlkes)
+
+    /* Regulasi footer */
+    +'<div class="chart-card" style="margin-top:4px">'
+    +'<div style="padding:12px 16px;font-size:11px;color:var(--text-mid);line-height:1.8;display:grid;grid-template-columns:1fr 1fr;gap:12px">'
+    +'<div><strong style="color:var(--blue)">Dasar Hukum:</strong> MLC 2006 Reg.4.1 · SOLAS Ch.III · IMO MSC/Circ.1351 · Permenkes 340/2010 · ILO C164</div>'
+    +'<div><strong style="color:var(--red)">Tindak Lanjut:</strong> Item expired → ganti segera sebelum kapal berangkat. Alkes tidak ada → pengadaan sesuai daftar wajib IMO. Pantau secara berkala minimal 6 bulan.</div>'
+    +'</div></div>';
+}
+
+function _alkesKpi(label,val,unit,color,icon){
+  return'<div class="kpi-card '+color+'">'
+    +'<div class="kpi-icon"><i class="fas '+icon+'"></i></div>'
+    +'<div class="kpi-body"><div class="kpi-value">'+val+'</div>'
+    +'<div class="kpi-label">'+label+'</div>'
+    +'</div></div>';
+}
+
+function _alkesRenderTable(data,itemCols){
+  if(!data.length)return'<div style="padding:40px;text-align:center;color:var(--text-muted)">Tidak ada data.</div>';
+
+  /* Batasi kolom yang ditampilkan — max 8 item alkes */
+  var showCols=itemCols.filter(function(c){
+    return !c.toLowerCase().includes("expired date")&&!c.toLowerCase().includes("expired_date");
+  }).slice(0,8);
+
+  var thead='<tr>'
+    +'<th style="padding:8px 12px;background:var(--grad-blue);color:#fff;font-size:10px;font-weight:700;text-align:left;white-space:nowrap;position:sticky;left:0;z-index:2">Nama Kapal</th>'
+    +'<th style="padding:8px 12px;background:var(--grad-blue);color:#fff;font-size:10px;font-weight:700;white-space:nowrap">Fleet</th>'
+    +'<th style="padding:8px 12px;background:var(--grad-blue);color:#fff;font-size:10px;font-weight:700;text-align:center">Status</th>'
+    +'<th style="padding:8px 12px;background:var(--grad-blue);color:#fff;font-size:10px;font-weight:700;text-align:center">Kelengkapan</th>'
+    +showCols.map(function(c){
+      return'<th style="padding:8px 10px;background:var(--grad-blue);color:#fff;font-size:9px;font-weight:700;text-align:center;white-space:nowrap;max-width:80px">'+esc(c)+'</th>';
+    }).join("")
+    +'</tr>';
+
+  var tbody=data.map(function(r,i){
+    var bg=i%2===0?"#fff":"#F8FAFC";
+    var sc=ALKES_STATUS_COLOR[r._status]||{bg:"var(--border)",c:"var(--text-muted)",icon:"fa-minus"};
+    var pct=r._kelengkapanPct||0;
+    var barCol=pct===100?"var(--green)":pct>=50?"#F57F17":"var(--red)";
+    return'<tr style="background:'+bg+'">'
+      +'<td style="padding:8px 12px;font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;position:sticky;left:0;background:'+bg+';z-index:1">'+esc(r._kapal||"—")+'</td>'
+      +'<td style="padding:8px 12px;font-size:11px;color:var(--text-mid);text-align:center;white-space:nowrap">'+esc(r._fleet||"—")+'</td>'
+      +'<td style="padding:8px 12px;text-align:center">'
+      +'<span style="background:'+sc.bg+';color:'+sc.c+';padding:2px 10px;border-radius:99px;font-size:10px;font-weight:700;white-space:nowrap">'
+      +'<i class="fas '+sc.icon+'" style="margin-right:3px"></i>'+esc(r._status||"—")+'</span></td>'
+      +'<td style="padding:8px 12px;text-align:center;min-width:80px">'
+      +'<div style="font-size:11px;font-weight:700;color:'+barCol+';margin-bottom:3px">'+pct+'%</div>'
+      +'<div style="background:var(--border);border-radius:4px;height:4px"><div style="width:'+pct+'%;background:'+barCol+';height:4px;border-radius:4px"></div></div>'
+      +'</td>'
+      +showCols.map(function(c){
+        var v=String(r[c]||"").toUpperCase().trim();
+        var vc=v==="ADA"?"var(--green)":v==="BELUM ADA"?"var(--red)":v?"#F57F17":"var(--text-muted)";
+        var vbg=v==="ADA"?"var(--green-soft)":v==="BELUM ADA"?"var(--red-soft)":v?"#FFFDE7":"transparent";
+        return'<td style="padding:6px 8px;text-align:center">'
+          +(v?'<span style="background:'+vbg+';color:'+vc+';padding:1px 8px;border-radius:99px;font-size:10px;font-weight:700">'+esc(r[c]||"—")+'</span>':'<span style="color:var(--text-muted);font-size:11px">—</span>')
+          +'</td>';
+      }).join("")
+      +'</tr>';
+  }).join("");
+
+  return'<table style="width:100%;border-collapse:collapse;font-family:var(--font)">'
+    +'<thead>'+thead+'</thead><tbody>'+tbody+'</tbody></table>';
+}
+
+function _alkesRenderMasalah(data){
+  var masalah=data.filter(function(r){return r._status!=="LENGKAP";});
+  if(!masalah.length)return'';
+
+  return'<div class="chart-card" style="margin-bottom:16px">'
+    +'<div class="chart-header" style="background:var(--grad-red);border-radius:var(--radius) var(--radius) 0 0">'
+    +'<span class="chart-title" style="color:#fff"><i class="fas fa-triangle-exclamation"></i> Kapal dengan Alkes Tidak Lengkap / Bermasalah</span>'
+    +'<span style="background:rgba(255,255,255,.25);color:#fff;padding:2px 10px;border-radius:99px;font-size:11px;font-weight:700">'+masalah.length+' kapal</span>'
+    +'</div>'
+    +'<div style="padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px">'
+    +masalah.map(function(r){
+      var sc=ALKES_STATUS_COLOR[r._status]||{bg:"var(--red-soft)",c:"var(--red)",icon:"fa-circle-xmark"};
+      var belumList=[];
+      Object.keys(r).forEach(function(k){
+        if(k.startsWith("_"))return;
+        var v=String(r[k]||"").toUpperCase().trim();
+        if(v==="BELUM ADA")belumList.push(k);
+      });
+      return'<div style="background:'+sc.bg+';border:1px solid rgba(0,0,0,.06);border-radius:10px;padding:12px 14px">'
+        +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+        +'<div style="width:32px;height:32px;background:'+sc.c+';border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">'
+        +'<i class="fas fa-ship" style="color:#fff;font-size:13px"></i></div>'
+        +'<div><div style="font-size:13px;font-weight:800;color:var(--text)">'+esc(r._kapal||"—")+'</div>'
+        +'<div style="font-size:11px;color:var(--text-muted)">'+esc(r._fleet||"—")+'</div></div>'
+        +'<div style="margin-left:auto"><span style="background:'+sc.c+';color:#fff;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700">'+esc(r._status||"—")+'</span></div>'
+        +'</div>'
+        +(r._alkesExpired&&r._alkesExpired.length?
+          '<div style="background:rgba(255,255,255,.5);border-radius:6px;padding:6px 10px;margin-bottom:6px;font-size:11px;color:var(--red)">'
+          +'<strong>Expired:</strong> '+r._alkesExpired.map(function(e){return e.item+' ('+e.tgl+')';}).join(", ")
+          +'</div>':"")
+        +(belumList.length?
+          '<div style="font-size:11px;color:var(--text-mid);line-height:1.7">'
+          +'<strong style="color:'+sc.c+'">Belum Ada:</strong> '+belumList.slice(0,4).map(esc).join(", ")
+          +(belumList.length>4?' +'+( belumList.length-4)+' lainnya':"")
+          +'</div>':"")
+        +'<div style="margin-top:8px">'
+        +'<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-bottom:3px">'
+        +'<span>Kelengkapan</span><span style="font-weight:700;color:'+sc.c+'">'+r._kelengkapanPct+'%</span></div>'
+        +'<div style="background:rgba(255,255,255,.4);border-radius:4px;height:4px">'
+        +'<div style="width:'+r._kelengkapanPct+'%;background:'+sc.c+';height:4px;border-radius:4px"></div>'
+        +'</div></div>'
+        +'</div>';
+    }).join("")
+    +'</div></div>';
 }
