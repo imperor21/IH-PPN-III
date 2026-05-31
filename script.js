@@ -3,7 +3,7 @@
 /* ✅ Pedoman PDF & Foto Dokumentasi → Google Drive (multi-device)    */
 /* ✅ IndexedDB dihapus — data terpusat di GAS/Drive                  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbyzXcgTYDmcVEzKLbAqWEQ4iXCPYVshvCf5tW9zAZM2dnhXi2Hc5vaOZ7-FZP_syzbxjQ/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxWscFjKrrqQgNwmeRLAfjBtWi05bnRLkW5ESrtVBWkNlIA5exFlTLhNid8VnGUoWMK2Q/exec";
 
 async function gasPost(payload) {
   const controller = new AbortController();
@@ -518,7 +518,7 @@ function toggleNavGroup(id){
 function restoreNavGroups(){
   try{
     const states=JSON.parse(localStorage.getItem("ppn_nav_groups")||"{}");
-    ["monitoring","hazard","others"].forEach(id=>{
+    ["monitoring","hazard","medsurv","others"].forEach(id=>{
       const grp=document.getElementById("navg-"+id);
       if(!grp)return;
       if(states[id]===false){
