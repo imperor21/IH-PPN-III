@@ -730,6 +730,10 @@ async function loadData(){
     rawFisika=data.fisika||[];rawKimia=data.kimia||[];rawBiologi=data.biologi||[];
     rawErgonomi=data.ergonomi||[];rawPsikososial=data.psikososial||[];
     rawAlkes=data.alkes||[];filteredAlkes=[...rawAlkes];
+    /* Re-render alkes page jika sedang aktif */
+    const pgAlkes=document.getElementById("page-menu5");
+    if(pgAlkes&&pgAlkes.classList.contains("active"))renderAlkesPage();
+    if(rawAlkes.length>0)console.log("Sebaran Alkes: "+rawAlkes.length+" kapal dari GAS ✅");
     filteredHRA=[...rawHRA];filteredDAT=[...rawDAT];filteredPest=[...rawPest];
     filteredFisika=[...rawFisika];filteredKimia=[...rawKimia];filteredBiologi=[...rawBiologi];
     filteredErgonomi=[...rawErgonomi];filteredPsikososial=[...rawPsikososial];
