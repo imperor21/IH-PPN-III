@@ -198,12 +198,12 @@ Kirim ulang kode OTP
     <a href="#" class="nav-item" data-menu="p3k" data-title="P3K & AED Office" data-group="monitoring">
       <span class="nav-icon"><i class="fas fa-kit-medical"></i></span>
       <span class="nav-text">P3K & AED Office</span>
-      
+      <span class="nav-badge">Soon</span>
     </a>
     <a href="#" class="nav-item placeholder" data-menu="menu5" data-title="Sebaran Alkes Kapal" data-group="monitoring">
       <span class="nav-icon"><i class="fas fa-chart-pie"></i></span>
       <span class="nav-text">Sebaran Alkes Kapal</span>
-      
+      <span class="nav-badge">Soon</span>
     </a>
   </div>
 </div>
@@ -249,6 +249,27 @@ Kirim ulang kode OTP
   </div>
 </div>
 
+<!-- ── GROUP: MEDICAL SURVEILLANCE ── -->
+<div class="nav-group" id="navg-medsurv">
+  <div class="nav-group-hdr" onclick="toggleNavGroup('medsurv')">
+    <div class="nav-group-hdr-left">
+      <span class="nav-group-icon"><i class="fas fa-stethoscope"></i></span>
+      <span class="nav-group-label">Medical Surveillance</span>
+    </div>
+    <div class="nav-group-hdr-right">
+      <span class="nav-group-count">1</span>
+      <i class="fas fa-chevron-down nav-group-arrow"></i>
+    </div>
+  </div>
+  <div class="nav-group-body">
+    <a href="#" class="nav-item" data-menu="medsurv" data-title="Medical Surveillance" data-group="medsurv">
+      <span class="nav-icon"><i class="fas fa-file-medical"></i></span>
+      <span class="nav-text">Medical Surveillance</span>
+      <span class="nav-badge">Soon</span>
+    </a>
+  </div>
+</div>
+
 <!-- ── GROUP: OTHERS ── -->
 <div class="nav-group" id="navg-others">
   <div class="nav-group-hdr" onclick="toggleNavGroup('others')">
@@ -270,7 +291,7 @@ Kirim ulang kode OTP
     <a href="#" class="nav-item" data-menu="riskprediction" data-title="Health Risk Prediction" data-group="others">
       <span class="nav-icon"><i class="fas fa-brain"></i></span>
       <span class="nav-text">Risk Prediction</span>
-      
+      <span class="nav-badge" style="background:#7B1FA2;color:#fff">AI</span>
     </a>
     <a href="#" class="nav-item" data-menu="closeout25" data-title="Closeout HRA &amp; IH 2025" data-group="others">
       <span class="nav-icon"><i class="fas fa-clipboard-check"></i></span>
@@ -615,7 +636,106 @@ Kirim ulang kode OTP
   <div id="p3k-content-masalah" style="display:none"></div>
 
 </section>
-<section class="page-content" id="page-menu5"><div class="placeholder-page"><div class="placeholder-icon"><i class="fas fa-chart-pie"></i></div><h2>Sebaran Alkes Kapal</h2><p>Modul belum tersedia.</p></div></section>
+<section class="page-content" id="page-menu5"><div class="placeholder-page"><div class="placeholder-icon"><i class="fas fa-chart-pie"></i></div><h2>Sebaran Alkes Kapal</h2><p>Modul belum tersedia.</p><div class="placeholder-tag">Soon</div></div></section>
+<!-- ===== PAGE MEDICAL SURVEILLANCE — MCU PELAUT ===== -->
+<section class="page-content" id="page-medsurv">
+
+  <!-- Filter Bar -->
+  <div class="filter-bar">
+    <div class="filter-group">
+      <label>Jenis Fleet</label>
+      <select id="mcu-filter-fleet" onchange="applyMCUFilters()">
+        <option value="">Semua Fleet</option>
+        <option value="FP I">FP I</option>
+        <option value="FP II">FP II</option>
+        <option value="FC">FC</option>
+        <option value="FGP">FGP</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Tahun MCU</label>
+      <select id="mcu-filter-tahun" onchange="applyMCUFilters()">
+        <option value="">Semua Tahun</option>
+        <option value="2026">2026</option>
+        <option value="2025">2025</option>
+        <option value="2024">2024</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Hasil MCU</label>
+      <select id="mcu-filter-hasil" onchange="applyMCUFilters()">
+        <option value="">Semua Hasil</option>
+        <option value="FIT">FIT</option>
+        <option value="FIT BERSYARAT">FIT BERSYARAT</option>
+        <option value="UNFIT">UNFIT</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Nama Kapal</label>
+      <input type="text" id="mcu-filter-kapal" placeholder="Cari kapal..." oninput="applyMCUFilters()">
+    </div>
+    <button class="btn-clear" onclick="clearMCUFilters()"><i class="fas fa-rotate-left"></i> Reset</button>
+    <button class="btn-export-ppt" onclick="exportMCUPPT()"><i class="fas fa-file-powerpoint"></i> Export PPT</button>
+  </div>
+
+  <!-- KPI Strip -->
+  <div class="kpi-grid" style="margin-bottom:18px">
+    <div class="kpi-card blue">
+      <div class="kpi-icon"><i class="fas fa-users"></i></div>
+      <div class="kpi-body"><div class="kpi-value" id="mcu-kpi-total">—</div><div class="kpi-label">Total ABK Terdata</div></div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-icon"><i class="fas fa-circle-check"></i></div>
+      <div class="kpi-body"><div class="kpi-value" id="mcu-kpi-fit">—</div><div class="kpi-label">FIT</div></div>
+    </div>
+    <div class="kpi-card orange">
+      <div class="kpi-icon"><i class="fas fa-triangle-exclamation"></i></div>
+      <div class="kpi-body"><div class="kpi-value" id="mcu-kpi-fitbs">—</div><div class="kpi-label">FIT Bersyarat</div></div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-icon"><i class="fas fa-circle-xmark"></i></div>
+      <div class="kpi-body"><div class="kpi-value" id="mcu-kpi-unfit">—</div><div class="kpi-label">UNFIT</div></div>
+    </div>
+    <div class="kpi-card teal">
+      <div class="kpi-icon"><i class="fas fa-percent"></i></div>
+      <div class="kpi-body"><div class="kpi-value" id="mcu-kpi-fitpct">—</div><div class="kpi-label">% FIT</div></div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="kpi-icon"><i class="fas fa-ear-listen"></i></div>
+      <div class="kpi-body"><div class="kpi-value" id="mcu-kpi-nihl">—</div><div class="kpi-label">NIHL (Audiometri)</div></div>
+    </div>
+  </div>
+
+  <!-- Tab Navigation -->
+  <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:20px;flex-wrap:wrap">
+    <button id="mcu-tab-overview"    class="tab-btn active"  onclick="switchMCUTab('overview')"><i class="fas fa-chart-pie"></i> Overview</button>
+    <button id="mcu-tab-audiometri"  class="tab-btn"         onclick="switchMCUTab('audiometri')"><i class="fas fa-ear-listen"></i> Audiometri</button>
+    <button id="mcu-tab-spirometri"  class="tab-btn"         onclick="switchMCUTab('spirometri')"><i class="fas fa-lungs"></i> Spirometri</button>
+    <button id="mcu-tab-visus"       class="tab-btn"         onclick="switchMCUTab('visus')"><i class="fas fa-eye"></i> Visus</button>
+    <button id="mcu-tab-hematologi"  class="tab-btn"         onclick="switchMCUTab('hematologi')"><i class="fas fa-droplet"></i> Hematologi</button>
+    <button id="mcu-tab-tabel"       class="tab-btn"         onclick="switchMCUTab('tabel')"><i class="fas fa-table-list"></i> Tabel Lengkap</button>
+  </div>
+
+  <!-- Tab Contents -->
+  <div id="mcu-content-overview"></div>
+  <div id="mcu-content-audiometri"  style="display:none"></div>
+  <div id="mcu-content-spirometri"  style="display:none"></div>
+  <div id="mcu-content-visus"       style="display:none"></div>
+  <div id="mcu-content-hematologi"  style="display:none"></div>
+  <div id="mcu-content-tabel"       style="display:none">
+    <div class="table-card">
+      <div class="table-header-row" style="padding:14px 20px;border-bottom:1.5px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:14px;font-weight:700;color:var(--text)"><i class="fas fa-table-list" style="color:var(--blue);margin-right:8px"></i>Data MCU Lengkap</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="text" id="mcu-search" placeholder="🔍 Cari nama / kapal / NIP..." oninput="searchMCUTable()" class="search-input">
+          <span id="mcu-table-count" style="font-size:12px;color:var(--text-muted)"></span>
+        </div>
+      </div>
+      <div id="mcu-table-wrap" style="overflow-x:auto"></div>
+    </div>
+  </div>
+
+</section>
 
 <!-- ===== PAGE PEDOMAN IH ===== -->
 <section class="page-content" id="page-menu6">
