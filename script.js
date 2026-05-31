@@ -3,7 +3,7 @@
 /* ✅ Pedoman PDF & Foto Dokumentasi → Google Drive (multi-device)    */
 /* ✅ IndexedDB dihapus — data terpusat di GAS/Drive                  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbzzp0zB8_P8FuiEzPe7BY-rkKAjY_TROBcq6pFDI_7cDHUAr9fZV0PeL8P2VX3MnGv1cw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyuiqvsxU1-4AYd-X9WH6BWTJbNKPqOrYEAIp3cvJcFGKXlST0qaTAEhlgRyp8qxTi2iQ/exec";
 
 async function gasPost(payload) {
   const controller = new AbortController();
@@ -6190,15 +6190,15 @@ var ALKES_STATUS_COLOR={
 };
 
 /* ── Helper: deteksi kolom alkes dari header ── */
+/* 8 kolom alkes wajib — harus sama persis dengan ALKES_WAJIB di GAS */
+var ALKES_WAJIB_JS = [
+  "Aed","Tandu Biasa","Basket Stretcher","Long Spinal Board",
+  "Tabung Oksigen","Body Thermometer","Blood Pressure Monitor","Spirometry"
+];
+
 function _alkesGetItemCols(data){
-  if(!data||!data.length)return[];
-  var sample=data[0];
-  return Object.keys(sample).filter(function(k){
-    var kl=k.toLowerCase();
-    return !["nama kapal","fleet","_kapal","_fleet","_alkestotal","_alkesada",
-             "_alkesbelum","_alkesexpired","_alkeskosong","_kelengkapanpct","_status"].includes(kl)
-        && !k.startsWith("_");
-  });
+  /* Tidak lagi dipakai untuk dynamic columns — pakai ALKES_WAJIB_JS */
+  return ALKES_WAJIB_JS;
 }
 
 /* ── Filter ── */
@@ -6348,10 +6348,8 @@ function _alkesKpi(label,val,unit,color,icon){
 function _alkesRenderTable(data,itemCols){
   if(!data.length)return'<div style="padding:40px;text-align:center;color:var(--text-muted)">Tidak ada data.</div>';
 
-  /* Batasi kolom yang ditampilkan — max 8 item alkes */
-  var showCols=itemCols.filter(function(c){
-    return !c.toLowerCase().includes("expired date")&&!c.toLowerCase().includes("expired_date");
-  }).slice(0,8);
+  /* Pakai ALKES_WAJIB_JS sebagai kolom tetap — 8 kolom */
+  var showCols=ALKES_WAJIB_JS;
 
   var thead='<tr>'
     +'<th style="padding:8px 12px;background:var(--grad-blue);color:#fff;font-size:10px;font-weight:700;text-align:left;white-space:nowrap;position:sticky;left:0;z-index:2">Nama Kapal</th>'
@@ -6359,7 +6357,9 @@ function _alkesRenderTable(data,itemCols){
     +'<th style="padding:8px 12px;background:var(--grad-blue);color:#fff;font-size:10px;font-weight:700;text-align:center">Status</th>'
     +'<th style="padding:8px 12px;background:var(--grad-blue);color:#fff;font-size:10px;font-weight:700;text-align:center">Kelengkapan</th>'
     +showCols.map(function(c){
-      return'<th style="padding:8px 10px;background:var(--grad-blue);color:#fff;font-size:9px;font-weight:700;text-align:center;white-space:nowrap;max-width:80px">'+esc(c)+'</th>';
+      /* Singkat nama kolom panjang */
+      var shortNames={"Blood Pressure Monitor":"Tensi","Basket Stretcher":"Basket Str.","Long Spinal Board":"Spinal Board","Body Thermometer":"Thermometer"};
+      return'<th style="padding:8px 8px;background:var(--grad-blue);color:#fff;font-size:8.5px;font-weight:700;text-align:center;white-space:nowrap">'+(shortNames[c]||c)+'</th>';
     }).join("")
     +'</tr>';
 
@@ -6368,6 +6368,13 @@ function _alkesRenderTable(data,itemCols){
     var sc=ALKES_STATUS_COLOR[r._status]||{bg:"var(--border)",c:"var(--text-muted)",icon:"fa-minus"};
     var pct=r._kelengkapanPct||0;
     var barCol=pct===100?"var(--green)":pct>=50?"#F57F17":"var(--red)";
+
+    /* Buat map dari _alkesDetail untuk lookup cepat */
+    var detailMap={};
+    if(r._alkesDetail&&r._alkesDetail.length){
+      r._alkesDetail.forEach(function(d){ detailMap[d.nama]=d.status; });
+    }
+
     return'<tr style="background:'+bg+'">'
       +'<td style="padding:8px 12px;font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;position:sticky;left:0;background:'+bg+';z-index:1">'+esc(r._kapal||"—")+'</td>'
       +'<td style="padding:8px 12px;font-size:11px;color:var(--text-mid);text-align:center;white-space:nowrap">'+esc(r._fleet||"—")+'</td>'
@@ -6376,14 +6383,19 @@ function _alkesRenderTable(data,itemCols){
       +'<i class="fas '+sc.icon+'" style="margin-right:3px"></i>'+esc(r._status||"—")+'</span></td>'
       +'<td style="padding:8px 12px;text-align:center;min-width:80px">'
       +'<div style="font-size:11px;font-weight:700;color:'+barCol+';margin-bottom:3px">'+pct+'%</div>'
-      +'<div style="background:var(--border);border-radius:4px;height:4px"><div style="width:'+pct+'%;background:'+barCol+';height:4px;border-radius:4px"></div></div>'
+      +'<div style="background:var(--border);border-radius:4px;height:4px"><div style="width:'+pct+'%;background:'+barCol+';height:4px;border-radius:4px;transition:width .5s"></div></div>'
+      +'<div style="font-size:9px;color:var(--text-muted);margin-top:2px">'+r._alkesAda+'/8 alkes</div>'
       +'</td>'
       +showCols.map(function(c){
-        var v=String(r[c]||"").toUpperCase().trim();
-        var vc=v==="ADA"?"var(--green)":v==="BELUM ADA"?"var(--red)":v?"#F57F17":"var(--text-muted)";
-        var vbg=v==="ADA"?"var(--green-soft)":v==="BELUM ADA"?"var(--red-soft)":v?"#FFFDE7":"transparent";
-        return'<td style="padding:6px 8px;text-align:center">'
-          +(v?'<span style="background:'+vbg+';color:'+vc+';padding:1px 8px;border-radius:99px;font-size:10px;font-weight:700">'+esc(r[c]||"—")+'</span>':'<span style="color:var(--text-muted);font-size:11px">—</span>')
+        /* Ambil dari _alkesDetail jika ada, fallback ke raw value */
+        var v = detailMap[c] || String(r[c]||"").toUpperCase().trim() || "KOSONG";
+        var isAda     = v==="ADA";
+        var isBelum   = v==="BELUM ADA";
+        var vc  = isAda?"var(--green)":isBelum?"var(--red)":"var(--text-muted)";
+        var vbg = isAda?"var(--green-soft)":isBelum?"var(--red-soft)":"transparent";
+        var icon= isAda?"✓":isBelum?"✗":"—";
+        return'<td style="padding:6px 6px;text-align:center">'
+          +'<span style="background:'+vbg+';color:'+vc+';padding:2px 6px;border-radius:99px;font-size:11px;font-weight:700">'+icon+'</span>'
           +'</td>';
       }).join("")
       +'</tr>';
@@ -6402,38 +6414,65 @@ function _alkesRenderMasalah(data){
     +'<span class="chart-title" style="color:#fff"><i class="fas fa-triangle-exclamation"></i> Kapal dengan Alkes Tidak Lengkap / Bermasalah</span>'
     +'<span style="background:rgba(255,255,255,.25);color:#fff;padding:2px 10px;border-radius:99px;font-size:11px;font-weight:700">'+masalah.length+' kapal</span>'
     +'</div>'
-    +'<div style="padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px">'
+    +'<div style="padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">'
     +masalah.map(function(r){
       var sc=ALKES_STATUS_COLOR[r._status]||{bg:"var(--red-soft)",c:"var(--red)",icon:"fa-circle-xmark"};
+
+      /* Gunakan _alkesDetail untuk list alkes yang belum ada */
       var belumList=[];
-      Object.keys(r).forEach(function(k){
-        if(k.startsWith("_"))return;
-        var v=String(r[k]||"").toUpperCase().trim();
-        if(v==="BELUM ADA")belumList.push(k);
-      });
+      var adaList=[];
+      if(r._alkesDetail&&r._alkesDetail.length){
+        r._alkesDetail.forEach(function(d){
+          if(d.status==="ADA") adaList.push(d.nama);
+          else belumList.push(d.nama);
+        });
+      } else {
+        /* Fallback jika _alkesDetail tidak ada dari versi lama GAS */
+        ALKES_WAJIB_JS.forEach(function(k){
+          var v=String(r[k]||"").toUpperCase().trim();
+          if(v==="ADA") adaList.push(k);
+          else belumList.push(k);
+        });
+      }
+
       return'<div style="background:'+sc.bg+';border:1px solid rgba(0,0,0,.06);border-radius:10px;padding:12px 14px">'
-        +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+        +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'
         +'<div style="width:32px;height:32px;background:'+sc.c+';border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">'
         +'<i class="fas fa-ship" style="color:#fff;font-size:13px"></i></div>'
-        +'<div><div style="font-size:13px;font-weight:800;color:var(--text)">'+esc(r._kapal||"—")+'</div>'
+        +'<div style="flex:1"><div style="font-size:13px;font-weight:800;color:var(--text)">'+esc(r._kapal||"—")+'</div>'
         +'<div style="font-size:11px;color:var(--text-muted)">'+esc(r._fleet||"—")+'</div></div>'
-        +'<div style="margin-left:auto"><span style="background:'+sc.c+';color:#fff;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700">'+esc(r._status||"—")+'</span></div>'
+        +'<div><span style="background:'+sc.c+';color:#fff;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700">'+esc(r._status||"—")+'</span></div>'
         +'</div>'
-        +(r._alkesExpired&&r._alkesExpired.length?
-          '<div style="background:rgba(255,255,255,.5);border-radius:6px;padding:6px 10px;margin-bottom:6px;font-size:11px;color:var(--red)">'
-          +'<strong>Expired:</strong> '+r._alkesExpired.map(function(e){return e.item+' ('+e.tgl+')';}).join(", ")
-          +'</div>':"")
-        +(belumList.length?
-          '<div style="font-size:11px;color:var(--text-mid);line-height:1.7">'
-          +'<strong style="color:'+sc.c+'">Belum Ada:</strong> '+belumList.slice(0,4).map(esc).join(", ")
-          +(belumList.length>4?' +'+( belumList.length-4)+' lainnya':"")
-          +'</div>':"")
-        +'<div style="margin-top:8px">'
-        +'<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-bottom:3px">'
-        +'<span>Kelengkapan</span><span style="font-weight:700;color:'+sc.c+'">'+r._kelengkapanPct+'%</span></div>'
-        +'<div style="background:rgba(255,255,255,.4);border-radius:4px;height:4px">'
-        +'<div style="width:'+r._kelengkapanPct+'%;background:'+sc.c+';height:4px;border-radius:4px"></div>'
+        /* Progress bar */
+        +'<div style="margin-bottom:8px">'
+        +'<div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:3px">'
+        +'<span style="color:var(--text-muted)">Kelengkapan</span>'
+        +'<span style="font-weight:700;color:'+sc.c+'">'+r._alkesAda+'/8 alkes ('+r._kelengkapanPct+'%)</span></div>'
+        +'<div style="background:rgba(255,255,255,.4);border-radius:4px;height:6px">'
+        +'<div style="width:'+r._kelengkapanPct+'%;background:'+sc.c+';height:6px;border-radius:4px;transition:width .5s"></div>'
         +'</div></div>'
+        /* Expired AED jika ada */
+        +(r._alkesExpired&&r._alkesExpired.length?
+          '<div style="background:rgba(255,255,255,.5);border-radius:6px;padding:5px 8px;margin-bottom:6px;font-size:10px;color:var(--red)">'
+          +'<i class="fas fa-clock" style="margin-right:4px"></i><strong>Expired:</strong> '
+          +r._alkesExpired.map(function(e){return e.item+' ('+e.tgl+')';}).join(", ")
+          +'</div>':"")
+        /* Daftar yang belum ada */
+        +(belumList.length?
+          '<div style="font-size:10px;color:var(--text-mid);line-height:1.8">'
+          +'<strong style="color:'+sc.c+'">Belum Ada / Kosong:</strong><br>'
+          +belumList.map(function(k){
+            return'<span style="display:inline-block;background:var(--red-soft);color:var(--red);border-radius:4px;padding:0px 6px;margin:1px;font-size:9px;font-weight:700">'+esc(k)+'</span>';
+          }).join(" ")
+          +'</div>':"")
+        /* Daftar yang sudah ada */
+        +(adaList.length?
+          '<div style="font-size:10px;color:var(--text-muted);margin-top:5px">'
+          +'<strong style="color:var(--green)">Sudah Ada:</strong> '
+          +adaList.map(function(k){
+            return'<span style="display:inline-block;background:var(--green-soft);color:var(--green);border-radius:4px;padding:0px 6px;margin:1px;font-size:9px;font-weight:700">'+esc(k)+'</span>';
+          }).join(" ")
+          +'</div>':"")
         +'</div>';
     }).join("")
     +'</div></div>';
