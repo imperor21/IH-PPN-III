@@ -389,6 +389,8 @@ const BULAN_ORDER=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agu
 let rawHRA=[],rawDAT=[],rawPest=[],filteredHRA=[],filteredDAT=[],filteredPest=[];
 let rawFisika=[],rawKimia=[],rawBiologi=[],rawErgonomi=[],rawPsikososial=[];
 let rawCloseout25=[];
+let rawAlkes=[],filteredAlkes=[];
+let rawMCU=[],filteredMCU=[],mcuSummary={};
 let filteredFisika=[],filteredKimia=[],filteredBiologi=[],filteredErgonomi=[],filteredPsikososial=[];
 let hraBarChart,hraDonutChart,datBarChart,datDonutChart,pestBarChart,pestDonutChart,pestTemuanChart,pestBiayaChart;
 let fisikaBarChart,fisikaDonutChart,kimiaBarChart,kimiaDonutChart,biologiBarChart,biologiDonutChart;
@@ -456,6 +458,8 @@ document.addEventListener("DOMContentLoaded",()=>{
   document.querySelectorAll('.nav-item[data-menu="summary"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(renderSummaryPage,80));});
   document.querySelectorAll('.nav-item[data-menu="riskprediction"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(renderRiskPage,80));});
   document.querySelectorAll('.nav-item[data-menu="closeout25"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(renderCO25Page,80));});
+  document.querySelectorAll('.nav-item[data-menu="menu5"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(renderAlkesPage,80));});
+  document.querySelectorAll('.nav-item[data-menu="medsurv"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(renderMCUPage,80));});
   document.querySelectorAll('.nav-item[data-menu="accesslog"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(loadAccessLog,80));});
   /* Re-apply demo overlay saat pindah halaman */
   document.querySelectorAll(".nav-item").forEach(item=>{
@@ -689,6 +693,8 @@ async function loadData(){
     rawFisika=[];rawKimia=[];rawBiologi=[];rawErgonomi=[];rawPsikososial=[];
     filteredHRA=[];filteredDAT=[];filteredPest=[];
     filteredFisika=[];filteredKimia=[];filteredBiologi=[];filteredErgonomi=[];filteredPsikososial=[];
+    rawAlkes=[];filteredAlkes=[];
+    rawMCU=[];filteredMCU=[];mcuSummary={};
     rawCloseout25=[...RAW_CLOSEOUT_2025];filteredCO25=[...RAW_CLOSEOUT_2025];
     const lastEl=document.getElementById("lastUpdated");
     if(lastEl)lastEl.textContent="Mode Demo";
@@ -721,6 +727,21 @@ async function loadData(){
     initP3KData(data);
     rawFisika=data.fisika||[];rawKimia=data.kimia||[];rawBiologi=data.biologi||[];
     rawErgonomi=data.ergonomi||[];rawPsikososial=data.psikososial||[];
+    /* Alkes */
+    rawAlkes=(data.alkes||[]).map(function(r){
+      var items=['Aed','Tandu Biasa','Basket Stretcher','Long Spinal Board',
+                 'Tabung Oksigen','Body Thermometer','Blood Pressure Monitor','Spirometry'];
+      var total=items.length+1; /* +1 for AED */
+      var hadir=items.filter(function(k){return r[k]&&String(r[k]).trim()!=='0'&&String(r[k]).trim()!=='';}).length;
+      if(r['Aed']&&String(r['Aed']).trim()!=='0'&&String(r['Aed']).trim()!=='')hadir++;
+      var pct=Math.round((hadir/total)*100);
+      var expAED=(r['Expired Date AED']||'').toString().trim();
+      var isExpired=false;
+      if(expAED){var d=new Date(expAED);if(!isNaN(d)&&d<new Date())isExpired=true;}
+      var status=isExpired?'EXPIRED':(pct>=100?'LENGKAP':(pct>=50?'PARSIAL':'TIDAK LENGKAP'));
+      return Object.assign({},r,{_status:status,_kelengkapanPct:pct,_expiredAED:isExpired});
+    });
+    filteredAlkes=[...rawAlkes];
     filteredHRA=[...rawHRA];filteredDAT=[...rawDAT];filteredPest=[...rawPest];
     filteredFisika=[...rawFisika];filteredKimia=[...rawKimia];filteredBiologi=[...rawBiologi];
     filteredErgonomi=[...rawErgonomi];filteredPsikososial=[...rawPsikososial];
@@ -756,6 +777,8 @@ async function loadData(){
     rawFisika=[];rawKimia=[];rawBiologi=[];rawErgonomi=[];rawPsikososial=[];
     filteredHRA=[];filteredDAT=[];filteredPest=[];
     filteredFisika=[];filteredKimia=[];filteredBiologi=[];filteredErgonomi=[];filteredPsikososial=[];
+    rawAlkes=[];filteredAlkes=[];
+    rawMCU=[];filteredMCU=[];mcuSummary={};
     /* Closeout tetap pakai data statis saat koneksi gagal */
     rawCloseout25=[...RAW_CLOSEOUT_2025];
     filteredCO25=[...RAW_CLOSEOUT_2025];
@@ -769,6 +792,8 @@ async function loadData(){
   setTimeout(mUpdateKpiStrip,200);
   /* Fetch biomonitoring data from GAS */
   fetchBiomonitoring();
+  /* Fetch MCU Pelaut data dari GAS */
+  fetchMCUData();
 }
 function showLoading(v){document.getElementById("loadingOverlay").style.display=v?"flex":"none";}
 function showError(msg){document.getElementById("errorBanner").style.display="flex";document.getElementById("errorMsg").textContent=msg;}
@@ -1038,7 +1063,8 @@ function switchPage(menu) {
     biologi:'Faktor Biologi', ergonomi:'Faktor Ergonomi',
     psikososial:'Faktor Psikososial',
     summary:'Summary Dashboard', riskprediction:'Health Risk Prediction',
-    closeout25:'Closeout HRA & IH 2025', accesslog:'Access Log'
+    closeout25:'Closeout HRA & IH 2025', accesslog:'Access Log',
+    medsurv:'Medical Surveillance — MCU Pelaut'
   };
   var title = titles[menu] || menu;
   document.querySelectorAll('.page-content').forEach(function(p){ p.classList.remove('active'); });
@@ -2136,65 +2162,55 @@ function hcvRenderProfile(){
   var svg=document.getElementById('hcvProfileSVG');
   if(!svg)return;
   var S='http://www.w3.org/2000/svg';
-  var XL='http://www.w3.org/1999/xlink';
   svg.innerHTML='';
-  /* PNG 1126×316 → SVG 900×253  (scale 0.7993) */
+  /* PNG actual: 1126×316 → SVG 900×253 (scale=0.79929) */
   svg.setAttribute('viewBox','0 0 900 253');
 
-  /* ── Ship profile background image ── */
-  var imgP=document.createElementNS(S,'image');
-  imgP.setAttribute('href','https://raw.githubusercontent.com/imperor21/IH-PPN-III/main/ship_profile.png');
-  imgP.setAttributeNS(XL,'xlink:href','https://raw.githubusercontent.com/imperor21/IH-PPN-III/main/ship_profile.png');
-  imgP.setAttribute('x','0');imgP.setAttribute('y','0');
-  imgP.setAttribute('width','900');imgP.setAttribute('height','253');
-  imgP.setAttribute('preserveAspectRatio','xMidYMid meet');
-  svg.appendChild(imgP);
+  /* Background image */
+  var img=document.createElementNS(S,'image');
+  img.setAttribute('href','https://raw.githubusercontent.com/imperor21/IH-PPN-III/main/ship_profile.png');
+  img.setAttribute('x','0');img.setAttribute('y','0');
+  img.setAttribute('width','900');img.setAttribute('height','253');
+  img.setAttribute('preserveAspectRatio','xMinYMin meet');
+  svg.appendChild(img);
 
-  /* ── Zone overlay helper ── */
-  /* PNG sudah memiliki label — SVG hanya overlay transparan clickable */
+  /* Zone overlay — koordinat dari pixel scan aktual PNG
+     Boundary dari analisa warna pixel y=180 topview (lebar sama, 1126px):
+       Acc/Cargo  : PNG x=248 → SVG x=198
+       Cargo/Pump : PNG x=724 → SVG x=579
+       Pump/Fore  : PNG x=876 → SVG x=700
+       Fore end   : PNG x=1119→ SVG x=894                              */
   function zone(id,x,y,w,h,col){
     var g=document.createElementNS(S,'g');
     g.setAttribute('cursor','pointer');
-    /* Fill transparan */
     var r=document.createElementNS(S,'rect');
-    r.setAttribute('x',x);r.setAttribute('y',y);
-    r.setAttribute('width',w);r.setAttribute('height',h);
-    r.setAttribute('fill',col);r.setAttribute('fill-opacity','.11');
-    r.setAttribute('stroke',col);r.setAttribute('stroke-width','1.8');
-    r.setAttribute('stroke-opacity','.55');r.setAttribute('rx','3');
+    r.setAttribute('x',String(x+1));r.setAttribute('y',String(y+1));
+    r.setAttribute('width',String(w-2));r.setAttribute('height',String(h-2));
+    r.setAttribute('fill',col);r.setAttribute('fill-opacity','0.10');
+    r.setAttribute('stroke',col);r.setAttribute('stroke-width','2');
+    r.setAttribute('stroke-opacity','0.60');r.setAttribute('rx','4');
     g.appendChild(r);
-    /* Accent bar atas (border tebal atas) */
-    var top=document.createElementNS(S,'line');
-    top.setAttribute('x1',String(x+6));top.setAttribute('y1',String(y));
-    top.setAttribute('x2',String(x+w-6));top.setAttribute('y2',String(y));
-    top.setAttribute('stroke',col);top.setAttribute('stroke-width','4');
-    top.setAttribute('stroke-opacity','.85');top.setAttribute('stroke-linecap','round');
-    g.appendChild(top);
-    /* Events */
     g.addEventListener('click',function(){hcvZoneClick(id);});
     g.addEventListener('mouseenter',function(){
-      r.setAttribute('fill-opacity','.28');
-      r.setAttribute('stroke-opacity','1');
+      r.setAttribute('fill-opacity','0.25');r.setAttribute('stroke-opacity','1');
     });
     g.addEventListener('mouseleave',function(){
-      r.setAttribute('fill-opacity','.11');
-      r.setAttribute('stroke-opacity','.55');
+      r.setAttribute('fill-opacity','0.10');r.setAttribute('stroke-opacity','0.60');
     });
     svg.appendChild(g);
   }
 
-  /* ── Zones — koordinat presisi: PNG 1126×316 → scale 0.7993 → SVG 900×253 ──
-     Referensi PNG pixel (estimasi layout tanker tipikal):
-       Accommodation : x 0–280   full height
-       Cargo deck    : x 280–737  y 110–316
-       Engine room   : x 0–280    y 195–316
-       Pump room     : x 737–848  y 105–316
-       Forecastle    : x 848–1126  y 88–316                               */
-  zone('bridge', 2,   2,   222, 205, '#FF8F00'); /* Akomodasi & Anjungan  */
-  zone('cargo',  224, 88,  365, 163, '#B71C1C'); /* Cargo Tank Area       */
-  zone('engine', 2,   155, 222,  98, '#C62828'); /* Kamar Mesin           */
-  zone('pump',   589,  84,  89, 167, '#E63946'); /* Pump Room             */
-  zone('fore',   678,  72, 220, 179, '#FF8F00'); /* Haluan & Mooring      */
+  /* PROFILE ZONES (SVG 900×253)
+     bridge  : x=0   → x=198  (acc block penuh)
+     engine  : x=0   → x=198  y=155→253  (lower acc = engine room)
+     cargo   : x=198 → x=579  (cargo tank area)
+     pump    : x=579 → x=700  (pump room)
+     fore    : x=700 → x=894  (forecastle & mooring)               */
+  zone('bridge', 0,   0,  198, 253, '#FF8F00');
+  zone('engine', 0, 155,  198,  98, '#C62828');
+  zone('cargo', 198,  0,  381, 253, '#B71C1C');
+  zone('pump',  579,  0,  121, 253, '#E63946');
+  zone('fore',  700,  0,  194, 253, '#FF8F00');
 }
 
 /* ── TOP VIEW SVG ── */
@@ -2202,71 +2218,94 @@ function hcvRenderTop(){
   var svg=document.getElementById('hcvTopSVG');
   if(!svg)return;
   var S='http://www.w3.org/2000/svg';
-  var XL='http://www.w3.org/1999/xlink';
   svg.innerHTML='';
-  /* PNG 1126×366 → SVG 900×293  (scale 0.7993) */
+  /* PNG actual: 1126×366 → SVG 900×293 (scale=0.79929) */
   svg.setAttribute('viewBox','0 0 900 293');
 
-  /* ── Ship top-view background image ── */
-  var imgT=document.createElementNS(S,'image');
-  imgT.setAttribute('href','https://raw.githubusercontent.com/imperor21/IH-PPN-III/main/ship_topview.png');
-  imgT.setAttributeNS(XL,'xlink:href','https://raw.githubusercontent.com/imperor21/IH-PPN-III/main/ship_topview.png');
-  imgT.setAttribute('x','0');imgT.setAttribute('y','0');
-  imgT.setAttribute('width','900');imgT.setAttribute('height','293');
-  imgT.setAttribute('preserveAspectRatio','xMidYMid meet');
-  svg.appendChild(imgT);
+  /* Background image */
+  var img=document.createElementNS(S,'image');
+  img.setAttribute('href','https://raw.githubusercontent.com/imperor21/IH-PPN-III/main/ship_topview.png');
+  img.setAttribute('x','0');img.setAttribute('y','0');
+  img.setAttribute('width','900');img.setAttribute('height','293');
+  img.setAttribute('preserveAspectRatio','xMinYMin meet');
+  svg.appendChild(img);
 
-  /* ── Zone overlays — top view ──
-     PNG 1126×366 → scale 0.7993 → SVG 900×293
-     Deck band (PNG y: 40–342) → SVG y: 32–273
-     Zona (PNG pixel referensi):
-       Bridge/Accommodation: x 0–218    full deck height
-       Cargo Tanks         : x 218–741  full deck height
-       Pump Room           : x 741–845  full deck height
-       Forecastle/Bow      : x 845–1126 full deck height (curve kanan)
-       Engine Room         : x 0–218    lower 44% (y 208–342 PNG → y 166–273 SVG)  */
-  var tZones=[
-    {id:'bridge',col:'#FF8F00',
-     d:'M 0 32 L 0 273 L 174 273 L 174 32 Z'},
-    {id:'cargo', col:'#B71C1C',
-     d:'M 174 32 L 174 273 L 592 273 L 592 32 Z'},
-    {id:'pump',  col:'#E63946',
-     d:'M 592 32 L 592 273 L 675 273 L 675 32 Z'},
-    {id:'fore',  col:'#FF8F00',
-     /* Bow curve: kiri x=675, kanan melengkung ke bow tip (x≈895, y tengah 152) */
-     d:'M 675 32 L 675 273 L 768 273 Q 878 273 898 152 Q 878 32 768 32 Z'},
-    {id:'engine',col:'#C62828',
-     /* Engine room = bagian bawah blok accommodation */
-     d:'M 0 166 L 0 273 L 174 273 L 174 166 Z'},
-  ];
+  /* Zone overlay dari pixel scan aktual PNG 1126×366
+     Scan y=180 (PNG) = y=144 SVG → warna per x:
+       x=40-248 PNG (SVG 32-198)   : ORANGE  = Accommodation/Bridge
+       x=248-724 PNG (SVG 198-579) : RED     = Cargo Tanks
+       x=724-876 PNG (SVG 579-700) : PINK    = Pump Room
+       x=876-1070 PNG (SVG 700-855): ORANGE  = Forecastle
+     Scan vertikal (PNG y) kapal di x=500:
+       Ship TOP : y=120 PNG → SVG 96
+       Ship BOT : y=330 PNG → SVG 264                                    */
+  var YTOP=96, YBOT=264, YMID=Math.round((96+264)/2); /* 180 */
 
-  tZones.forEach(function(z){
+  function zoneRect(id,x,y,w,h,col){
+    var g=document.createElementNS(S,'g');
+    g.setAttribute('cursor','pointer');
+    var r=document.createElementNS(S,'rect');
+    r.setAttribute('x',String(x+1));r.setAttribute('y',String(y+1));
+    r.setAttribute('width',String(w-2));r.setAttribute('height',String(h-2));
+    r.setAttribute('fill',col);r.setAttribute('fill-opacity','0.10');
+    r.setAttribute('stroke',col);r.setAttribute('stroke-width','2');
+    r.setAttribute('stroke-opacity','0.60');r.setAttribute('rx','4');
+    g.appendChild(r);
+    g.addEventListener('click',function(){hcvZoneClick(id);});
+    g.addEventListener('mouseenter',function(){
+      r.setAttribute('fill-opacity','0.25');r.setAttribute('stroke-opacity','1');
+    });
+    g.addEventListener('mouseleave',function(){
+      r.setAttribute('fill-opacity','0.10');r.setAttribute('stroke-opacity','0.60');
+    });
+    svg.appendChild(g);
+  }
+
+  function zonePath(id,d,col){
     var g=document.createElementNS(S,'g');
     g.setAttribute('cursor','pointer');
     var p=document.createElementNS(S,'path');
-    p.setAttribute('d',z.d);
-    p.setAttribute('fill',z.col);p.setAttribute('fill-opacity','.12');
-    p.setAttribute('stroke',z.col);p.setAttribute('stroke-width','1.5');
-    p.setAttribute('stroke-opacity','.6');
+    p.setAttribute('d',d);
+    p.setAttribute('fill',col);p.setAttribute('fill-opacity','0.10');
+    p.setAttribute('stroke',col);p.setAttribute('stroke-width','2');
+    p.setAttribute('stroke-opacity','0.60');
     g.appendChild(p);
-    g.addEventListener('click',function(){hcvZoneClick(z.id);});
+    g.addEventListener('click',function(){hcvZoneClick(id);});
     g.addEventListener('mouseenter',function(){
-      p.setAttribute('fill-opacity','.30');
-      p.setAttribute('stroke-opacity','1');
+      p.setAttribute('fill-opacity','0.25');p.setAttribute('stroke-opacity','1');
     });
     g.addEventListener('mouseleave',function(){
-      p.setAttribute('fill-opacity','.12');
-      p.setAttribute('stroke-opacity','.6');
+      p.setAttribute('fill-opacity','0.10');p.setAttribute('stroke-opacity','0.60');
     });
     svg.appendChild(g);
-  });
+  }
 
-  /* N ↑ compass */
+  /* TOPVIEW ZONES
+     bridge  : SVG x=32-198, y=96-264  (acc/anjungan penuh)
+     engine  : SVG x=32-198, y=180-264 (lower half = engine bawah)
+     cargo   : SVG x=198-579, y=96-264
+     pump    : SVG x=579-700, y=96-264
+     fore    : bow shape x=700-855, curved kanan                         */
+  var H=YBOT-YTOP; /* 168 */
+  zoneRect('bridge', 32,  YTOP, 166, H,         '#FF8F00');
+  zoneRect('engine', 32,  YMID, 166, YBOT-YMID, '#C62828');
+  zoneRect('cargo', 198,  YTOP, 381, H,         '#B71C1C');
+  zoneRect('pump',  579,  YTOP, 121, H,         '#E63946');
+  /* Forecastle — bow shape mengikuti outline kapal */
+  zonePath('fore',
+    'M 700 '+YTOP+' L 700 '+YBOT+
+    ' L 790 '+YBOT+
+    ' Q 855 '+YBOT+' 855 '+YMID+
+    ' Q 855 '+YTOP+' 790 '+YTOP+' Z',
+    '#FF8F00');
+
+  /* Compass N↑ */
   var nt=document.createElementNS(S,'text');
   nt.setAttribute('x','886');nt.setAttribute('y','20');
   nt.setAttribute('text-anchor','end');
-  nt.setAttribute('fill','rgba(0,180,216,.6)');nt.setAttribute('font-size','12');
-  nt.setAttribute('font-weight','700');nt.setAttribute('font-family','Arial');
+  nt.setAttribute('fill','rgba(0,180,216,.7)');
+  nt.setAttribute('font-size','13');nt.setAttribute('font-weight','700');
+  nt.setAttribute('font-family','Arial');
   nt.textContent='N \u2191';
   svg.appendChild(nt);
 }
@@ -4899,6 +4938,457 @@ function renderP3KPage(){
   applyP3KFilters();
 }
 
+/* ══════════════════════════════════════════════════════════════
+   SEBARAN ALKES KAPAL — renderAlkesPage
+   Data: rawAlkes [] dari GAS action getData → key "alkes"
+   Kolom GAS: Nama Kapal, Fleet, Aed, Expired Date AED,
+              Tandu Biasa, Basket Stretcher, Long Spinal Board,
+              Tabung Oksigen, Body Thermometer,
+              Blood Pressure Monitor, Spirometry
+   Kalkulasi: _status, _kelengkapanPct, _expiredAED
+══════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════
+   MEDICAL SURVEILLANCE — MCU PELAUT
+   GAS action: getMCU → rawMCU[]
+   GAS kalkulasi: IMT, classifyAudio(ISO1999), classifySpiro(ATS/ERS2022),
+                  classifyHemo(WHO), classifyVisus(STCW2010), _riskLevel
+   Tabs: overview | audiometri | spirometri | visus | hematologi | tabel
+══════════════════════════════════════════════════════════════ */
+async function fetchMCUData(){
+  try{
+    var data=await gasPost({action:'getMCU',token:getToken()});
+    if(!data||data.status==='unauthorized')return;
+    if(data.status!=='ok')return;
+    rawMCU=(data.mcu||[]);
+    filteredMCU=[...rawMCU];
+    _buildMCUSummary();
+    /* Re-render jika halaman sedang aktif */
+    var pg=document.getElementById('page-medsurv');
+    if(pg&&pg.classList.contains('active'))renderMCUPage();
+  }catch(e){console.warn('fetchMCUData error:',e);}
+}
+
+function _buildMCUSummary(){
+  var d=rawMCU;
+  mcuSummary={
+    total:d.length,
+    fit:d.filter(function(r){return(r._riskLevel||'').toUpperCase()==='FIT';}).length,
+    fitDenganCatatan:d.filter(function(r){return(r._riskLevel||'').toUpperCase()==='FIT DENGAN CATATAN';}).length,
+    tidakFit:d.filter(function(r){return(r._riskLevel||'').toUpperCase()==='TIDAK FIT';}).length,
+    avgIMT:d.length?+(d.reduce(function(s,r){return s+(parseFloat(r.imt||r.IMT||0));},0)/d.length).toFixed(1):0,
+    fleets:[...new Set(d.map(function(r){return(r.fleet||r.Fleet||'').trim();}).filter(Boolean))].sort(),
+    kapalList:[...new Set(d.map(function(r){return(r.namaKapal||r['Nama Kapal']||'').trim();}).filter(Boolean))].sort(),
+  };
+}
+
+function renderMCUPage(){
+  var pg=document.getElementById('page-medsurv');
+  if(!pg)return;
+
+  /* Kalau data belum ada, tampilkan loading state */
+  if(!rawMCU.length){
+    pg.innerHTML='<div class="page-header-row"><div>'+
+      '<h2 class="page-title-main"><i class="fas fa-stethoscope" style="color:#00ACC1;margin-right:10px"></i>Medical Surveillance — MCU Pelaut</h2>'+
+      '<p class="page-subtitle">Hasil Medical Check-Up Pelaut — Pertamina Patra Niaga</p></div></div>'+
+      '<div style="text-align:center;padding:60px 20px;color:var(--text-muted)">'+
+      '<i class="fas fa-spinner fa-spin" style="font-size:32px;opacity:.3;display:block;margin-bottom:12px"></i>'+
+      '<div style="font-size:14px;font-weight:600">Memuat data MCU Pelaut dari server...</div>'+
+      '<div style="font-size:12px;margin-top:6px">Pastikan sheet "MCU PELAUT" sudah tersedia di Google Sheets</div></div>';
+    fetchMCUData();
+    return;
+  }
+
+  var activeTab=pg.dataset.mcuTab||'overview';
+  var tabs=['overview','audiometri','spirometri','visus','hematologi','tabel'];
+  var tabLabels={overview:'Overview',audiometri:'Audiometri',spirometri:'Spirometri',
+                 visus:'Visus',hematologi:'Hematologi',tabel:'Data Lengkap'};
+
+  /* Filter state */
+  var selFleet=pg.dataset.mcuFleet||'';
+  var selKapal=pg.dataset.mcuKapal||'';
+  var filtered=rawMCU.filter(function(r){
+    if(selFleet&&(r.fleet||r.Fleet||'').trim()!==selFleet)return false;
+    if(selKapal&&(r.namaKapal||r['Nama Kapal']||'').trim()!==selKapal)return false;
+    return true;
+  });
+  filteredMCU=[...filtered];
+
+  function riskBadge(lv){
+    var s=(lv||'').toUpperCase();
+    var map={'FIT':'background:#1B5E20;color:#A5D6A7',
+             'FIT DENGAN CATATAN':'background:#E65100;color:#FFE0B2',
+             'TIDAK FIT':'background:#B71C1C;color:#EF9A9A'};
+    return '<span style="'+(map[s]||'background:#37474F;color:#B0BEC5')+
+           ';padding:2px 10px;border-radius:20px;font-size:10px;font-weight:700">'+esc(lv||'—')+'</span>';
+  }
+
+  function classifyBadge(val, normal, warn){
+    var c=parseFloat(val);
+    if(isNaN(c))return '<span style="color:var(--text-muted)">—</span>';
+    var col=c<=normal?'#43A047':(c<=warn?'#FB8C00':'#E53935');
+    return '<span style="color:'+col+';font-weight:700">'+val+'</span>';
+  }
+
+  var html='<div class="page-header-row"><div>'+
+    '<h2 class="page-title-main"><i class="fas fa-stethoscope" style="color:#00ACC1;margin-right:10px"></i>Medical Surveillance — MCU Pelaut</h2>'+
+    '<p class="page-subtitle">Hasil Medical Check-Up Pelaut berdasarkan STCW 2010 & standar WHO/ATS/ERS</p></div></div>';
+
+  /* Filter bar */
+  html+='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px">'+
+    '<select id="mcu-sel-fleet" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text)" onchange="mcuApplyFilter()">'+
+    '<option value="">Semua Fleet</option>'+
+    mcuSummary.fleets.map(function(f){return'<option'+(f===selFleet?' selected':'')+'>'+esc(f)+'</option>';}).join('')+
+    '</select>'+
+    '<select id="mcu-sel-kapal" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text)" onchange="mcuApplyFilter()">'+
+    '<option value="">Semua Kapal</option>'+
+    mcuSummary.kapalList.map(function(k){return'<option'+(k===selKapal?' selected':'')+'>'+esc(k)+'</option>';}).join('')+
+    '</select>'+
+    '<span style="font-size:11px;color:var(--text-muted)">'+filtered.length+' crew</span>'+
+    '</div>';
+
+  /* Tabs */
+  html+='<div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:0">';
+  tabs.forEach(function(t){
+    var active=t===activeTab;
+    html+='<button onclick="mcuSetTab(\''+t+'\')" style="padding:8px 14px;font-size:12px;font-weight:'+(active?'700':'500')+
+          ';border:none;background:none;cursor:pointer;color:'+(active?'var(--primary)':'var(--text-muted)')+
+          ';border-bottom:2px solid '+(active?'var(--primary)':'transparent')+';border-radius:0;transition:.2s">'+
+          tabLabels[t]+'</button>';
+  });
+  html+='</div>';
+
+  /* ── TAB: OVERVIEW ── */
+  if(activeTab==='overview'){
+    var fit=filtered.filter(function(r){return(r._riskLevel||'').toUpperCase()==='FIT';}).length;
+    var fitC=filtered.filter(function(r){return(r._riskLevel||'').toUpperCase()==='FIT DENGAN CATATAN';}).length;
+    var tFit=filtered.filter(function(r){return(r._riskLevel||'').toUpperCase()==='TIDAK FIT';}).length;
+    var pct=filtered.length?Math.round((fit/filtered.length)*100):0;
+    html+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">';
+    [{l:'Total Crew',v:filtered.length,ico:'fa-users',c:'#0288D1'},
+     {l:'Fit',v:fit,ico:'fa-circle-check',c:'#43A047'},
+     {l:'Fit + Catatan',v:fitC,ico:'fa-triangle-exclamation',c:'#FB8C00'},
+     {l:'Tidak Fit',v:tFit,ico:'fa-circle-xmark',c:'#E53935'}].forEach(function(k){
+      html+='<div class="stat-card" style="border-top:3px solid '+k.c+'">'+
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'+
+        '<i class="fas '+k.ico+'" style="font-size:16px;color:'+k.c+'"></i>'+
+        '<span style="font-size:11px;color:var(--text-muted);font-weight:600">'+esc(k.l)+'</span></div>'+
+        '<div style="font-size:26px;font-weight:800;color:var(--text)">'+k.v+'</div></div>';
+    });
+    html+='</div>';
+    /* Kelayakan bar */
+    html+='<div class="stat-card" style="padding:14px 16px;margin-bottom:16px">'+
+      '<div style="display:flex;justify-content:space-between;margin-bottom:8px">'+
+      '<span style="font-size:12px;font-weight:700">Tingkat Kelayakan (FIT)</span>'+
+      '<span style="font-size:20px;font-weight:800;color:'+(pct>=80?'#43A047':pct>=60?'#FB8C00':'#E53935')+'">'+pct+'%</span></div>'+
+      '<div style="height:8px;background:rgba(255,255,255,.1);border-radius:4px;overflow:hidden">'+
+      '<div style="width:'+pct+'%;height:100%;background:'+(pct>=80?'#43A047':pct>=60?'#FB8C00':'#E53935')+';border-radius:4px;transition:width .6s"></div></div></div>';
+    /* Distribusi per kapal */
+    if(filtered.length){
+      var kapalMap={};
+      filtered.forEach(function(r){
+        var k=(r.namaKapal||r['Nama Kapal']||'—').trim();
+        if(!kapalMap[k])kapalMap[k]={fit:0,fitC:0,tFit:0,total:0};
+        kapalMap[k].total++;
+        var lv=(r._riskLevel||'').toUpperCase();
+        if(lv==='FIT')kapalMap[k].fit++;
+        else if(lv==='FIT DENGAN CATATAN')kapalMap[k].fitC++;
+        else if(lv==='TIDAK FIT')kapalMap[k].tFit++;
+      });
+      html+='<h3 style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--text)">Distribusi per Kapal</h3>';
+      html+='<div class="table-scroll"><table class="ih-table"><thead><tr>'+
+        '<th>Kapal</th><th>Total</th><th style="color:#43A047">FIT</th>'+
+        '<th style="color:#FB8C00">Fit+Catatan</th><th style="color:#E53935">Tidak Fit</th><th>Kelayakan</th></tr></thead><tbody>';
+      Object.entries(kapalMap).sort(function(a,b){return b[1].total-a[1].total;}).forEach(function(e){
+        var kn=e[0],ks=e[1];
+        var kpct=Math.round((ks.fit/ks.total)*100);
+        html+='<tr><td><strong>'+esc(kn)+'</strong></td><td>'+ks.total+'</td>'+
+          '<td style="color:#43A047;font-weight:700">'+ks.fit+'</td>'+
+          '<td style="color:#FB8C00;font-weight:700">'+ks.fitC+'</td>'+
+          '<td style="color:#E53935;font-weight:700">'+ks.tFit+'</td>'+
+          '<td style="min-width:100px"><div style="display:flex;align-items:center;gap:6px">'+
+          '<div style="flex:1;height:5px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden">'+
+          '<div style="width:'+kpct+'%;height:100%;background:'+(kpct>=80?'#43A047':kpct>=60?'#FB8C00':'#E53935')+';border-radius:3px"></div></div>'+
+          '<span style="font-size:11px;font-weight:700">'+kpct+'%</span></div></td></tr>';
+      });
+      html+='</tbody></table></div>';
+    }
+  }
+
+  /* ── TAB: AUDIOMETRI ── */
+  else if(activeTab==='audiometri'){
+    html+='<div class="table-scroll"><table class="ih-table"><thead><tr>'+
+      '<th>Nama</th><th>Kapal</th><th>Telinga Kiri</th><th>Telinga Kanan</th><th>Klasifikasi Audio</th><th>Status</th></tr></thead><tbody>';
+    if(!filtered.length){html+=emptyState('Belum ada data audiometri','fa-ear-listen');}
+    else filtered.forEach(function(r){
+      html+='<tr><td>'+esc(r.nama||r.Nama||'—')+'</td><td>'+esc(r.namaKapal||r['Nama Kapal']||'—')+'</td>'+
+        '<td>'+esc(r.telingaKiri||r['Telinga Kiri']||'—')+'</td>'+
+        '<td>'+esc(r.telingaKanan||r['Telinga Kanan']||'—')+'</td>'+
+        '<td>'+esc(r.klasifikasiAudio||r['Klasifikasi Audio']||'—')+'</td>'+
+        '<td>'+riskBadge(r._riskLevel)+'</td></tr>';
+    });
+    html+='</tbody></table></div>';
+  }
+
+  /* ── TAB: SPIROMETRI ── */
+  else if(activeTab==='spirometri'){
+    html+='<div class="table-scroll"><table class="ih-table"><thead><tr>'+
+      '<th>Nama</th><th>Kapal</th><th>FVC (%)</th><th>FEV1 (%)</th><th>FEV1/FVC</th><th>Klasifikasi Spiro</th><th>Status</th></tr></thead><tbody>';
+    if(!filtered.length){html+=emptyState('Belum ada data spirometri','fa-lungs');}
+    else filtered.forEach(function(r){
+      html+='<tr><td>'+esc(r.nama||r.Nama||'—')+'</td><td>'+esc(r.namaKapal||r['Nama Kapal']||'—')+'</td>'+
+        '<td>'+classifyBadge(r.fvc||r.FVC,'80','70')+'</td>'+
+        '<td>'+classifyBadge(r.fev1||r.FEV1,'80','70')+'</td>'+
+        '<td>'+esc(r.fev1fvc||r['FEV1/FVC']||'—')+'</td>'+
+        '<td>'+esc(r.klasifikasiSpiro||r['Klasifikasi Spiro']||'—')+'</td>'+
+        '<td>'+riskBadge(r._riskLevel)+'</td></tr>';
+    });
+    html+='</tbody></table></div>';
+  }
+
+  /* ── TAB: VISUS ── */
+  else if(activeTab==='visus'){
+    html+='<div class="table-scroll"><table class="ih-table"><thead><tr>'+
+      '<th>Nama</th><th>Kapal</th><th>Visus Kiri</th><th>Visus Kanan</th><th>Buta Warna</th><th>Klasifikasi Visus</th><th>Status</th></tr></thead><tbody>';
+    if(!filtered.length){html+=emptyState('Belum ada data visus','fa-eye');}
+    else filtered.forEach(function(r){
+      html+='<tr><td>'+esc(r.nama||r.Nama||'—')+'</td><td>'+esc(r.namaKapal||r['Nama Kapal']||'—')+'</td>'+
+        '<td>'+esc(r.visusKiri||r['Visus Kiri']||'—')+'</td>'+
+        '<td>'+esc(r.visusKanan||r['Visus Kanan']||'—')+'</td>'+
+        '<td>'+esc(r.butaWarna||r['Buta Warna']||'—')+'</td>'+
+        '<td>'+esc(r.klasifikasiVisus||r['Klasifikasi Visus']||'—')+'</td>'+
+        '<td>'+riskBadge(r._riskLevel)+'</td></tr>';
+    });
+    html+='</tbody></table></div>';
+  }
+
+  /* ── TAB: HEMATOLOGI ── */
+  else if(activeTab==='hematologi'){
+    html+='<div class="table-scroll"><table class="ih-table"><thead><tr>'+
+      '<th>Nama</th><th>Kapal</th><th>Hb (g/dL)</th><th>HCT (%)</th><th>Leukosit</th><th>Trombosit</th><th>Klasifikasi Hemo</th><th>Status</th></tr></thead><tbody>';
+    if(!filtered.length){html+=emptyState('Belum ada data hematologi','fa-droplet');}
+    else filtered.forEach(function(r){
+      html+='<tr><td>'+esc(r.nama||r.Nama||'—')+'</td><td>'+esc(r.namaKapal||r['Nama Kapal']||'—')+'</td>'+
+        '<td>'+classifyBadge(r.hb||r.Hb||r.HB,'14','12')+'</td>'+
+        '<td>'+classifyBadge(r.hct||r.HCT,'45','38')+'</td>'+
+        '<td>'+esc(r.leukosit||r.Leukosit||'—')+'</td>'+
+        '<td>'+esc(r.trombosit||r.Trombosit||'—')+'</td>'+
+        '<td>'+esc(r.klasifikasiHemo||r['Klasifikasi Hemo']||'—')+'</td>'+
+        '<td>'+riskBadge(r._riskLevel)+'</td></tr>';
+    });
+    html+='</tbody></table></div>';
+  }
+
+  /* ── TAB: DATA LENGKAP ── */
+  else if(activeTab==='tabel'){
+    html+='<div class="table-scroll"><table class="ih-table"><thead><tr>'+
+      '<th>Nama</th><th>Jabatan</th><th>Kapal</th><th>Fleet</th>'+
+      '<th>Tgl MCU</th><th>IMT</th><th>Audio</th><th>Spiro</th><th>Visus</th><th>Hemo</th><th>Risk Level</th></tr></thead><tbody>';
+    if(!filtered.length){html+=emptyState('Belum ada data MCU','fa-stethoscope');}
+    else filtered.forEach(function(r){
+      html+='<tr>'+
+        '<td><strong>'+esc(r.nama||r.Nama||'—')+'</strong></td>'+
+        '<td>'+esc(r.jabatan||r.Jabatan||'—')+'</td>'+
+        '<td>'+esc(r.namaKapal||r['Nama Kapal']||'—')+'</td>'+
+        '<td><span style="background:#E3F2FD;color:#1565C0;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">'+esc(r.fleet||r.Fleet||'—')+'</span></td>'+
+        '<td>'+esc(r.tanggalMCU||r['Tanggal MCU']||'—')+'</td>'+
+        '<td>'+esc(r.imt||r.IMT||'—')+'</td>'+
+        '<td>'+esc(r.klasifikasiAudio||r['Klasifikasi Audio']||'—')+'</td>'+
+        '<td>'+esc(r.klasifikasiSpiro||r['Klasifikasi Spiro']||'—')+'</td>'+
+        '<td>'+esc(r.klasifikasiVisus||r['Klasifikasi Visus']||'—')+'</td>'+
+        '<td>'+esc(r.klasifikasiHemo||r['Klasifikasi Hemo']||'—')+'</td>'+
+        '<td>'+riskBadge(r._riskLevel)+'</td></tr>';
+    });
+    html+='</tbody></table></div>';
+    html+='<div style="font-size:11px;color:var(--text-muted);margin-top:8px">'+filtered.length+' dari '+rawMCU.length+' data crew</div>';
+  }
+
+  pg.innerHTML=html;
+}
+
+function mcuSetTab(tab){
+  var pg=document.getElementById('page-medsurv');
+  if(pg){pg.dataset.mcuTab=tab;renderMCUPage();}
+}
+
+function mcuApplyFilter(){
+  var pg=document.getElementById('page-medsurv');
+  if(!pg)return;
+  var sf=document.getElementById('mcu-sel-fleet');
+  var sk=document.getElementById('mcu-sel-kapal');
+  if(sf)pg.dataset.mcuFleet=sf.value;
+  if(sk)pg.dataset.mcuKapal=sk.value;
+  renderMCUPage();
+}
+
+function renderAlkesPage(){
+  var pg=document.getElementById('page-menu5');
+  if(!pg) return;
+
+  var ITEMS=['Aed','Tandu Biasa','Basket Stretcher','Long Spinal Board',
+             'Tabung Oksigen','Body Thermometer','Blood Pressure Monitor','Spirometry'];
+  var TOTAL_ITEMS=ITEMS.length;
+
+  function statusBadgeAlkes(s){
+    var map={
+      'LENGKAP':    'background:#1B5E20;color:#A5D6A7',
+      'PARSIAL':    'background:#E65100;color:#FFE0B2',
+      'TIDAK LENGKAP':'background:#B71C1C;color:#EF9A9A',
+      'EXPIRED':    'background:#4A148C;color:#CE93D8'
+    };
+    return '<span style="'+( map[s]||'background:#37474F;color:#B0BEC5')+
+           ';padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap">'+esc(s)+'</span>';
+  }
+
+  function pctBar(pct){
+    var col=pct>=100?'#43A047':(pct>=50?'#FB8C00':'#E53935');
+    return '<div style="display:flex;align-items:center;gap:6px">'+
+           '<div style="flex:1;height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden">'+
+           '<div style="width:'+pct+'%;height:100%;background:'+col+';border-radius:3px;transition:width .5s"></div></div>'+
+           '<span style="font-size:11px;font-weight:700;color:'+col+';min-width:32px">'+pct+'%</span></div>';
+  }
+
+  var data=rawAlkes;
+  var cLengkap  =data.filter(function(r){return r._status==='LENGKAP';}).length;
+  var cParsial  =data.filter(function(r){return r._status==='PARSIAL';}).length;
+  var cTidak    =data.filter(function(r){return r._status==='TIDAK LENGKAP';}).length;
+  var cExpired  =data.filter(function(r){return r._status==='EXPIRED';}).length;
+  var avgPct    =data.length?Math.round(data.reduce(function(s,r){return s+r._kelengkapanPct;},0)/data.length):0;
+
+  var html='<div class="page-header-row"><div>'+
+    '<h2 class="page-title-main"><i class="fas fa-briefcase-medical" style="color:#00ACC1;margin-right:10px"></i>'+
+    'Sebaran Alkes Kapal</h2>'+
+    '<p class="page-subtitle">Status kelengkapan alat kesehatan &amp; keselamatan per kapal — Pertamina Patra Niaga</p></div></div>';
+
+  /* KPI cards */
+  html+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px">';
+  var kpis=[
+    {label:'Total Kapal',val:data.length,ico:'fa-ship',col:'#0288D1'},
+    {label:'Lengkap',    val:cLengkap,   ico:'fa-circle-check',col:'#43A047'},
+    {label:'Parsial',    val:cParsial,   ico:'fa-triangle-exclamation',col:'#FB8C00'},
+    {label:'Tidak Lengkap',val:cTidak,  ico:'fa-circle-xmark',col:'#E53935'},
+    {label:'AED Expired',val:cExpired,  ico:'fa-calendar-xmark',col:'#8E24AA'},
+  ];
+  kpis.forEach(function(k){
+    html+='<div class="stat-card" style="border-top:3px solid '+k.col+'">'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'+
+      '<i class="fas '+k.ico+'" style="font-size:18px;color:'+k.col+'"></i>'+
+      '<span style="font-size:11px;color:var(--text-muted);font-weight:600">'+esc(k.label)+'</span></div>'+
+      '<div style="font-size:26px;font-weight:800;color:var(--text)">'+k.val+'</div></div>';
+  });
+  html+='</div>';
+
+  /* Rata-rata kelengkapan bar */
+  html+='<div class="stat-card" style="margin-bottom:16px;padding:12px 16px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
+    '<span style="font-size:12px;font-weight:700;color:var(--text)">Rata-rata Kelengkapan Armada</span>'+
+    '<span style="font-size:20px;font-weight:800;color:'+(avgPct>=80?'#43A047':avgPct>=50?'#FB8C00':'#E53935')+'">'+avgPct+'%</span></div>'+
+    pctBar(avgPct)+'</div>';
+
+  /* Filter bar */
+  html+='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px">'+
+    '<select id="alkes-filter-fleet" onchange="applyAlkesFilters()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text)">'+
+    '<option value="">Semua Fleet</option>'+
+    [...new Set(rawAlkes.map(function(r){return (r['Fleet']||'').trim();}))].filter(Boolean).sort().map(function(f){return '<option>'+esc(f)+'</option>';}).join('')+
+    '</select>'+
+    '<select id="alkes-filter-status" onchange="applyAlkesFilters()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text)">'+
+    '<option value="">Semua Status</option>'+
+    ['LENGKAP','PARSIAL','TIDAK LENGKAP','EXPIRED'].map(function(s){return '<option>'+s+'</option>';}).join('')+
+    '</select>'+
+    '<span id="alkes-count" style="font-size:11px;color:var(--text-muted);margin-left:4px">'+data.length+' kapal</span>'+
+    '</div>';
+
+  /* Tabel */
+  html+='<div class="table-scroll"><table class="ih-table"><thead><tr>'+
+    '<th>Nama Kapal</th><th>Fleet</th><th>AED</th><th>Expired AED</th>'+
+    ITEMS.slice(1).map(function(i){return '<th>'+esc(i)+'</th>';}).join('')+
+    '<th>Kelengkapan</th><th>Status</th></tr></thead>'+
+    '<tbody id="alkes-tbody">';
+
+  if(!data.length){
+    html+='<tr><td colspan="99" style="text-align:center;padding:48px;color:var(--text-muted)">'+
+      '<i class="fas fa-briefcase-medical" style="font-size:32px;opacity:.2;display:block;margin-bottom:10px"></i>'+
+      'Data Sebaran Alkes belum tersedia — Pastikan sheet "Sebaran Alkes Kapal" sudah diisi di Google Sheets</td></tr>';
+  } else {
+    html+=data.map(function(r){
+      var aed=r['Aed']||'—';
+      var expAed=(r['Expired Date AED']||'').toString().trim()||'—';
+      var expStyle=r._expiredAED?'color:#CE93D8;font-weight:700':'';
+      return '<tr>'+
+        '<td><strong style="color:var(--text)">'+esc(r['Nama Kapal']||'—')+'</strong></td>'+
+        '<td><span style="background:#E3F2FD;color:#1565C0;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">'+esc(r['Fleet']||'—')+'</span></td>'+
+        '<td>'+esc(aed)+'</td>'+
+        '<td style="'+expStyle+'">'+esc(expAed)+(r._expiredAED?' ⚠️':'')+'</td>'+
+        ITEMS.slice(1).map(function(k){
+          var v=(r[k]||'').toString().trim();
+          var ok=v&&v!=='0';
+          return '<td style="text-align:center">'+
+            (ok?'<i class="fas fa-check-circle" style="color:#43A047"></i>':
+                '<i class="fas fa-times-circle" style="color:#E53935;opacity:.5"></i>')+'</td>';
+        }).join('')+
+        '<td style="min-width:120px">'+pctBar(r._kelengkapanPct)+'</td>'+
+        '<td>'+statusBadgeAlkes(r._status)+'</td>'+
+        '</tr>';
+    }).join('');
+  }
+  html+='</tbody></table></div>';
+  html+='<div style="font-size:11px;color:var(--text-muted);margin-top:8px;padding:0 4px" id="alkes-footer">'+
+    'Menampilkan '+data.length+' dari '+rawAlkes.length+' kapal</div>';
+
+  pg.innerHTML=html;
+}
+
+function applyAlkesFilters(){
+  var fleet=(document.getElementById('alkes-filter-fleet')||{}).value||'';
+  var status=(document.getElementById('alkes-filter-status')||{}).value||'';
+  filteredAlkes=rawAlkes.filter(function(r){
+    if(fleet&&(r['Fleet']||'').trim()!==fleet)return false;
+    if(status&&r._status!==status)return false;
+    return true;
+  });
+  /* Re-render tbody saja */
+  var tbody=document.getElementById('alkes-tbody');
+  if(!tbody){renderAlkesPage();return;}
+  var data=filteredAlkes;
+  var ITEMS=['Aed','Tandu Biasa','Basket Stretcher','Long Spinal Board',
+             'Tabung Oksigen','Body Thermometer','Blood Pressure Monitor','Spirometry'];
+  function pctBar(pct){
+    var col=pct>=100?'#43A047':(pct>=50?'#FB8C00':'#E53935');
+    return '<div style="display:flex;align-items:center;gap:6px">'+
+           '<div style="flex:1;height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden">'+
+           '<div style="width:'+pct+'%;height:100%;background:'+col+';border-radius:3px"></div></div>'+
+           '<span style="font-size:11px;font-weight:700;color:'+col+';min-width:32px">'+pct+'%</span></div>';
+  }
+  function statusBadgeAlkes(s){
+    var map={'LENGKAP':'background:#1B5E20;color:#A5D6A7','PARSIAL':'background:#E65100;color:#FFE0B2',
+             'TIDAK LENGKAP':'background:#B71C1C;color:#EF9A9A','EXPIRED':'background:#4A148C;color:#CE93D8'};
+    return '<span style="'+(map[s]||'background:#37474F;color:#B0BEC5')+
+           ';padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700">'+esc(s)+'</span>';
+  }
+  if(!data.length){
+    tbody.innerHTML='<tr><td colspan="99" style="text-align:center;padding:32px;color:var(--text-muted)">Tidak ada data sesuai filter</td></tr>';
+  } else {
+    tbody.innerHTML=data.map(function(r){
+      return '<tr>'+
+        '<td><strong style="color:var(--text)">'+esc(r['Nama Kapal']||'—')+'</strong></td>'+
+        '<td><span style="background:#E3F2FD;color:#1565C0;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">'+esc(r['Fleet']||'—')+'</span></td>'+
+        '<td>'+esc(r['Aed']||'—')+'</td>'+
+        '<td style="'+(r._expiredAED?'color:#CE93D8;font-weight:700':'')+'">'+
+          esc((r['Expired Date AED']||'').toString().trim()||'—')+(r._expiredAED?' ⚠️':'')+'</td>'+
+        ITEMS.slice(1).map(function(k){
+          var v=(r[k]||'').toString().trim();var ok=v&&v!=='0';
+          return '<td style="text-align:center">'+
+            (ok?'<i class="fas fa-check-circle" style="color:#43A047"></i>':
+                '<i class="fas fa-times-circle" style="color:#E53935;opacity:.5"></i>')+'</td>';
+        }).join('')+
+        '<td style="min-width:120px">'+pctBar(r._kelengkapanPct)+'</td>'+
+        '<td>'+statusBadgeAlkes(r._status)+'</td></tr>';
+    }).join('');
+  }
+  var footer=document.getElementById('alkes-footer');
+  if(footer)footer.textContent='Menampilkan '+data.length+' dari '+rawAlkes.length+' kapal';
+  var cnt=document.getElementById('alkes-count');
+  if(cnt)cnt.textContent=data.length+' kapal';
+}
 function applyP3KFilters(){
   var fLantai=(document.getElementById("p3k-filter-lantai")||{}).value||"";
   var fBulan =(document.getElementById("p3k-filter-bulan") ||{}).value||"";
