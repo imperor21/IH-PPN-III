@@ -3,7 +3,7 @@
 /* ✅ Pedoman PDF & Foto Dokumentasi → Google Drive (multi-device)    */
 /* ✅ IndexedDB dihapus — data terpusat di GAS/Drive                  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbyuiqvsxU1-4AYd-X9WH6BWTJbNKPqOrYEAIp3cvJcFGKXlST0qaTAEhlgRyp8qxTi2iQ/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxWscFjKrrqQgNwmeRLAfjBtWi05bnRLkW5ESrtVBWkNlIA5exFlTLhNid8VnGUoWMK2Q/exec";
 
 async function gasPost(payload) {
   const controller = new AbortController();
@@ -2133,47 +2133,65 @@ function hcvRenderProfile(){
   var svg=document.getElementById('hcvProfileSVG');
   if(!svg)return;
   var S='http://www.w3.org/2000/svg';
+  var XL='http://www.w3.org/1999/xlink';
   svg.innerHTML='';
-  function el(tag,attrs){
-    var e=document.createElementNS(S,tag);
-    Object.keys(attrs).forEach(function(k){e.setAttribute(k,attrs[k]);});
-    return e;
-  }
-  function zone(id,x,y,w,h,col,lbl,ly){
+  /* PNG 1126×316 → SVG 900×253  (scale 0.7993) */
+  svg.setAttribute('viewBox','0 0 900 253');
+
+  /* ── Ship profile background image ── */
+  var imgP=document.createElementNS(S,'image');
+  imgP.setAttribute('href','https://raw.githubusercontent.com/imperor21/IH-PPN-III/main/ship_profile.png');
+  imgP.setAttributeNS(XL,'xlink:href','https://raw.githubusercontent.com/imperor21/IH-PPN-III/main/ship_profile.png');
+  imgP.setAttribute('x','0');imgP.setAttribute('y','0');
+  imgP.setAttribute('width','900');imgP.setAttribute('height','253');
+  imgP.setAttribute('preserveAspectRatio','xMidYMid meet');
+  svg.appendChild(imgP);
+
+  /* ── Zone overlay helper ── */
+  /* PNG sudah memiliki label — SVG hanya overlay transparan clickable */
+  function zone(id,x,y,w,h,col){
     var g=document.createElementNS(S,'g');
     g.setAttribute('cursor','pointer');
-    var r=el('rect',{x:x,y:y,width:w,height:h,fill:col,opacity:'.18',rx:3,stroke:col,'stroke-width':1.5});
+    /* Fill transparan */
+    var r=document.createElementNS(S,'rect');
+    r.setAttribute('x',x);r.setAttribute('y',y);
+    r.setAttribute('width',w);r.setAttribute('height',h);
+    r.setAttribute('fill',col);r.setAttribute('fill-opacity','.11');
+    r.setAttribute('stroke',col);r.setAttribute('stroke-width','1.8');
+    r.setAttribute('stroke-opacity','.55');r.setAttribute('rx','3');
     g.appendChild(r);
-    g.appendChild(el('rect',{x:x+1,y:y+1,width:5,height:h-2,fill:col,rx:3}));
-    /* leader line */
-    g.appendChild(el('line',{x1:x+w/2,y1:y,x2:x+w/2,y2:ly+11,stroke:col,'stroke-width':1,'stroke-dasharray':'3,2',opacity:'.7'}));
-    /* label box */
-    var bw=lbl.length*6.5+14; var bh=12;
-    var bx=Math.max(2,Math.min(896-bw,x+w/2-bw/2));
-    g.appendChild(el('rect',{x:bx,y:ly-1,width:bw,height:bh,fill:'#060E1E',stroke:col,'stroke-width':1.2,rx:3,opacity:'.94'}));
-    var t=document.createElementNS(S,'text');
-    t.setAttribute('x',bx+bw/2);t.setAttribute('y',ly+8);t.setAttribute('text-anchor','middle');
-    t.setAttribute('fill',col);t.setAttribute('font-size','8');t.setAttribute('font-family','Arial');t.setAttribute('font-weight','700');
-    t.textContent=lbl;g.appendChild(t);
+    /* Accent bar atas (border tebal atas) */
+    var top=document.createElementNS(S,'line');
+    top.setAttribute('x1',String(x+6));top.setAttribute('y1',String(y));
+    top.setAttribute('x2',String(x+w-6));top.setAttribute('y2',String(y));
+    top.setAttribute('stroke',col);top.setAttribute('stroke-width','4');
+    top.setAttribute('stroke-opacity','.85');top.setAttribute('stroke-linecap','round');
+    g.appendChild(top);
+    /* Events */
     g.addEventListener('click',function(){hcvZoneClick(id);});
-    g.addEventListener('mouseenter',function(){r.setAttribute('opacity','.36');});
-    g.addEventListener('mouseleave',function(){r.setAttribute('opacity','.18');});
+    g.addEventListener('mouseenter',function(){
+      r.setAttribute('fill-opacity','.28');
+      r.setAttribute('stroke-opacity','1');
+    });
+    g.addEventListener('mouseleave',function(){
+      r.setAttribute('fill-opacity','.11');
+      r.setAttribute('stroke-opacity','.55');
+    });
     svg.appendChild(g);
   }
 
-  /* Ship profile image — raw GitHub */
-  svg.appendChild(el('image',{
-    href:'https://raw.githubusercontent.com/imperor21/IH-PPN-III/main/ship_profile.png',
-    x:0,y:0,width:900,height:245,
-    preserveAspectRatio:'none'
-  }));
-
-  /* ZONE OVERLAYS — koordinat tetap sesuai layout kapal */
-  zone('bridge', 18,  18,  204, 145, '#FF8F00', 'AKOMODASI & ANJUNGAN', 18);
-  zone('cargo',  278, 128, 268, 86,  '#B71C1C', 'CARGO TANK AREA',      18);
-  zone('engine', 22,  164, 256, 72,  '#C62828', 'KAMAR MESIN',          222);
-  zone('pump',   544, 118, 90,  96,  '#E63946', 'PUMP ROOM',            18);
-  zone('fore',   722, 132, 130, 98,  '#FF8F00', 'HALUAN & MOORING',     18);
+  /* ── Zones — koordinat presisi: PNG 1126×316 → scale 0.7993 → SVG 900×253 ──
+     Referensi PNG pixel (estimasi layout tanker tipikal):
+       Accommodation : x 0–280   full height
+       Cargo deck    : x 280–737  y 110–316
+       Engine room   : x 0–280    y 195–316
+       Pump room     : x 737–848  y 105–316
+       Forecastle    : x 848–1126  y 88–316                               */
+  zone('bridge', 2,   2,   222, 205, '#FF8F00'); /* Akomodasi & Anjungan  */
+  zone('cargo',  224, 88,  365, 163, '#B71C1C'); /* Cargo Tank Area       */
+  zone('engine', 2,   155, 222,  98, '#C62828'); /* Kamar Mesin           */
+  zone('pump',   589,  84,  89, 167, '#E63946'); /* Pump Room             */
+  zone('fore',   678,  72, 220, 179, '#FF8F00'); /* Haluan & Mooring      */
 }
 
 /* ── TOP VIEW SVG ── */
@@ -2181,52 +2199,73 @@ function hcvRenderTop(){
   var svg=document.getElementById('hcvTopSVG');
   if(!svg)return;
   var S='http://www.w3.org/2000/svg';
+  var XL='http://www.w3.org/1999/xlink';
   svg.innerHTML='';
-  function el(tag,attrs){
-    var e=document.createElementNS(S,tag);
-    Object.keys(attrs).forEach(function(k){e.setAttribute(k,attrs[k]);});
-    return e;
-  }
+  /* PNG 1126×366 → SVG 900×293  (scale 0.7993) */
+  svg.setAttribute('viewBox','0 0 900 293');
 
-  /* Ship top-view image — raw GitHub */
-  svg.appendChild(el('image',{
-    href:'https://raw.githubusercontent.com/imperor21/IH-PPN-III/main/ship_topview.png',
-    x:0,y:0,width:900,height:170,
-    preserveAspectRatio:'none'
-  }));
+  /* ── Ship top-view background image ── */
+  var imgT=document.createElementNS(S,'image');
+  imgT.setAttribute('href','https://raw.githubusercontent.com/imperor21/IH-PPN-III/main/ship_topview.png');
+  imgT.setAttributeNS(XL,'xlink:href','https://raw.githubusercontent.com/imperor21/IH-PPN-III/main/ship_topview.png');
+  imgT.setAttribute('x','0');imgT.setAttribute('y','0');
+  imgT.setAttribute('width','900');imgT.setAttribute('height','293');
+  imgT.setAttribute('preserveAspectRatio','xMidYMid meet');
+  svg.appendChild(imgT);
 
-  /* ZONE OVERLAYS — interactive click areas */
+  /* ── Zone overlays — top view ──
+     PNG 1126×366 → scale 0.7993 → SVG 900×293
+     Deck band (PNG y: 40–342) → SVG y: 32–273
+     Zona (PNG pixel referensi):
+       Bridge/Accommodation: x 0–218    full deck height
+       Cargo Tanks         : x 218–741  full deck height
+       Pump Room           : x 741–845  full deck height
+       Forecastle/Bow      : x 845–1126 full deck height (curve kanan)
+       Engine Room         : x 0–218    lower 44% (y 208–342 PNG → y 166–273 SVG)  */
   var tZones=[
-    {id:'bridge',path:'M 38 15 L 38 155 L 180 155 L 180 15 Z',col:'#FF8F00',lbls:['Akomodasi','& Anjungan'],lx:108,ly:85},
-    {id:'cargo', path:'M 184 15 L 184 155 L 592 155 L 592 15 Z',col:'#B71C1C',lbls:['CARGO TANKS'],lx:388,ly:85},
-    {id:'pump',  path:'M 596 15 L 596 155 L 686 155 L 686 15 Z',col:'#E63946',lbls:['Pump','Room'],lx:640,ly:85},
-    {id:'engine',path:'M 38 90 L 38 155 L 180 155 L 180 90 Z',col:'#C62828',lbls:['Engine','(Bawah)'],lx:108,ly:120},
-    {id:'fore',  path:'M 690 15 L 690 155 L 738 155 Q 848 155 868 85 Q 848 15 738 15 Z',col:'#FF8F00',lbls:['Forecastle'],lx:778,ly:85},
+    {id:'bridge',col:'#FF8F00',
+     d:'M 0 32 L 0 273 L 174 273 L 174 32 Z'},
+    {id:'cargo', col:'#B71C1C',
+     d:'M 174 32 L 174 273 L 592 273 L 592 32 Z'},
+    {id:'pump',  col:'#E63946',
+     d:'M 592 32 L 592 273 L 675 273 L 675 32 Z'},
+    {id:'fore',  col:'#FF8F00',
+     /* Bow curve: kiri x=675, kanan melengkung ke bow tip (x≈895, y tengah 152) */
+     d:'M 675 32 L 675 273 L 768 273 Q 878 273 898 152 Q 878 32 768 32 Z'},
+    {id:'engine',col:'#C62828',
+     /* Engine room = bagian bawah blok accommodation */
+     d:'M 0 166 L 0 273 L 174 273 L 174 166 Z'},
   ];
+
   tZones.forEach(function(z){
-    var g=document.createElementNS(S,'g');g.setAttribute('cursor','pointer');
-    var p=el('path',{d:z.path,fill:z.col,opacity:'.28',stroke:z.col,'stroke-width':1.2});
+    var g=document.createElementNS(S,'g');
+    g.setAttribute('cursor','pointer');
+    var p=document.createElementNS(S,'path');
+    p.setAttribute('d',z.d);
+    p.setAttribute('fill',z.col);p.setAttribute('fill-opacity','.12');
+    p.setAttribute('stroke',z.col);p.setAttribute('stroke-width','1.5');
+    p.setAttribute('stroke-opacity','.6');
     g.appendChild(p);
     g.addEventListener('click',function(){hcvZoneClick(z.id);});
-    g.addEventListener('mouseenter',function(){p.setAttribute('opacity','.45');});
-    g.addEventListener('mouseleave',function(){p.setAttribute('opacity','.28');});
-    svg.appendChild(g);
-    z.lbls.forEach(function(line,li){
-      var t=document.createElementNS(S,'text');
-      t.setAttribute('x',z.lx);t.setAttribute('y',z.ly-((z.lbls.length-1)*8)+li*16);
-      t.setAttribute('text-anchor','middle');t.setAttribute('fill','#fff');
-      t.setAttribute('font-size',z.lbls.length>1?'8':'10');
-      t.setAttribute('font-family','Arial');t.setAttribute('font-weight','700');
-      t.textContent=line;svg.appendChild(t);
+    g.addEventListener('mouseenter',function(){
+      p.setAttribute('fill-opacity','.30');
+      p.setAttribute('stroke-opacity','1');
     });
+    g.addEventListener('mouseleave',function(){
+      p.setAttribute('fill-opacity','.12');
+      p.setAttribute('stroke-opacity','.6');
+    });
+    svg.appendChild(g);
   });
 
-  /* N compass label */
+  /* N ↑ compass */
   var nt=document.createElementNS(S,'text');
-  nt.setAttribute('x','886');nt.setAttribute('y','18');nt.setAttribute('text-anchor','end');
-  nt.setAttribute('fill','rgba(0,180,216,.55)');nt.setAttribute('font-size','11');
+  nt.setAttribute('x','886');nt.setAttribute('y','20');
+  nt.setAttribute('text-anchor','end');
+  nt.setAttribute('fill','rgba(0,180,216,.6)');nt.setAttribute('font-size','12');
   nt.setAttribute('font-weight','700');nt.setAttribute('font-family','Arial');
-  nt.textContent='N \u2191';svg.appendChild(nt);
+  nt.textContent='N \u2191';
+  svg.appendChild(nt);
 }
 
 /* ── ZONE CLICK — show detail ── */
