@@ -5488,9 +5488,8 @@ function renderAlkesPage(){
     '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:10px;margin-bottom:20px">';
 
   data.forEach(function(r){
-    var pct=r._kelengkapanPct,col=pct>=100?'#43A047':(pct>=50?'#FB8C00':'#E53935');
-    var presentItems=ITEMS.filter(function(k){var v=(r[k]||'').toString().trim();return v&&v!=='0';});
-    var missingItems=ITEMS.filter(function(k){var v=(r[k]||'').toString().trim();return !v||v==='0';});
+    var pct=r._kelengkapanPct!=null?r._kelengkapanPct:0;
+    var col=pct>=100?'#43A047':(pct>=50?'#FB8C00':'#E53935');
     html+='<div class="stat-card" style="padding:14px 16px'+(r._expiredAED?';border-left:3px solid #AB47BC':'')+'">'+
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'+
       '<div><div style="font-size:12px;font-weight:700;color:var(--text)">'+esc(r['Nama Kapal']||'—')+'</div>'+
@@ -5501,13 +5500,23 @@ function renderAlkesPage(){
       '<span style="font-size:15px;font-weight:800;color:'+col+'">'+pct+'%</span></div>'+
       miniBar(pct)+
       '<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:3px">'+
-      ITEMS.map(function(k){
-        var v=(r[k]||'').toString().trim(),ok=v&&v!=='0';
-        var lbl=k==='Aed'?'AED':k.split(' ').map(function(w){return w[0];}).join('').toUpperCase();
-        return '<span style="padding:2px 6px;border-radius:4px;font-size:9px;font-weight:700;'+
-          (ok?'background:rgba(67,160,71,.15);color:#43A047':'background:rgba(229,57,53,.12);color:#E53935')+
-          '" title="'+esc(k)+'">'+esc(lbl)+'</span>';
-      }).join('')+
+      /* Gunakan _alkesDetail dari GAS jika ada — paling akurat */
+      (r._alkesDetail&&r._alkesDetail.length>0?
+        r._alkesDetail.map(function(d){
+          var ok=d.status==='ADA';
+          var lbl=d.nama==='Aed'?'AED':d.nama.split(' ').map(function(w){return w[0];}).join('').toUpperCase();
+          return '<span style="padding:2px 6px;border-radius:4px;font-size:9px;font-weight:700;'+
+            (ok?'background:rgba(67,160,71,.15);color:#43A047':'background:rgba(229,57,53,.12);color:#E53935')+
+            '" title="'+esc(d.nama)+': '+esc(d.status)+'">'+esc(lbl)+'</span>';
+        })
+      :ITEMS.map(function(k){
+          var ok=String(r[k]||'').toUpperCase().trim()==='ADA';
+          var lbl=k==='Aed'?'AED':k.split(' ').map(function(w){return w[0];}).join('').toUpperCase();
+          return '<span style="padding:2px 6px;border-radius:4px;font-size:9px;font-weight:700;'+
+            (ok?'background:rgba(67,160,71,.15);color:#43A047':'background:rgba(229,57,53,.12);color:#E53935')+
+            '" title="'+esc(k)+'">'+esc(lbl)+'</span>';
+        })
+      ).join('')+
       '</div></div>';
   });
   html+='</div>';
@@ -5528,7 +5537,7 @@ function renderAlkesPage(){
         '<td><strong style="color:var(--text)">'+esc(r['Nama Kapal']||'—')+'</strong></td>'+
         '<td><span style="background:#E8F5E9;color:#1B5E20;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">'+esc(r['Fleet']||'—')+'</span></td>'+
         ITEMS.map(function(k){
-          var v=(r[k]||'').toString().trim(),ok=v&&v!=='0';
+          var ok=String(r[k]||'').toUpperCase().trim()==='ADA';
           var extra='';
           if(k==='Aed'&&r._expiredAED&&expAed)extra='<div style="font-size:9px;color:#AB47BC;margin-top:1px">Exp: '+esc(expAed)+'</div>';
           return'<td style="text-align:center">'+
