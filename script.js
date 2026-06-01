@@ -3,7 +3,7 @@
 /* ✅ Pedoman PDF & Foto Dokumentasi → Google Drive (multi-device)    */
 /* ✅ IndexedDB dihapus — data terpusat di GAS/Drive                  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbyJNNVaW6twA4K5F8_rcZk-SSuNsIVThl_q3XwqyqjAHkbBT0exLosqByR9j3zOv2YOug/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyuiqvsxU1-4AYd-X9WH6BWTJbNKPqOrYEAIp3cvJcFGKXlST0qaTAEhlgRyp8qxTi2iQ/exec";
 
 async function gasPost(payload) {
   const controller = new AbortController();
@@ -4058,70 +4058,124 @@ function _buildSummary(el,cKey){
   var totalPages=nomBio?7:6;
 
   /* ══════════════ HALAMAN 1: COVER ══════════════ */
-  var pg1='<div style="background:linear-gradient(150deg,#071929 0%,#0F2A4A 50%,#1A3A5C 100%);'
-    +'min-height:1123px;margin:-40px -44px -44px;padding:52px 52px 44px;box-sizing:border-box;position:relative;overflow:hidden">'
-    +'<div style="position:absolute;right:-60px;top:-60px;width:340px;height:340px;border-radius:50%;background:rgba(255,255,255,.04)"></div>'
-    +'<div style="position:absolute;left:-40px;bottom:-40px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.03)"></div>'
-    +'<div style="position:absolute;left:0;top:0;width:6px;height:100%;background:linear-gradient(180deg,#C9973A,#3B82F6)"></div>'
-    +'<div style="font-size:9px;font-weight:700;color:rgba(255,255,255,.5);letter-spacing:2.5px;text-transform:uppercase;margin-bottom:5px">Laporan Komprehensif Industrial Hygiene</div>'
-    +'<div style="font-size:9px;color:rgba(255,255,255,.35);margin-bottom:28px">PT Pertamina Patra Niaga · Satuan Kerja Regional III · '+tgl+'</div>'
-    +'<div style="font-size:48px;font-weight:700;color:#fff;line-height:1.1;margin-bottom:8px">Monitoring, Assessment</div>'
-    +'<div style="font-size:48px;font-weight:700;color:#60B4F4;line-height:1.1;margin-bottom:20px">&amp; Hazard Management</div>'
-    +'<div style="width:72px;height:3px;background:#C9973A;border-radius:2px;margin-bottom:18px"></div>'
-    +'<div style="font-size:13px;color:rgba(255,255,255,.7);line-height:2;margin-bottom:24px">'
-    +'Armada: <strong style="color:#fff">'+fleetLbl+'</strong> &nbsp;·&nbsp; Periode: <strong style="color:#fff">'+periode+'</strong></div>'
-    /* 4 KPI Cover */
-    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">'
+  var pg1=''
+    /* Outer wrapper — putih bersih, full A4 */
+    +'<div style="min-height:1123px;margin:-40px -44px -44px;padding:0;box-sizing:border-box;background:#FFFFFF;position:relative;font-family:Arial,Helvetica,sans-serif">'
+
+    /* ── LEFT ACCENT BAR ── */
+    +'<div style="position:absolute;left:0;top:0;width:5px;height:100%;background:linear-gradient(180deg,#0D2B4E 0%,#1A4A7A 100%)"></div>'
+
+    /* ── TOP BAND — gelap tipis ── */
+    +'<div style="background:#0D2B4E;height:6px;width:100%"></div>'
+
+    /* ── MAIN CONTENT ── */
+    +'<div style="padding:64px 60px 48px 64px">'
+
+    /* Kategori dokumen */
+    +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:48px">'
+    +'<div style="width:32px;height:1px;background:#0D2B4E"></div>'
+    +'<span style="font-size:9px;font-weight:700;color:#0D2B4E;letter-spacing:3px;text-transform:uppercase">Laporan Komprehensif</span>'
+    +'<div style="flex:1;height:1px;background:#E2E8F0"></div>'
+    +'<span style="font-size:9px;color:#94A3B8;letter-spacing:1px">'+tgl+'</span>'
+    +'</div>'
+
+    /* ── JUDUL UTAMA ── */
+    +'<div style="margin-bottom:16px">'
+    +'<div style="font-size:13px;font-weight:400;color:#64748B;letter-spacing:.5px;margin-bottom:10px;text-transform:uppercase">Industrial Hygiene &amp; Occupational Health</div>'
+    +'<div style="font-size:46px;font-weight:700;color:#0D2B4E;line-height:1.1;letter-spacing:-1px;margin-bottom:4px">Monitoring,</div>'
+    +'<div style="font-size:46px;font-weight:700;color:#0D2B4E;line-height:1.1;letter-spacing:-1px;margin-bottom:4px">Assessment</div>'
+    +'<div style="font-size:46px;font-weight:300;color:#1A6BB5;line-height:1.1;letter-spacing:-1px">&amp; Hazard Management</div>'
+    +'</div>'
+
+    /* ── GARIS PEMBATAS ELEGAN ── */
+    +'<div style="display:flex;align-items:center;gap:0;margin:28px 0">'
+    +'<div style="width:40px;height:3px;background:#C9973A"></div>'
+    +'<div style="width:20px;height:3px;background:#1A6BB5"></div>'
+    +'<div style="flex:1;height:1px;background:#E2E8F0"></div>'
+    +'</div>'
+
+    /* ── INFO PERIODE & ARMADA ── */
+    +'<div style="display:flex;gap:40px;margin-bottom:48px">'
+    +'<div><div style="font-size:9px;color:#94A3B8;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px">Armada</div>'
+    +'<div style="font-size:14px;font-weight:700;color:#0D2B4E">'+fleetLbl+'</div></div>'
+    +'<div style="width:1px;background:#E2E8F0"></div>'
+    +'<div><div style="font-size:9px;color:#94A3B8;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px">Periode</div>'
+    +'<div style="font-size:14px;font-weight:700;color:#0D2B4E">'+periode+'</div></div>'
+    +'<div style="width:1px;background:#E2E8F0"></div>'
+    +'<div><div style="font-size:9px;color:#94A3B8;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px">Status</div>'
+    +'<div style="font-size:14px;font-weight:700;color:'+stOvr.c+'">'+stOvr.l+'</div></div>'
+    +'</div>'
+
+    /* ── 4 KPI CARDS ── putih bersih dengan border ── */
+    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#E2E8F0;border-radius:4px;overflow:hidden;margin-bottom:40px">'
     +[
-      {l:"COVERAGE HRA",v:d.hra.coverage+"%",s:d.hra.done+"/"+d.hra.total+" kapal",c:stC(d.hra.coverage,80,50)},
-      {l:"DAT COMPLIANCE",v:datPct+"%",s:d.dat.positif+" positif",c:stC(datPct,99,95)},
-      {l:"HAZARD NAB",v:hazPct+"%",s:d.hazard.melebihi+" melebihi",c:stC(hazPct,100,80)},
-      {l:"PEST CONTROL",v:d.pest.count>0?"Aktif":"—",s:d.pest.count+"x / "+d.pest.lokasi+" lok.",c:d.pest.count>0?"#2E7D32":"#C62828"}
+      {l:"Coverage HRA",    v:d.hra.coverage+"%",    s:d.hra.done+"/"+d.hra.total+" kapal",  c:stC(d.hra.coverage,80,50)},
+      {l:"DAT Compliance",  v:datPct+"%",             s:d.dat.positif+" positif",              c:stC(datPct,99,95)},
+      {l:"Hazard NAB",      v:hazPct+"%",             s:d.hazard.melebihi+" melebihi",         c:stC(hazPct,100,80)},
+      {l:"Pest Control",    v:d.pest.count>0?"Aktif":"—", s:d.pest.count+"x / "+d.pest.lokasi+" lok.", c:d.pest.count>0?"#2E7D32":"#C62828"}
     ].map(function(k){
-      return'<div style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);'
-        +'border-top:3px solid '+k.c+';border-radius:10px;padding:14px 12px">'
-        +'<div style="font-size:9px;color:rgba(255,255,255,.45);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">'+k.l+'</div>'
-        +'<div style="font-size:26px;font-weight:700;color:'+k.c+'">'+k.v+'</div>'
-        +'<div style="font-size:10px;color:rgba(255,255,255,.45);margin-top:3px">'+k.s+'</div>'
+      return '<div style="background:#fff;padding:20px 18px;border-top:3px solid '+k.c+'">'
+        +'<div style="font-size:9px;color:#94A3B8;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">'+k.l+'</div>'
+        +'<div style="font-size:28px;font-weight:700;color:'+k.c+';line-height:1;margin-bottom:4px">'+k.v+'</div>'
+        +'<div style="font-size:10px;color:#64748B">'+k.s+'</div>'
         +'</div>';
     }).join("")
     +'</div>'
-    /* Status Overall */
-    +'<div style="background:'+stOvr.bg+';border:2px solid '+stOvr.c+';border-radius:12px;padding:14px 20px;'
-    +'display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">'
-    +'<div><div style="font-size:10px;font-weight:700;color:'+stOvr.c+';letter-spacing:1px;text-transform:uppercase;margin-bottom:3px">Status Keseluruhan</div>'
-    +'<div style="font-size:22px;font-weight:700;color:'+stOvr.c+'">'+stOvr.l+'</div></div>'
-    +'<div style="text-align:right;font-size:10px;color:#64748B">IH Dashboard v5.0<br>'+tgl+'</div>'
-    +'</div>'
-    /* Ringkasan singkat cover */
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">'
-    +'<div style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:14px 16px">'
-    +'<div style="font-size:10px;font-weight:700;color:#60B4F4;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Ruang Lingkup Laporan</div>'
-    +'<div style="font-size:11px;color:rgba(255,255,255,.65);line-height:1.8">'
-    +'✦ Hazard Recognition &amp; Assessment (HRA)<br>'
-    +'✦ Drugs &amp; Alcohol Test (DAT) Awak Kapal<br>'
-    +'✦ Pest &amp; Rodent Control Kantor<br>'
-    +'✦ Pemantauan 5 Hazard Utama (Fisika, Kimia, Biologi, Ergonomi, Psikososial)'
-    +(nomBio?'<br>✦ Biomonitoring Benzene (ACGIH BEI 2024)':"")
+
+    /* ── DUA KOLOM: RUANG LINGKUP + TEMUAN ── */
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:40px">'
+
+    /* Ruang lingkup */
+    +'<div style="border:1px solid #E2E8F0;border-radius:6px;padding:20px 22px">'
+    +'<div style="font-size:9px;font-weight:700;color:#0D2B4E;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:14px;display:flex;align-items:center;gap:8px">'
+    +'<div style="width:16px;height:2px;background:#C9973A"></div>Ruang Lingkup</div>'
+    +'<div style="font-size:11px;color:#475569;line-height:2">'
+    +'<div>Hazard Recognition &amp; Assessment (HRA)</div>'
+    +'<div>Drugs &amp; Alcohol Test (DAT) Awak Kapal</div>'
+    +'<div>Pest &amp; Rodent Control</div>'
+    +'<div>5 Hazard Utama (Fisika, Kimia, Biologi, Ergonomi, Psikososial)</div>'
+    +(nomBio?'<div>Biomonitoring Benzene (ACGIH BEI 2024)</div>':"")
     +'</div></div>'
-    +'<div style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:14px 16px">'
-    +'<div style="font-size:10px;font-weight:700;color:#60B4F4;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Temuan Utama</div>'
-    +'<div style="font-size:11px;color:rgba(255,255,255,.65);line-height:1.9">'
-    +(parseFloat(d.hra.coverage)<80?'⚠ Coverage HRA '+d.hra.coverage+'% — '+d.hra.done+'/'+d.hra.total+' armada':'✓ Coverage HRA '+d.hra.coverage+'% — '+d.hra.done+' armada HRA')+'<br>'
-    +(d.dat.positif>0?'⚠ '+d.dat.positif+' ABK reaktif ('+d.dat.rate+'%) dari '+d.dat.crew.toLocaleString("id-ID")+' terperiksa':'✓ Zero positive DAT — '+d.dat.crew.toLocaleString("id-ID")+' awak negatif')+'<br>'
-    +(d.hazard.melebihi>0?'⚠ '+d.hazard.melebihi+' parameter hazard melebihi NAB':'✓ Semua '+d.hazard.total+' parameter dalam batas NAB')+'<br>'
-    +(d.pest.count>0?'✓ Pest Control aktif — '+d.pest.count+'x di '+d.pest.lokasi+' lokasi':'⚠ Belum ada data Pest Control')
-    +(nomBio&&d.bio.melebihi>0?'<br>⚠ '+d.bio.melebihi+' sampel benzene melebihi BEI':"")
+
+    /* Temuan utama */
+    +'<div style="border:1px solid #E2E8F0;border-radius:6px;padding:20px 22px">'
+    +'<div style="font-size:9px;font-weight:700;color:#0D2B4E;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:14px;display:flex;align-items:center;gap:8px">'
+    +'<div style="width:16px;height:2px;background:#1A6BB5"></div>Temuan Utama</div>'
+    +'<div style="font-size:11px;color:#475569;line-height:2.1">'
+    +(parseFloat(d.hra.coverage)<80
+      ?'<div style="color:#C62828">\u26a0 Coverage HRA '+d.hra.coverage+'% &mdash; '+d.hra.done+'/'+d.hra.total+' armada</div>'
+      :'<div style="color:#2E7D32">\u2713 Coverage HRA '+d.hra.coverage+'% &mdash; '+d.hra.done+' armada HRA</div>')
+    +(d.dat.positif>0
+      ?'<div style="color:#C62828">\u26a0 '+d.dat.positif+' ABK reaktif ('+d.dat.rate+'%) dari '+d.dat.crew.toLocaleString("id-ID")+' terperiksa</div>'
+      :'<div style="color:#2E7D32">\u2713 Zero positif DAT &mdash; '+d.dat.crew.toLocaleString("id-ID")+' awak negatif</div>')
+    +(d.hazard.melebihi>0
+      ?'<div style="color:#C62828">\u26a0 '+d.hazard.melebihi+' parameter hazard melebihi NAB</div>'
+      :'<div style="color:#2E7D32">\u2713 Semua '+d.hazard.total+' parameter dalam batas NAB</div>')
+    +(d.pest.count>0
+      ?'<div style="color:#2E7D32">\u2713 Pest Control aktif &mdash; '+d.pest.count+'x di '+d.pest.lokasi+' lokasi</div>'
+      :'<div style="color:#C62828">\u26a0 Belum ada data Pest Control</div>')
+    +(nomBio&&d.bio.melebihi>0
+      ?'<div style="color:#C62828">\u26a0 '+d.bio.melebihi+' sampel benzene melebihi BEI</div>':"")
     +'</div></div></div>'
-    /* Regulasi Tags */
-    +'<div style="font-size:9px;color:rgba(255,255,255,.35);margin-bottom:7px;letter-spacing:1px;text-transform:uppercase">Kerangka Regulasi &amp; Standar</div>'
+
+    /* ── REFERENSI REGULASI ── */
+    +'<div style="border-top:1px solid #E2E8F0;padding-top:16px">'
+    +'<div style="font-size:9px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px">Kerangka Regulasi &amp; Standar</div>'
     +'<div style="display:flex;flex-wrap:wrap;gap:6px">'
     +["Permenaker 05/2018","ACGIH TLV &amp; BEI 2024","ILO MLC 2006","IMO MSC/Circ.1351","ISO 45001:2018","IHR 2005 WHO"].map(function(s){
-      return'<span style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.65);padding:4px 12px;border-radius:20px;font-size:9px;font-weight:600;border:1px solid rgba(255,255,255,.15)">'+s+'</span>';
-    }).join("")+'</div>'
-    +'<div style="position:absolute;bottom:28px;left:52px;right:52px;display:flex;justify-content:space-between;font-size:8px;color:rgba(255,255,255,.25)">'
-    +'<span>KONFIDENSIAL — HANYA UNTUK PENGGUNAAN INTERNAL</span><span>Hal 1 / '+totalPages+'</span>'
-    +'</div></div>';
+      return '<span style="background:#F8FAFC;border:1px solid #CBD5E1;border-radius:3px;padding:3px 10px;font-size:9px;color:#475569;font-weight:600">'+s+'</span>';
+    }).join("")
+    +'</div></div>'
+
+    +'</div>'/* end padding div */
+
+    /* ── BOTTOM FOOTER BAND ── */
+    +'<div style="position:absolute;bottom:0;left:0;right:0;background:#0D2B4E;padding:12px 64px;display:flex;justify-content:space-between;align-items:center">'
+    +'<span style="font-size:8px;color:rgba(255,255,255,.4);letter-spacing:1px;text-transform:uppercase">Konfidensial &mdash; Penggunaan Internal</span>'
+    +'<span style="font-size:8px;color:rgba(255,255,255,.4)">Hal 1 / '+totalPages+'</span>'
+    +'</div>'
+
+    +'</div>';
 
   /* ══════════════ HALAMAN 2: HRA ══════════════ */
   var hraCovNum=parseFloat(d.hra.coverage);
