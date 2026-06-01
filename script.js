@@ -455,6 +455,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   setInterval(updateDashboardAge,60000);
   document.querySelectorAll('.nav-item[data-menu="summary"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(renderSummaryPage,80));});
   document.querySelectorAll('.nav-item[data-menu="riskprediction"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(renderRiskPage,80));});
+  document.querySelectorAll('.nav-item[data-menu="closeout25"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(renderCO25Page,80));});
   document.querySelectorAll('.nav-item[data-menu="accesslog"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(loadAccessLog,80));});
   /* Re-apply demo overlay saat pindah halaman */
   document.querySelectorAll(".nav-item").forEach(item=>{
@@ -1035,7 +1036,9 @@ function switchPage(menu) {
     dokumentasi:'Dokumentasi',
     fisika:'Faktor Fisika', kimia:'Faktor Kimia',
     biologi:'Faktor Biologi', ergonomi:'Faktor Ergonomi',
-    psikososial:'Faktor Psikososial'
+    psikososial:'Faktor Psikososial',
+    summary:'Summary Dashboard', riskprediction:'Health Risk Prediction',
+    closeout25:'Closeout HRA & IH 2025', accesslog:'Access Log'
   };
   var title = titles[menu] || menu;
   document.querySelectorAll('.page-content').forEach(function(p){ p.classList.remove('active'); });
