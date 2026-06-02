@@ -45,6 +45,18 @@ function _guard(){
     return false;
   }return true;
 }
+/* Async guard — tunggu max 15 detik */
+async function _guardAsync(){
+  if(typeof _awaitPptx==="function"){
+    var ok=await _awaitPptx();
+    if(!ok){
+      if(typeof showToast==="function")showToast("Library PPT gagal dimuat. Coba refresh halaman.","error");
+      return false;
+    }
+    return true;
+  }
+  return _guard();
+}
 function _pres(t){
   var p=new PptxGenJS();
   p.layout="LAYOUT_WIDE";
@@ -290,8 +302,8 @@ function _cover(pr,judul1,judul2,sub,periode,kpis,watermark){
 /* ════════════════════════════════════════════════════
    1. EXPORT DAT — 8 Slide
 ════════════════════════════════════════════════════ */
-function exportDATPPT(){
-  if(!_guard())return;
+async function exportDATPPT(){
+  if(!(await _guardAsync()))return;
   var raw=(typeof filteredDAT!=="undefined"&&filteredDAT.length)?filteredDAT:
           (typeof rawDAT!=="undefined"?rawDAT:[]);
   if(!raw.length){showToast("Tidak ada data DAT.","warning");return;}
@@ -587,8 +599,8 @@ function exportDATPPT(){
 /* ════════════════════════════════════════════════════
    2. EXPORT HRA — 8 Slide (sama style)
 ════════════════════════════════════════════════════ */
-function exportHRAPPT(){
-  if(!_guard())return;
+async function exportHRAPPT(){
+  if(!(await _guardAsync()))return;
   var raw=(typeof filteredHRA!=="undefined"&&filteredHRA.length)?filteredHRA:
           (typeof rawHRA!=="undefined"?rawHRA:[]);
   if(!raw.length){showToast("Tidak ada data HRA.","warning");return;}
@@ -793,8 +805,8 @@ function exportHRAPPT(){
 /* ════════════════════════════════════════════════════
    3. EXPORT PEST — 6 Slide
 ════════════════════════════════════════════════════ */
-function exportPestPPT(){
-  if(!_guard())return;
+async function exportPestPPT(){
+  if(!(await _guardAsync()))return;
   var raw=(typeof filteredPest!=="undefined"&&filteredPest.length)?filteredPest:
           (typeof rawPest!=="undefined"?rawPest:[]);
   if(!raw.length){showToast("Tidak ada data Pest Control.","warning");return;}
@@ -937,8 +949,8 @@ function exportPestPPT(){
 /* ════════════════════════════════════════════════════
    4. EXPORT CLOSEOUT HRA 2025 — 6 Slide
 ════════════════════════════════════════════════════ */
-function exportCloseout25PPT(){
-  if(!_guard())return;
+async function exportCloseout25PPT(){
+  if(!(await _guardAsync()))return;
   var raw=(typeof rawCloseout!=="undefined"?rawCloseout:[]);
   if(!raw.length){showToast("Tidak ada data Closeout.","warning");return;}
   showToast("Membuat PPT Closeout...","info");
