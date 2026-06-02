@@ -7,24 +7,26 @@
 ═══════════════════════════════════════════════════════════════════ */
 "use strict";
 
-/* ══ PALETTE — Dari file asli ══ */
+/* ══ PALETTE PERTAMINA — dari mockup Pak Diyon ══ */
 var C={
-  navD:"0A1628",  /* bg gelap utama */
-  nav:"0F2044",   /* nav medium */
-  nav2:"162B55",  /* nav terang */
-  cyan:"00B4D8",  /* aksen cyan */
-  blue:"0066CC",  /* biru KPI */
-  wht:"FFFFFF",
-  gry:"F8FAFD",   /* bg card */
-  lgr:"E2E8F0",   /* border */
-  cgr:"CCDDE8",   /* circle bg */
-  grn:"2DC653",   /* hijau negatif */
-  red:"E63946",   /* merah positif */
-  ora:"F77F00",   /* oranye */
-  pur:"7B2FBE",   /* ungu */
-  muted:"8899AB",
-  txt:"374151",
-  drkblu:"1B5E8A"
+  navD:"002060",  /* Navy gelap Pertamina */
+  nav: "003195",  /* Navy medium */
+  nav2:"184799",  /* Navy terang */
+  red: "E62129",  /* Merah Pertamina */
+  cyan:"00B0F0",  /* Biru terang Pertamina */
+  blue:"0159B9",  /* Biru medium */
+  gold:"FFC000",  /* Kuning/Gold */
+  grn: "9CC82B",  /* Hijau Pertamina */
+  pos: "2DC653",  /* Hijau positif */
+  wht: "FFFFFF",
+  gry: "F5F8FC",  /* bg slide */
+  lgr: "D6E4F0",  /* border */
+  cgr: "DDEEFF",  /* circle bg */
+  ora: "FB8C00",  /* oranye */
+  pur: "5C35A0",  /* ungu */
+  muted:"6B7A8D",
+  txt: "1A2B45",
+  drkblu:"00498C"
 };
 
 var BULAN=["Januari","Februari","Maret","April","Mei","Juni",
@@ -45,14 +47,10 @@ function _guard(){
     return false;
   }return true;
 }
-/* Async guard — tunggu max 15 detik */
 async function _guardAsync(){
   if(typeof _awaitPptx==="function"){
     var ok=await _awaitPptx();
-    if(!ok){
-      if(typeof showToast==="function")showToast("Library PPT gagal dimuat. Coba refresh halaman.","error");
-      return false;
-    }
+    if(!ok){if(typeof showToast==="function")showToast("Library PPT gagal dimuat. Coba refresh.","error");return false;}
     return true;
   }
   return _guard();
@@ -70,110 +68,116 @@ function _fs(v){var s=String(v);return s.length>8?18:s.length>5?24:s.length>3?32
    SLIDE HELPERS — sesuai desain asli
 ════════════════════════════════════════════════════ */
 
-/* Header bar style: navy bg, cyan bottom line, big white title */
+/* ════════════════════════════════════════════════════
+   Header — Pertamina style (dari mockup Pak Diyon)
+   Merah full-width atas + logo box + gold accent
+════════════════════════════════════════════════════ */
 function _hdr(s,pr,title,sub){
-  s.background={color:C.navD};
-  /* Dekorasi lingkaran kanan atas */
-  s.addShape(pr.ShapeType.ellipse,{x:11.6,y:-1.0,w:3.2,h:3.2,
+  s.background={color:C.gry};
+  /* Header bar merah */
+  s.addShape(pr.ShapeType.rect,{x:0,y:0,w:13.33,h:0.82,
+    fill:{color:C.red},line:{color:C.red,width:0}});
+  /* Gold accent bawah header */
+  s.addShape(pr.ShapeType.rect,{x:0,y:0.80,w:13.33,h:0.04,
+    fill:{color:C.gold},line:{color:C.gold,width:0}});
+  /* Logo box kiri */
+  s.addShape(pr.ShapeType.rect,{x:0.22,y:0.09,w:1.08,h:0.62,
+    fill:{color:C.wht},line:{color:C.gold,width:1}});
+  s.addText("⚓",{x:0.22,y:0.09,w:1.08,h:0.62,
+    fontSize:22,align:"center",valign:"middle",fontFace:"Segoe UI Emoji"});
+  /* Title di header */
+  /* Auto-scale title jika panjang > 45 karakter */
+  var hdrFs=title.length>55?14:title.length>45?16:20;
+  s.addText(title,{x:1.46,y:0.08,w:9.2,h:0.42,
+    fontSize:hdrFs,bold:true,color:C.wht,fontFace:"Century Gothic",charSpacing:0.2});
+  if(sub)s.addText(sub,{x:1.46,y:0.50,w:9.2,h:0.28,
+    fontSize:9.5,color:"FFCCCC",italic:true,fontFace:"Segoe UI"});
+  /* Pertamina badge kanan */
+  s.addShape(pr.ShapeType.rect,{x:10.98,y:0.10,w:2.12,h:0.60,
+    fill:{color:C.navD},line:{color:C.gold,width:1}});
+  s.addText("PERTAMINA\nPATRA NIAGA",{x:10.98,y:0.10,w:2.12,h:0.60,
+    fontSize:8.5,bold:true,color:C.gold,align:"center",valign:"middle",
+    fontFace:"Century Gothic",lineSpacingMultiple:1.1});
+  /* Subheader navy band */
+  s.addShape(pr.ShapeType.rect,{x:0,y:0.84,w:4.8,h:0.44,
+    fill:{color:C.navD},line:{color:C.navD,width:0}});
+  s.addShape(pr.ShapeType.rect,{x:4.8,y:0.84,w:8.53,h:0.44,
     fill:{color:C.nav2},line:{color:C.nav2,width:0}});
-  s.addShape(pr.ShapeType.ellipse,{x:12.2,y:0.2,w:1.8,h:1.8,
-    fill:{color:C.drkblu},line:{color:C.drkblu,width:0}});
-  /* Header area */
-  s.addShape(pr.ShapeType.rect,{x:0,y:0,w:13.33,h:1.4,
-    fill:{color:C.navD},line:{color:C.navD,width:0}});
-  /* Cyan bottom line */
-  s.addShape(pr.ShapeType.rect,{x:0,y:1.38,w:13.33,h:0.05,
-    fill:{color:C.cyan},line:{color:C.cyan,width:0}});
-  /* Title */
-  s.addText(title,{x:0.35,y:0.2,w:10.5,h:0.65,
-    fontSize:22,bold:true,color:C.wht,fontFace:"Calibri"});
-  if(sub)s.addText(sub,{x:0.35,y:0.85,w:10.5,h:0.4,
-    fontSize:13,color:C.cyan,fontFace:"Calibri"});
-  /* Footer */
-  s.addShape(pr.ShapeType.rect,{x:0,y:7.18,w:13.33,h:0.32,
-    fill:{color:C.navD},line:{color:C.navD,width:0}});
+  /* Footer merah */
+  s.addShape(pr.ShapeType.rect,{x:0,y:7.20,w:13.33,h:0.30,
+    fill:{color:C.red},line:{color:C.red,width:0}});
 }
 
-/* Footer text + page number */
+/* Footer text + page number — overlay di atas red bar */
 function _ftr(s,pr,label,pg,tot){
-  s.addText(label,{x:0.25,y:7.2,w:10.5,h:0.26,
-    fontSize:9,color:C.muted,fontFace:"Calibri"});
-  s.addText(pg+" / "+tot,{x:11.8,y:7.2,w:1.3,h:0.26,
-    fontSize:9,color:C.muted,align:"right",fontFace:"Calibri"});
+  s.addText(label,{x:0.25,y:7.22,w:10.5,h:0.24,
+    fontSize:8.5,color:C.wht,fontFace:"Segoe UI",italic:true});
+  s.addText(pg+" / "+tot,{x:11.5,y:7.22,w:1.6,h:0.24,
+    fontSize:9,bold:true,color:C.gold,align:"right",fontFace:"Century Gothic"});
 }
 
 /* KPI Card — style slide 2: white card, colored top bar, circle icon */
-function _kpiCard(s,pr,x,y,w,h,icon,val,lbl,topCol,iconBg,valCol){
-  /* White card */
+function _kpiCard(s,pr,x,y,w,h,icon,val,lbl,clr,ibg,acl){
   s.addShape(pr.ShapeType.roundRect,{x:x,y:y,w:w,h:h,
-    fill:{color:C.wht},line:{color:C.lgr,width:0.5},rectRadius:0.05});
-  /* Colored top bar */
+    fill:{color:C.wht},line:{color:C.lgr,width:0.5},rectRadius:0.08,
+    shadow:{type:"outer",color:"000000",blur:5,offset:2,angle:135,opacity:0.08}});
   s.addShape(pr.ShapeType.rect,{x:x,y:y,w:w,h:0.07,
-    fill:{color:topCol},line:{color:topCol,width:0}});
-  /* Circle icon bg */
+    fill:{color:C.gold},line:{color:C.gold,width:0}});
   s.addShape(pr.ShapeType.ellipse,{x:x+w/2-0.45,y:y+0.18,w:0.9,h:0.9,
-    fill:{color:iconBg||C.cgr},line:{color:iconBg||C.cgr,width:0}});
-  /* Icon */
+    fill:{color:ibg||C.navD},line:{color:clr,width:1.5}});
   s.addText(icon,{x:x+w/2-0.45,y:y+0.22,w:0.9,h:0.8,
-    fontSize:20,align:"center",fontFace:"Segoe UI Emoji"});
-  /* Value */
-  var fs=_fs(val); if(fs>32)fs=32;
+    fontSize:22,align:"center",fontFace:"Segoe UI Emoji"});
   s.addText(String(val),{x:x,y:y+1.22,w:w,h:0.65,
-    fontSize:fs,bold:true,color:valCol||C.blue,align:"center",fontFace:"Calibri"});
-  /* Label */
-  s.addText(lbl,{x:x+0.05,y:y+1.9,w:w-0.1,h:0.3,
-    fontSize:11,color:C.muted,align:"center",fontFace:"Calibri",wrap:true});
+    fontSize:_fs(val),bold:true,color:C.navD,align:"center",fontFace:"Century Gothic"});
+  s.addText(lbl,{x:x+0.05,y:y+1.9,w:w-0.1,h:0.35,
+    fontSize:9.5,color:C.muted,align:"center",fontFace:"Segoe UI",wrap:true});
 }
 
 /* Alert banner — merah/kuning */
-function _alert(s,pr,x,y,w,h,icon,txt,col,bg){
+function _alert(s,pr,x,y,w,h,icon,txt,clr,bg){
   s.addShape(pr.ShapeType.roundRect,{x:x,y:y,w:w,h:h,
-    fill:{color:bg},line:{color:col,width:1.5},rectRadius:0.06});
-  s.addText(icon+" ",{x:x+0.15,y:y+0.05,w:0.5,h:h-0.1,
-    fontSize:14,fontFace:"Segoe UI Emoji",valign:"middle"});
-  s.addText(txt,{x:x+0.55,y:y+0.05,w:w-0.7,h:h-0.1,
-    fontSize:11,bold:true,color:col,fontFace:"Calibri",wrap:true,valign:"middle"});
+    fill:{color:bg||C.gry},line:{color:clr,width:1.5},rectRadius:0.08});
+  s.addShape(pr.ShapeType.rect,{x:x,y:y,w:w,h:0.07,
+    fill:{color:clr},line:{color:clr,width:0}});
+  s.addShape(pr.ShapeType.ellipse,{x:x+(w-0.58)/2,y:y+0.15,w:0.58,h:0.58,
+    fill:{color:clr},line:{color:clr,width:0}});
+  s.addText(icon,{x:x+(w-0.58)/2,y:y+0.16,w:0.58,h:0.52,
+    fontSize:18,align:"center",fontFace:"Segoe UI Emoji"});
+  s.addText(txt,{x:x+0.1,y:y+0.86,w:w-0.2,h:h-1.0,
+    fontSize:10.5,color:C.navD,align:"center",fontFace:"Segoe UI",
+    wrap:true,valign:"top"});
 }
 
 /* KPI row style slide 4: left circle + big number + label, colored top */
-function _kpiRow(s,pr,x,y,w,h,icon,val,lbl,col,iconBg){
+function _kpiRow(s,pr,x,y,w,h,icon,val,txt,clr,ibg){
   s.addShape(pr.ShapeType.roundRect,{x:x,y:y,w:w,h:h,
-    fill:{color:C.wht},line:{color:C.lgr,width:0.5},rectRadius:0.05});
-  s.addShape(pr.ShapeType.rect,{x:x,y:y,w:w,h:0.06,
-    fill:{color:col},line:{color:col,width:0}});
-  /* Circle */
-  s.addShape(pr.ShapeType.ellipse,{x:x+0.12,y:y+(h-0.6)/2,w:0.6,h:0.6,
-    fill:{color:iconBg||C.cgr},line:{color:iconBg||C.cgr,width:0}});
-  s.addText(icon,{x:x+0.12,y:y+(h-0.6)/2,w:0.6,h:0.6,
-    fontSize:16,align:"center",fontFace:"Segoe UI Emoji"});
-  /* Value */
-  var fs=_fs(val); if(fs>36)fs=36;
-  s.addText(String(val),{x:x+0.9,y:y+0.1,w:w-1.1,h:h*0.6,
-    fontSize:fs,bold:true,color:col,fontFace:"Calibri",valign:"middle"});
-  /* Label */
-  s.addText(lbl,{x:x+0.9,y:y+h*0.6,w:w-1.1,h:h*0.38,
-    fontSize:10.5,color:C.muted,fontFace:"Calibri",valign:"top"});
+    fill:{color:C.wht},line:{color:C.lgr,width:0.5},rectRadius:0.06});
+  s.addShape(pr.ShapeType.rect,{x:x,y:y,w:0.07,h:h,
+    fill:{color:clr},line:{color:clr,width:0}});
+  s.addShape(pr.ShapeType.ellipse,{x:x+0.18,y:y+(h-0.52)/2,w:0.52,h:0.52,
+    fill:{color:ibg||C.navD},line:{color:clr,width:1}});
+  s.addText(String(val),{x:x+0.9,y:y+0.08,w:w-1.0,h:h*0.55,
+    fontSize:_fs(val),bold:true,color:C.navD,fontFace:"Century Gothic"});
+  s.addText(txt,{x:x+0.9,y:y+h*0.55,w:w-1.0,h:h*0.42,
+    fontSize:10.5,color:C.muted,fontFace:"Segoe UI",wrap:true});
 }
 
 /* Rekomendasi card style slide 8: navy bg, numbered circle, left border */
 function _rekCard(s,pr,x,y,w,h,num,txt){
   s.addShape(pr.ShapeType.roundRect,{x:x,y:y,w:w,h:h,
-    fill:{color:C.nav},line:{color:C.cyan,width:1},rectRadius:0.08});
-  s.addShape(pr.ShapeType.rect,{x:x,y:y,w:0.06,h:h,
-    fill:{color:C.cyan},line:{color:C.cyan,width:0}});
-  /* Circle number */
-  s.addShape(pr.ShapeType.ellipse,{x:x+0.18,y:y+(h-0.52)/2,w:0.52,h:0.52,
-    fill:{color:C.cyan},line:{color:C.cyan,width:0}});
-  s.addText(String(num),{x:x+0.18,y:y+(h-0.52)/2,w:0.52,h:0.52,
-    fontSize:18,bold:true,color:C.navD,align:"center",fontFace:"Calibri"});
-  s.addText(txt,{x:x+0.86,y:y+0.1,w:w-1.0,h:h-0.2,
-    fontSize:12,color:C.wht,fontFace:"Calibri",wrap:true,valign:"middle"});
+    fill:{color:C.navD},line:{color:C.gold,width:1},rectRadius:0.08});
+  s.addShape(pr.ShapeType.ellipse,{x:x+0.18,y:y+(h-0.60)/2,w:0.60,h:0.60,
+    fill:{color:C.red},line:{color:C.gold,width:1}});
+  s.addText(String(num),{x:x+0.18,y:y+(h-0.60)/2,w:0.60,h:0.60,
+    fontSize:18,bold:true,color:C.wht,align:"center",fontFace:"Century Gothic"});
+  s.addText(txt,{x:x+0.92,y:y+0.1,w:w-1.06,h:h-0.2,
+    fontSize:12,color:C.wht,fontFace:"Segoe UI",wrap:true,valign:"middle"});
 }
 
 /* Bar chart — mirip slide 3 */
 function _barChart(s,pr,x,y,w,h,data,col,title){
   if(title)s.addText(title,{x:x,y:y-0.28,w:w,h:0.26,
-    fontSize:11,bold:true,color:C.txt,fontFace:"Calibri"});
+    fontSize:11,bold:true,color:C.txt,fontFace:"Segoe UI"});
   var vals=data.map(function(d){return d.v||0;});
   var mx=Math.max.apply(null,vals)||1;
   var n=data.length; var bw=w/n; var pad=bw*0.18;
@@ -191,13 +195,13 @@ function _barChart(s,pr,x,y,w,h,data,col,title){
       s.addShape(pr.ShapeType.roundRect,{x:bx,y:y+h-bh,w:bw-pad*2,h:bh,
         fill:{color:bc},line:{color:C.wht,width:0.5},rectRadius:0.04});
       s.addText(String(v),{x:bx,y:y+h-bh-0.3,w:bw-pad*2,h:0.28,
-        fontSize:10,bold:true,color:bc,align:"center",fontFace:"Calibri"});
+        fontSize:10,bold:true,color:bc,align:"center",fontFace:"Segoe UI"});
     } else {
       s.addText("0",{x:bx,y:y+h-0.32,w:bw-pad*2,h:0.28,
-        fontSize:9,color:C.muted,align:"center",fontFace:"Calibri"});
+        fontSize:9,color:C.muted,align:"center",fontFace:"Segoe UI"});
     }
     s.addText(d.lbl,{x:bx-pad,y:y+h+0.06,w:bw,h:0.28,
-      fontSize:8.5,color:C.muted,align:"center",fontFace:"Calibri"});
+      fontSize:8.5,color:C.muted,align:"center",fontFace:"Segoe UI"});
   });
   s.addShape(pr.ShapeType.rect,{x:x,y:y+h,w:w,h:0.03,
     fill:{color:C.txt},line:{color:C.txt,width:0}});
@@ -206,7 +210,7 @@ function _barChart(s,pr,x,y,w,h,data,col,title){
 /* Donut chart — mirip slide 3 */
 function _donutChart(s,pr,cx,cy,r,neg,pos,title){
   if(title)s.addText(title,{x:cx-r-0.5,y:cy-r-0.52,w:(r+0.5)*2,h:0.35,
-    fontSize:12,bold:true,color:C.txt,align:"center",fontFace:"Calibri"});
+    fontSize:12,bold:true,color:C.txt,align:"center",fontFace:"Segoe UI"});
   var tot=neg+pos||1;
   var negPct=Math.round(neg/tot*100);
   var posPct=Math.round(pos/tot*100);
@@ -225,17 +229,17 @@ function _donutChart(s,pr,cx,cy,r,neg,pos,title){
     fill:{color:C.wht},line:{color:C.lgr,width:1}});
   /* Center text */
   s.addText(negPct+"%",{x:cx-hr,y:cy-0.3,w:hr*2,h:0.6,
-    fontSize:22,bold:true,color:C.cyan,align:"center",fontFace:"Calibri"});
+    fontSize:22,bold:true,color:C.cyan,align:"center",fontFace:"Segoe UI"});
   /* Legend */
   var ly=cy+r+0.18;
   s.addShape(pr.ShapeType.rect,{x:cx-1.1,y:ly,w:0.2,h:0.18,
     fill:{color:C.cyan},line:{color:C.cyan,width:0}});
   s.addText("Negatif",{x:cx-0.86,y:ly-0.02,w:1.1,h:0.22,
-    fontSize:10,color:C.txt,fontFace:"Calibri"});
+    fontSize:10,color:C.txt,fontFace:"Segoe UI"});
   s.addShape(pr.ShapeType.rect,{x:cx+0.28,y:ly,w:0.2,h:0.18,
     fill:{color:C.red},line:{color:C.red,width:0}});
   s.addText("Positif",{x:cx+0.52,y:ly-0.02,w:0.9,h:0.22,
-    fontSize:10,color:C.txt,fontFace:"Calibri"});
+    fontSize:10,color:C.txt,fontFace:"Segoe UI"});
 }
 
 /* ════════════════════════════════════════════════════
@@ -244,59 +248,81 @@ function _donutChart(s,pr,cx,cy,r,neg,pos,title){
 function _cover(pr,judul1,judul2,sub,periode,kpis,watermark){
   var s=pr.addSlide();
   s.background={color:C.navD};
-  /* Vertical divider */
-  s.addShape(pr.ShapeType.rect,{x:7.8,y:0,w:0.04,h:7.5,
+  /* Header merah */
+  s.addShape(pr.ShapeType.rect,{x:0,y:0,w:13.33,h:0.82,
+    fill:{color:C.red},line:{color:C.red,width:0}});
+  s.addShape(pr.ShapeType.rect,{x:0,y:0.80,w:13.33,h:0.04,
+    fill:{color:C.gold},line:{color:C.gold,width:0}});
+  s.addShape(pr.ShapeType.rect,{x:0.22,y:0.09,w:1.08,h:0.62,
+    fill:{color:C.wht},line:{color:C.gold,width:1}});
+  s.addText("⚓",{x:0.22,y:0.09,w:1.08,h:0.62,
+    fontSize:22,align:"center",valign:"middle",fontFace:"Segoe UI Emoji"});
+  s.addText("IH Dashboard — PT Pertamina Patra Niaga",{x:1.46,y:0.10,w:8.2,h:0.36,
+    fontSize:12,bold:true,color:C.wht,fontFace:"Century Gothic",charSpacing:0.5});
+  s.addText("Industrial Hygiene · Health Division · Satuan Kerja Regional III",{x:1.46,y:0.48,w:8.2,h:0.26,
+    fontSize:9,color:"FFCCCC",italic:true,fontFace:"Segoe UI"});
+  s.addShape(pr.ShapeType.rect,{x:10.98,y:0.10,w:2.12,h:0.60,
+    fill:{color:C.navD},line:{color:C.gold,width:1}});
+  s.addText("PERTAMINA\nPATRA NIAGA",{x:10.98,y:0.10,w:2.12,h:0.60,
+    fontSize:8.5,bold:true,color:C.gold,align:"center",valign:"middle",
+    fontFace:"Century Gothic",lineSpacingMultiple:1.1});
+  /* Area kiri navy (konten) */
+  s.addShape(pr.ShapeType.rect,{x:0,y:0.84,w:7.7,h:6.66,
+    fill:{color:C.navD},line:{color:C.navD,width:0}});
+  /* Area kanan biru terang */
+  s.addShape(pr.ShapeType.rect,{x:7.7,y:0.84,w:5.63,h:6.66,
     fill:{color:C.nav2},line:{color:C.nav2,width:0}});
-  /* Dekorasi lingkaran kanan */
-  s.addShape(pr.ShapeType.ellipse,{x:9.5,y:-0.8,w:3.5,h:3.5,
-    fill:{color:C.nav2},line:{color:C.nav2,width:0}});
-  s.addShape(pr.ShapeType.ellipse,{x:10.2,y:2.0,w:2.2,h:2.2,
-    fill:{color:C.nav},line:{color:C.nav,width:0}});
-  s.addShape(pr.ShapeType.ellipse,{x:10.8,y:4.5,w:3.5,h:3.5,
-    fill:{color:C.nav2},line:{color:C.nav2,width:0}});
-  /* Watermark teks besar */
+  /* Garis pemisah gold yang tegas */
+  s.addShape(pr.ShapeType.rect,{x:7.68,y:0.84,w:0.06,h:6.66,
+    fill:{color:C.gold},line:{color:C.gold,width:0}});
+  /* Dekorasi lingkaran di area kanan */
+  s.addShape(pr.ShapeType.ellipse,{x:8.5,y:-0.5,w:3.8,h:3.8,
+    fill:{color:C.navD},line:{color:C.navD,width:0},transparency:40});
+  s.addShape(pr.ShapeType.ellipse,{x:10.5,y:4.0,w:3.5,h:3.5,
+    fill:{color:C.navD},line:{color:C.navD,width:0},transparency:40});
+  /* Watermark */
   if(watermark){
-    s.addText(watermark,{x:7.9,y:0.5,w:5.3,h:6.8,
-      fontSize:110,bold:true,color:C.nav2,fontFace:"Calibri",
-      transparency:0,valign:"middle",align:"center",lineSpacingMultiple:0.8});
+    s.addText(watermark,{x:7.76,y:1.5,w:5.5,h:4.8,
+      fontSize:52,bold:true,color:C.nav2,fontFace:"Century Gothic",
+      valign:"middle",align:"center",lineSpacingMultiple:0.8});
   }
-  /* Logo box kiri atas */
-  s.addShape(pr.ShapeType.rect,{x:0.28,y:0.24,w:0.96,h:0.96,
-    fill:{color:C.cyan},line:{color:C.cyan,width:0}});
-  s.addText("⚓",{x:0.28,y:0.24,w:0.96,h:0.96,
-    fontSize:28,align:"center",fontFace:"Segoe UI Emoji",valign:"middle"});
-  /* Kop */
-  s.addText("PERTAMINA PATRA NIAGA",{x:1.36,y:0.3,w:5.8,h:0.32,
-    fontSize:11,bold:true,color:C.wht,charSpacing:1.5,fontFace:"Calibri"});
-  s.addText("Industrial Hygiene Department · Health Division III",{x:1.36,y:0.64,w:5.8,h:0.26,
-    fontSize:9.5,color:C.cyan,fontFace:"Calibri"});
-  /* Judul besar */
-  s.addText(judul1,{x:0.28,y:1.42,w:7.2,h:1.15,
-    fontSize:54,bold:true,color:C.wht,fontFace:"Calibri",charSpacing:2});
-  s.addText(judul2,{x:0.28,y:2.62,w:7.2,h:0.72,
-    fontSize:28,bold:true,color:C.cyan,fontFace:"Calibri",charSpacing:1});
-  /* Sub */
-  s.addText(sub,{x:0.28,y:3.42,w:7.2,h:0.36,
-    fontSize:13,color:C.muted,italic:true,fontFace:"Calibri"});
+  /* Gold accent vertical line */
+  s.addShape(pr.ShapeType.rect,{x:0.30,y:1.25,w:0.09,h:4.1,
+    fill:{color:C.gold},line:{color:C.gold,width:0}});
+  /* Judul */
+  s.addText(judul1,{x:0.56,y:1.25,w:6.8,h:1.15,
+    fontSize:52,bold:true,color:C.wht,fontFace:"Century Gothic",charSpacing:1});
+  s.addText(judul2,{x:0.56,y:2.42,w:6.8,h:0.80,
+    fontSize:26,bold:true,color:C.gold,fontFace:"Century Gothic",charSpacing:0.5});
+  s.addText(sub,{x:0.56,y:3.30,w:6.8,h:0.40,
+    fontSize:12,color:"B0C4DE",italic:true,fontFace:"Segoe UI"});
   /* Periode badge */
-  s.addShape(pr.ShapeType.roundRect,{x:0.28,y:3.95,w:2.8,h:0.56,
-    fill:{color:C.cyan},line:{color:C.cyan,width:0},rectRadius:0.04});
-  s.addText(periode.toUpperCase(),{x:0.28,y:3.95,w:2.8,h:0.56,
-    fontSize:13,bold:true,color:C.navD,align:"center",charSpacing:2,fontFace:"Calibri"});
-  /* 3 KPI boxes bawah */
-  var tgl=_now();
+  s.addShape(pr.ShapeType.roundRect,{x:0.56,y:3.88,w:3.0,h:0.50,
+    fill:{color:C.red},line:{color:C.gold,width:1.5},rectRadius:0.04});
+  s.addText(periode.toUpperCase(),{x:0.56,y:3.88,w:3.0,h:0.50,
+    fontSize:12,bold:true,color:C.wht,align:"center",charSpacing:1.5,
+    fontFace:"Century Gothic"});
+  /* KPI boxes */
   (kpis||[]).forEach(function(k,i){
-    var bx=0.28+i*2.56;
-    s.addShape(pr.ShapeType.roundRect,{x:bx,y:4.76,w:2.4,h:1.42,
-      fill:{color:C.nav},line:{color:C.nav2,width:1},rectRadius:0.06});
-    s.addText(String(k.v),{x:bx,y:4.84,w:2.4,h:0.72,
-      fontSize:_fs(k.v),bold:true,color:k.c||C.cyan,align:"center",fontFace:"Calibri"});
-    s.addText(k.l,{x:bx+0.06,y:5.6,w:2.28,h:0.48,
-      fontSize:10,color:C.cyan,align:"center",fontFace:"Calibri",wrap:true});
+    var bx=0.56+i*2.28;
+    s.addShape(pr.ShapeType.roundRect,{x:bx,y:4.58,w:2.10,h:1.48,
+      fill:{color:C.nav},line:{color:C.gold,width:1},rectRadius:0.06});
+    s.addShape(pr.ShapeType.rect,{x:bx,y:4.58,w:2.10,h:0.07,
+      fill:{color:C.gold},line:{color:C.gold,width:0}});
+    s.addText(String(k.v),{x:bx,y:4.67,w:2.10,h:0.72,
+      fontSize:_fs(k.v),bold:true,color:k.c||C.gold,align:"center",
+      fontFace:"Century Gothic"});
+    s.addText(k.l,{x:bx+0.06,y:5.42,w:1.98,h:0.50,
+      fontSize:9.5,color:"B0C4DE",align:"center",fontFace:"Segoe UI",wrap:true});
   });
-  /* Footer prepared */
-  s.addText("Prepared by: IH Admin  ·  "+tgl+"  ·  CONFIDENTIAL",{
-    x:0.28,y:7.12,w:7.2,h:0.28,fontSize:9,color:C.muted,italic:true,fontFace:"Calibri"});
+  /* Footer */
+  s.addShape(pr.ShapeType.rect,{x:0,y:7.20,w:13.33,h:0.30,
+    fill:{color:C.red},line:{color:C.red,width:0}});
+  s.addText("Prepared by: IH Officer  ·  "+_now()+"  ·  CONFIDENTIAL",{
+    x:0.28,y:7.22,w:8.0,h:0.24,fontSize:8.5,color:C.wht,
+    italic:true,fontFace:"Segoe UI"});
+  s.addText("IH DASHBOARD v5.0",{x:9.5,y:7.22,w:3.6,h:0.24,
+    fontSize:8.5,bold:true,color:C.gold,align:"right",fontFace:"Century Gothic"});
 }
 
 /* ════════════════════════════════════════════════════
@@ -389,7 +415,7 @@ async function exportDATPPT(){
     var ftot=fKeys.reduce(function(a,k){return a+fleets[k];},0)||1;
     var cx=3.1,cy=4.4,r=2.0;
     s4.addText("Distribusi per Fleet",{x:0.5,y:1.55,w:5.2,h:0.3,
-      fontSize:12,bold:true,color:C.txt,align:"center",fontFace:"Calibri"});
+      fontSize:12,bold:true,color:C.txt,align:"center",fontFace:"Segoe UI"});
     s4.addShape(pr.ShapeType.ellipse,{x:cx-r,y:cy-r,w:r*2,h:r*2,
       fill:{color:fClrs[3]},line:{color:C.wht,width:1}});
     s4.addShape(pr.ShapeType.ellipse,{x:cx-r*0.85,y:cy-r,w:r*1.7,h:r*1.7,
@@ -408,7 +434,7 @@ async function exportDATPPT(){
         fill:{color:fClrs[i]},line:{color:fClrs[i],width:0}});
       var pct=ftot>0?Math.round(fleets[f]/ftot*100):0;
       s4.addText(f+" ("+pct+"%)",{x:1.0,y:ly-0.03,w:2.5,h:0.24,
-        fontSize:10.5,color:C.txt,fontFace:"Calibri"});
+        fontSize:10.5,color:C.txt,fontFace:"Segoe UI"});
     });
     /* KPI rows kanan */
     var kRows=[
@@ -433,7 +459,7 @@ async function exportDATPPT(){
     s5.addShape(pr.ShapeType.roundRect,{x:0.28,y:1.55,w:12.77,h:0.68,
       fill:{color:C.navD},line:{color:C.navD,width:0},rectRadius:0.06});
     s5.addText("🤖  AI REKOMENDASI · Kemenaker Permenaker No.5/2018 & ACGIH TLV/BEI 2024 · Konteks: Pelaut / Marine Industry",
-      {x:0.5,y:1.6,w:12.5,h:0.56,fontSize:11,bold:true,color:C.cyan,fontFace:"Calibri"});
+      {x:0.5,y:1.6,w:12.5,h:0.56,fontSize:11,bold:true,color:C.cyan,fontFace:"Segoe UI"});
     /* Rekomendasi box */
     var reks5=[];
     if(pos>0)reks5.push({
@@ -458,22 +484,22 @@ async function exportDATPPT(){
              "Pastikan chain of custody specimen terjaga — pilih lab terakreditasi KAN"]
     });
     reks5.slice(0,2).forEach(function(r,i){
-      var ry=2.35+i*2.1;
+      var ry=2.0+i*2.55;
       s5.addShape(pr.ShapeType.roundRect,{x:0.28,y:ry,w:12.77,h:1.98,
         fill:{color:C.wht},line:{color:r.catc,width:1},rectRadius:0.06});
       s5.addShape(pr.ShapeType.rect,{x:0.28,y:ry,w:12.77,h:0.5,
         fill:{color:r.catbg},line:{color:r.catc,width:0}});
       s5.addText(r.cat,{x:0.45,y:ry+0.04,w:6,h:0.42,
-        fontSize:12,bold:true,color:r.catc,fontFace:"Calibri"});
+        fontSize:12,bold:true,color:r.catc,fontFace:"Segoe UI"});
       s5.addText(r.sub,{x:0.45,y:ry+0.55,w:12.4,h:0.26,
-        fontSize:10,color:C.muted,italic:true,fontFace:"Calibri"});
+        fontSize:10,color:C.muted,italic:true,fontFace:"Segoe UI"});
       r.items.forEach(function(it,j){
         s5.addShape(pr.ShapeType.ellipse,{x:0.45,y:ry+0.9+j*0.46,w:0.26,h:0.26,
           fill:{color:r.catc},line:{color:r.catc,width:0}});
         s5.addText(String(j+1),{x:0.45,y:ry+0.9+j*0.46,w:0.26,h:0.26,
-          fontSize:11,bold:true,color:C.wht,align:"center",fontFace:"Calibri"});
+          fontSize:11,bold:true,color:C.wht,align:"center",fontFace:"Segoe UI"});
         s5.addText(it,{x:0.82,y:ry+0.88+j*0.46,w:12.1,h:0.42,
-          fontSize:11,color:C.txt,fontFace:"Calibri",wrap:true});
+          fontSize:11,color:C.txt,fontFace:"Segoe UI",wrap:true});
       });
     });
     _ftr(s5,pr,ftrlbl,5,8);
@@ -507,12 +533,12 @@ async function exportDATPPT(){
       s6.addShape(pr.ShapeType.rect,{x:rx,y:1.55,w:4.22,h:0.5,
         fill:{color:r.c},line:{color:r.c,width:0}});
       s6.addText(r.t,{x:rx+0.1,y:1.58,w:4.02,h:0.44,
-        fontSize:12,bold:true,color:C.wht,fontFace:"Calibri"});
+        fontSize:12,bold:true,color:C.wht,fontFace:"Segoe UI"});
       r.items.forEach(function(it,j){
         s6.addShape(pr.ShapeType.ellipse,{x:rx+0.15,y:2.22+j*1.5,w:0.28,h:0.28,
           fill:{color:r.c},line:{color:r.c,width:0}});
         s6.addText(it,{x:rx+0.55,y:2.18+j*1.5,w:3.55,h:1.3,
-          fontSize:11,color:C.txt,fontFace:"Calibri",wrap:true,valign:"top"});
+          fontSize:11,color:C.txt,fontFace:"Segoe UI",wrap:true,valign:"top"});
       });
     });
     _ftr(s6,pr,ftrlbl,6,8);
@@ -547,12 +573,12 @@ async function exportDATPPT(){
     s7.addTable([hdrs].concat(rows7),{
       x:0.28,y:1.55,w:12.77,
       colW:[2.3,0.9,1.0,1.1,1.1,1.1,3.27],
-      rowH:0.38,fontFace:"Calibri",border:{type:"none"},fill:{color:C.wht}
+      rowH:0.38,fontFace:"Segoe UI",border:{type:"none"},fill:{color:C.wht}
     });
     if(raw.length>14){
       s7.addText("... dan "+(raw.length-14)+" data lainnya",{
         x:0.28,y:6.82,w:12.77,h:0.25,
-        fontSize:9.5,color:C.muted,italic:true,fontFace:"Calibri"});
+        fontSize:9.5,color:C.muted,italic:true,fontFace:"Segoe UI"});
     }
     _ftr(s7,pr,ftrlbl,7,8);
 
@@ -565,9 +591,9 @@ async function exportDATPPT(){
     s8.addShape(pr.ShapeType.ellipse,{x:11.0,y:-1.0,w:3.0,h:3.0,
       fill:{color:C.nav},line:{color:C.nav,width:0}});
     s8.addText("TINDAK LANJUT & REKOMENDASI",{x:0.35,y:0.28,w:10,h:0.8,
-      fontSize:32,bold:true,color:C.wht,fontFace:"Calibri"});
+      fontSize:32,bold:true,color:C.wht,fontFace:"Segoe UI"});
     s8.addText("Drugs & Alcohol Test · "+periodeLabel,{x:0.35,y:1.1,w:10,h:0.32,
-      fontSize:14,color:C.cyan,fontFace:"Calibri"});
+      fontSize:14,color:C.cyan,fontFace:"Segoe UI"});
     /* 4 kotak rekomendasi */
     var reks8=[
       "Percepat DAT untuk "+belum+" kapal yang belum diperiksa",
@@ -586,9 +612,9 @@ async function exportDATPPT(){
     s8.addShape(pr.ShapeType.rect,{x:0.28,y:5.18,w:12.77,h:0.06,
       fill:{color:C.cyan},line:{color:C.cyan,width:0}});
     s8.addText("📅  PERIODE MONITORING BERIKUTNYA",{x:0.48,y:5.26,w:12.3,h:0.4,
-      fontSize:12,bold:true,color:C.cyan,fontFace:"Calibri"});
+      fontSize:12,bold:true,color:C.cyan,fontFace:"Segoe UI"});
     s8.addText("DAT bulan berikutnya dijadwalkan awal bulan. Pastikan vendor siap & koordinasi nakhoda untuk akses crew. Hasil positif ditindaklanjuti sebelum kapal berangkat.",
-      {x:0.48,y:5.7,w:12.3,h:0.96,fontSize:11.5,color:C.wht,fontFace:"Calibri",wrap:true});
+      {x:0.48,y:5.7,w:12.3,h:0.96,fontSize:11.5,color:C.wht,fontFace:"Segoe UI",wrap:true});
     _ftr(s8,pr,ftrlbl,8,8);
 
     pr.writeFile({fileName:"Laporan_DAT_"+periodeLabel.replace(/ /g,"_")+".pptx"});
@@ -660,16 +686,16 @@ async function exportHRAPPT(){
     /* Fleet mini donut */
     var fClrs=[C.cyan,C.blue,C.ora,C.red];
     var ftot=Object.values(fleets).reduce(function(a,v){return a+v;},0)||1;
-    s3.addText("Per Fleet",{x:9.5,y:1.65,w:3.5,h:0.3,fontSize:12,bold:true,color:C.txt,align:"center",fontFace:"Calibri"});
+    s3.addText("Per Fleet",{x:9.5,y:1.65,w:3.5,h:0.3,fontSize:12,bold:true,color:C.txt,align:"center",fontFace:"Segoe UI"});
     var ffy=2.1;
     Object.keys(fleets).forEach(function(f,i){
       s3.addShape(pr.ShapeType.roundRect,{x:9.5,y:ffy+i*1.08,w:3.55,h:0.98,
         fill:{color:C.wht},line:{color:fClrs[i],width:1},rectRadius:0.06});
       s3.addShape(pr.ShapeType.rect,{x:9.5,y:ffy+i*1.08,w:3.55,h:0.06,
         fill:{color:fClrs[i]},line:{color:fClrs[i],width:0}});
-      s3.addText(f,{x:9.65,y:ffy+0.1+i*1.08,w:1.8,h:0.38,fontSize:11,bold:true,color:fClrs[i],fontFace:"Calibri"});
+      s3.addText(f,{x:9.65,y:ffy+0.1+i*1.08,w:1.8,h:0.38,fontSize:11,bold:true,color:fClrs[i],fontFace:"Segoe UI"});
       s3.addText(fleets[f]+" kapal  ("+Math.round(fleets[f]/ftot*100)+"%)",
-        {x:9.65,y:ffy+0.5+i*1.08,w:3.2,h:0.36,fontSize:13,bold:true,color:C.txt,fontFace:"Calibri"});
+        {x:9.65,y:ffy+0.5+i*1.08,w:3.2,h:0.36,fontSize:13,bold:true,color:C.txt,fontFace:"Segoe UI"});
     });
     _ftr(s3,pr,ftrlbl,3,8);
 
@@ -685,7 +711,7 @@ async function exportHRAPPT(){
           "FFEAEC","FFF3E0",C.cgr,C.cgr,"F0E6FF"][i]);
       });
     }else{
-      s4.addText("Belum ada data hazard teridentifikasi.",{x:0.28,y:3.5,w:12.77,h:0.5,fontSize:14,color:C.muted,align:"center",fontFace:"Calibri"});
+      s4.addText("Belum ada data hazard teridentifikasi.",{x:0.28,y:3.5,w:12.77,h:0.5,fontSize:14,color:C.muted,align:"center",fontFace:"Segoe UI"});
     }
     _ftr(s4,pr,ftrlbl,4,8);
 
@@ -696,7 +722,7 @@ async function exportHRAPPT(){
     s5.addShape(pr.ShapeType.roundRect,{x:0.28,y:1.55,w:12.77,h:0.68,
       fill:{color:C.navD},line:{color:C.navD,width:0},rectRadius:0.06});
     s5.addText("🤖  AI REKOMENDASI · Permenaker No.5/2018 & ISO 45001:2018 · Konteks: Maritime / Tanker",
-      {x:0.5,y:1.6,w:12.5,h:0.56,fontSize:11,bold:true,color:C.cyan,fontFace:"Calibri"});
+      {x:0.5,y:1.6,w:12.5,h:0.56,fontSize:11,bold:true,color:C.cyan,fontFace:"Segoe UI"});
     var reks5h=[
       {cat:parseFloat(cov)<80?"⚠️ COVERAGE HRA RENDAH":"✅ COVERAGE HRA BAIK",
        catc:parseFloat(cov)<80?C.red:C.grn,catbg:parseFloat(cov)<80?"FFEAEC":"E3FAEB",
@@ -709,17 +735,17 @@ async function exportHRAPPT(){
               "Dokumentasikan rencana tindak lanjut per temuan hazard di IH Dashboard"]}
     ];
     reks5h.forEach(function(r,i){
-      var ry=2.35+i*2.1;
+      var ry=2.0+i*2.55;
       s5.addShape(pr.ShapeType.roundRect,{x:0.28,y:ry,w:12.77,h:1.98,
         fill:{color:C.wht},line:{color:r.catc,width:1},rectRadius:0.06});
       s5.addShape(pr.ShapeType.rect,{x:0.28,y:ry,w:12.77,h:0.5,
         fill:{color:r.catbg},line:{color:r.catc,width:0}});
-      s5.addText(r.cat,{x:0.45,y:ry+0.04,w:8,h:0.42,fontSize:12,bold:true,color:r.catc,fontFace:"Calibri"});
-      s5.addText(r.sub,{x:0.45,y:ry+0.55,w:12.4,h:0.26,fontSize:10,color:C.muted,italic:true,fontFace:"Calibri"});
+      s5.addText(r.cat,{x:0.45,y:ry+0.04,w:8,h:0.42,fontSize:12,bold:true,color:r.catc,fontFace:"Segoe UI"});
+      s5.addText(r.sub,{x:0.45,y:ry+0.55,w:12.4,h:0.26,fontSize:10,color:C.muted,italic:true,fontFace:"Segoe UI"});
       r.items.forEach(function(it,j){
         s5.addShape(pr.ShapeType.ellipse,{x:0.45,y:ry+0.9+j*0.46,w:0.26,h:0.26,fill:{color:r.catc},line:{color:r.catc,width:0}});
-        s5.addText(String(j+1),{x:0.45,y:ry+0.9+j*0.46,w:0.26,h:0.26,fontSize:11,bold:true,color:C.wht,align:"center",fontFace:"Calibri"});
-        s5.addText(it,{x:0.82,y:ry+0.88+j*0.46,w:12.1,h:0.42,fontSize:11,color:C.txt,fontFace:"Calibri",wrap:true});
+        s5.addText(String(j+1),{x:0.45,y:ry+0.9+j*0.46,w:0.26,h:0.26,fontSize:11,bold:true,color:C.wht,align:"center",fontFace:"Segoe UI"});
+        s5.addText(it,{x:0.82,y:ry+0.88+j*0.46,w:12.1,h:0.42,fontSize:11,color:C.txt,fontFace:"Segoe UI",wrap:true});
       });
     });
     _ftr(s5,pr,ftrlbl,5,8);
@@ -737,10 +763,10 @@ async function exportHRAPPT(){
       var rx=0.28+i*4.38;
       s6.addShape(pr.ShapeType.roundRect,{x:rx,y:1.55,w:4.22,h:5.5,fill:{color:C.wht},line:{color:r.c,width:1.5},rectRadius:0.08});
       s6.addShape(pr.ShapeType.rect,{x:rx,y:1.55,w:4.22,h:0.5,fill:{color:r.c},line:{color:r.c,width:0}});
-      s6.addText(r.t,{x:rx+0.1,y:1.58,w:4.02,h:0.44,fontSize:12,bold:true,color:C.wht,fontFace:"Calibri"});
+      s6.addText(r.t,{x:rx+0.1,y:1.58,w:4.02,h:0.44,fontSize:12,bold:true,color:C.wht,fontFace:"Segoe UI"});
       r.items.forEach(function(it,j){
         s6.addShape(pr.ShapeType.ellipse,{x:rx+0.15,y:2.22+j*1.5,w:0.28,h:0.28,fill:{color:r.c},line:{color:r.c,width:0}});
-        s6.addText(it,{x:rx+0.55,y:2.18+j*1.5,w:3.55,h:1.3,fontSize:11,color:C.txt,fontFace:"Calibri",wrap:true,valign:"top"});
+        s6.addText(it,{x:rx+0.55,y:2.18+j*1.5,w:3.55,h:1.3,fontSize:11,color:C.txt,fontFace:"Segoe UI",wrap:true,valign:"top"});
       });
     });
     _ftr(s6,pr,ftrlbl,6,8);
@@ -769,8 +795,8 @@ async function exportHRAPPT(){
         {text:ok?"✓ Done":"Belum",options:{fontSize:10,bold:true,color:ok?C.grn:C.red,fill:{color:ev},border:{type:"none"},align:"center"}}
       ];
     });
-    s7.addTable([hdrs7].concat(rows7),{x:0.28,y:1.55,w:12.77,colW:[2.5,1.0,1.1,2.5,1.7,1.27],rowH:0.38,fontFace:"Calibri",border:{type:"none"},fill:{color:C.wht}});
-    if(raw.length>14)s7.addText("... dan "+(raw.length-14)+" data lainnya",{x:0.28,y:6.82,w:12.77,h:0.25,fontSize:9.5,color:C.muted,italic:true,fontFace:"Calibri"});
+    s7.addTable([hdrs7].concat(rows7),{x:0.28,y:1.55,w:12.77,colW:[2.5,1.0,1.1,2.5,1.7,1.27],rowH:0.38,fontFace:"Segoe UI",border:{type:"none"},fill:{color:C.wht}});
+    if(raw.length>14)s7.addText("... dan "+(raw.length-14)+" data lainnya",{x:0.28,y:6.82,w:12.77,h:0.25,fontSize:9.5,color:C.muted,italic:true,fontFace:"Segoe UI"});
     _ftr(s7,pr,ftrlbl,7,8);
 
     /* S8 TINDAK LANJUT */
@@ -778,8 +804,8 @@ async function exportHRAPPT(){
     s8.background={color:C.navD};
     s8.addShape(pr.ShapeType.ellipse,{x:11.5,y:5.0,w:4.5,h:4.5,fill:{color:C.nav2},line:{color:C.nav2,width:0}});
     s8.addShape(pr.ShapeType.ellipse,{x:11.0,y:-1.0,w:3.0,h:3.0,fill:{color:C.nav},line:{color:C.nav,width:0}});
-    s8.addText("TINDAK LANJUT & REKOMENDASI",{x:0.35,y:0.28,w:10,h:0.8,fontSize:32,bold:true,color:C.wht,fontFace:"Calibri"});
-    s8.addText("Hazard Recognition & Assessment · "+tgl,{x:0.35,y:1.1,w:10,h:0.32,fontSize:14,color:C.cyan,fontFace:"Calibri"});
+    s8.addText("TINDAK LANJUT & REKOMENDASI",{x:0.35,y:0.28,w:10,h:0.8,fontSize:32,bold:true,color:C.wht,fontFace:"Segoe UI"});
+    s8.addText("Hazard Recognition & Assessment · "+tgl,{x:0.35,y:1.1,w:10,h:0.32,fontSize:14,color:C.cyan,fontFace:"Segoe UI"});
     var reks8h=[
       "Percepat HRA untuk "+belum+" unit yang belum — prioritas kapal risiko tinggi",
       "Validasi dan tindaklanjuti "+hazTop.length+" jenis hazard dominan yang teridentifikasi",
@@ -793,9 +819,9 @@ async function exportHRAPPT(){
     });
     s8.addShape(pr.ShapeType.roundRect,{x:0.28,y:5.18,w:12.77,h:1.68,fill:{color:C.nav},line:{color:C.cyan,width:1},rectRadius:0.08});
     s8.addShape(pr.ShapeType.rect,{x:0.28,y:5.18,w:12.77,h:0.06,fill:{color:C.cyan},line:{color:C.cyan,width:0}});
-    s8.addText("📅  SIKLUS HRA BERIKUTNYA",{x:0.48,y:5.26,w:12.3,h:0.4,fontSize:12,bold:true,color:C.cyan,fontFace:"Calibri"});
+    s8.addText("📅  SIKLUS HRA BERIKUTNYA",{x:0.48,y:5.26,w:12.3,h:0.4,fontSize:12,bold:true,color:C.cyan,fontFace:"Segoe UI"});
     s8.addText("HRA berikutnya dijadwalkan sebelum masa kontrak berakhir. Koordinasikan dengan vendor IH tersertifikasi. Pastikan temuan lama sudah di-closeout sebelum siklus baru dimulai.",
-      {x:0.48,y:5.7,w:12.3,h:0.96,fontSize:11.5,color:C.wht,fontFace:"Calibri",wrap:true});
+      {x:0.48,y:5.7,w:12.3,h:0.96,fontSize:11.5,color:C.wht,fontFace:"Segoe UI",wrap:true});
     _ftr(s8,pr,ftrlbl,8,8);
     pr.writeFile({fileName:"Laporan_HRA_"+tgl.replace(/ /g,"_")+".pptx"});
     showToast("PPT HRA berhasil didownload!","success");
@@ -858,7 +884,7 @@ async function exportPestPPT(){
     /* Hama top kanan */
     if(hamaTop.length){
       var hClrs=[C.red,C.ora,C.cyan,C.blue,C.pur];
-      s3.addText("Temuan Hama",{x:9.6,y:1.65,w:3.4,h:0.3,fontSize:12,bold:true,color:C.txt,fontFace:"Calibri"});
+      s3.addText("Temuan Hama",{x:9.6,y:1.65,w:3.4,h:0.3,fontSize:12,bold:true,color:C.txt,fontFace:"Segoe UI"});
       hamaTop.forEach(function(h,i){
         _kpiRow(s3,pr,9.6,2.05+i*0.98,3.45,0.88,"🐀",h[1]+"×",h[0].charAt(0).toUpperCase()+h[0].slice(1),hClrs[i],"F0E6FF");
       });
@@ -886,8 +912,8 @@ async function exportPestPPT(){
         {text:_rp(r["Est Biaya"]),options:{fontSize:10,fill:{color:ev},border:{type:"none"},align:"right"}}
       ];
     });
-    s4.addTable([hdrs4].concat(rows4),{x:0.28,y:1.55,w:12.77,colW:[2.4,1.0,2.2,4.2,2.17],rowH:0.38,fontFace:"Calibri",border:{type:"none"},fill:{color:C.wht}});
-    if(raw.length>14)s4.addText("... dan "+(raw.length-14)+" data lainnya",{x:0.28,y:6.82,w:12.77,h:0.25,fontSize:9.5,color:C.muted,italic:true,fontFace:"Calibri"});
+    s4.addTable([hdrs4].concat(rows4),{x:0.28,y:1.55,w:12.77,colW:[2.4,1.0,2.2,4.2,2.17],rowH:0.38,fontFace:"Segoe UI",border:{type:"none"},fill:{color:C.wht}});
+    if(raw.length>14)s4.addText("... dan "+(raw.length-14)+" data lainnya",{x:0.28,y:6.82,w:12.77,h:0.25,fontSize:9.5,color:C.muted,italic:true,fontFace:"Segoe UI"});
     _ftr(s4,pr,ftrlbl,4,6);
 
     /* S5 AI REKOMENDASI */
@@ -896,7 +922,7 @@ async function exportPestPPT(){
     s5.background={color:C.gry};
     s5.addShape(pr.ShapeType.roundRect,{x:0.28,y:1.55,w:12.77,h:0.68,fill:{color:C.navD},line:{color:C.navD,width:0},rectRadius:0.06});
     s5.addText("🤖  AI REKOMENDASI · IHR 2005 WHO & Permenkes No.50/2017 · Konteks: Fasilitas Perkantoran",
-      {x:0.5,y:1.6,w:12.5,h:0.56,fontSize:11,bold:true,color:C.cyan,fontFace:"Calibri"});
+      {x:0.5,y:1.6,w:12.5,h:0.56,fontSize:11,bold:true,color:C.cyan,fontFace:"Segoe UI"});
     var reks5p=[
       {cat:"🐀 PENGENDALIAN "+hamaDom.toUpperCase(),catc:C.red,catbg:"FFEAEC",
        sub:"Hama dominan "+hamaDom+" — vektor penyakit & risiko kontaminasi lingkungan kerja",
@@ -908,15 +934,15 @@ async function exportPestPPT(){
               "Arsipkan laporan pest control untuk keperluan audit K3 tahunan dan sertifikasi"]}
     ];
     reks5p.forEach(function(r,i){
-      var ry=2.35+i*2.1;
+      var ry=2.0+i*2.55;
       s5.addShape(pr.ShapeType.roundRect,{x:0.28,y:ry,w:12.77,h:1.98,fill:{color:C.wht},line:{color:r.catc,width:1},rectRadius:0.06});
       s5.addShape(pr.ShapeType.rect,{x:0.28,y:ry,w:12.77,h:0.5,fill:{color:r.catbg},line:{color:r.catc,width:0}});
-      s5.addText(r.cat,{x:0.45,y:ry+0.04,w:8,h:0.42,fontSize:12,bold:true,color:r.catc,fontFace:"Calibri"});
-      s5.addText(r.sub,{x:0.45,y:ry+0.55,w:12.4,h:0.26,fontSize:10,color:C.muted,italic:true,fontFace:"Calibri"});
+      s5.addText(r.cat,{x:0.45,y:ry+0.04,w:8,h:0.42,fontSize:12,bold:true,color:r.catc,fontFace:"Segoe UI"});
+      s5.addText(r.sub,{x:0.45,y:ry+0.55,w:12.4,h:0.26,fontSize:10,color:C.muted,italic:true,fontFace:"Segoe UI"});
       r.items.forEach(function(it,j){
         s5.addShape(pr.ShapeType.ellipse,{x:0.45,y:ry+0.9+j*0.46,w:0.26,h:0.26,fill:{color:r.catc},line:{color:r.catc,width:0}});
-        s5.addText(String(j+1),{x:0.45,y:ry+0.9+j*0.46,w:0.26,h:0.26,fontSize:11,bold:true,color:C.wht,align:"center",fontFace:"Calibri"});
-        s5.addText(it,{x:0.82,y:ry+0.88+j*0.46,w:12.1,h:0.42,fontSize:11,color:C.txt,fontFace:"Calibri",wrap:true});
+        s5.addText(String(j+1),{x:0.45,y:ry+0.9+j*0.46,w:0.26,h:0.26,fontSize:11,bold:true,color:C.wht,align:"center",fontFace:"Segoe UI"});
+        s5.addText(it,{x:0.82,y:ry+0.88+j*0.46,w:12.1,h:0.42,fontSize:11,color:C.txt,fontFace:"Segoe UI",wrap:true});
       });
     });
     _ftr(s5,pr,ftrlbl,5,6);
@@ -925,8 +951,8 @@ async function exportPestPPT(){
     var s6=pr.addSlide();
     s6.background={color:C.navD};
     s6.addShape(pr.ShapeType.ellipse,{x:11.5,y:5.0,w:4.5,h:4.5,fill:{color:C.nav2},line:{color:C.nav2,width:0}});
-    s6.addText("TINDAK LANJUT & REKOMENDASI",{x:0.35,y:0.28,w:10,h:0.8,fontSize:32,bold:true,color:C.wht,fontFace:"Calibri"});
-    s6.addText("Pest & Rodent Control · "+tgl,{x:0.35,y:1.1,w:10,h:0.32,fontSize:14,color:C.cyan,fontFace:"Calibri"});
+    s6.addText("TINDAK LANJUT & REKOMENDASI",{x:0.35,y:0.28,w:10,h:0.8,fontSize:32,bold:true,color:C.wht,fontFace:"Segoe UI"});
+    s6.addText("Pest & Rodent Control · "+tgl,{x:0.35,y:1.1,w:10,h:0.32,fontSize:14,color:C.cyan,fontFace:"Segoe UI"});
     var reks6p=["Jadwalkan pest control rutin tiap 3 bulan untuk semua "+totalLok+" lokasi aktif",
       "Intensifkan pengendalian "+hamaDom+" sebagai hama dominan yang teridentifikasi",
       "Perbaiki infrastruktur gedung — tutup celah masuk hama secara struktural",
@@ -937,9 +963,9 @@ async function exportPestPPT(){
     });
     s6.addShape(pr.ShapeType.roundRect,{x:0.28,y:5.18,w:12.77,h:1.68,fill:{color:C.nav},line:{color:C.cyan,width:1},rectRadius:0.08});
     s6.addShape(pr.ShapeType.rect,{x:0.28,y:5.18,w:12.77,h:0.06,fill:{color:C.cyan},line:{color:C.cyan,width:0}});
-    s6.addText("📅  JADWAL MONITORING BERIKUTNYA",{x:0.48,y:5.26,w:12.3,h:0.4,fontSize:12,bold:true,color:C.cyan,fontFace:"Calibri"});
+    s6.addText("📅  JADWAL MONITORING BERIKUTNYA",{x:0.48,y:5.26,w:12.3,h:0.4,fontSize:12,bold:true,color:C.cyan,fontFace:"Segoe UI"});
     s6.addText("Pest Control berikutnya dijadwalkan 3 bulan ke depan. Pastikan vendor pest control bersertifikat masih aktif. Review temuan dan tindakan lanjutan sebelum sesi berikutnya.",
-      {x:0.48,y:5.7,w:12.3,h:0.96,fontSize:11.5,color:C.wht,fontFace:"Calibri",wrap:true});
+      {x:0.48,y:5.7,w:12.3,h:0.96,fontSize:11.5,color:C.wht,fontFace:"Segoe UI",wrap:true});
     _ftr(s6,pr,ftrlbl,6,6);
     pr.writeFile({fileName:"Laporan_Pest_Control_"+tgl.replace(/ /g,"_")+".pptx"});
     showToast("PPT Pest Control berhasil didownload!","success");
@@ -988,11 +1014,11 @@ async function exportCloseout25PPT(){
     /* Progress bar */
     s2.addShape(pr.ShapeType.roundRect,{x:6.62,y:4.38,w:6.43,h:2.38,fill:{color:C.wht},line:{color:C.lgr,width:0.5},rectRadius:0.06});
     s2.addShape(pr.ShapeType.rect,{x:6.62,y:4.38,w:6.43,h:0.06,fill:{color:stC},line:{color:stC,width:0}});
-    s2.addText("Progress Closure",{x:6.8,y:4.52,w:6.1,h:0.3,fontSize:11,bold:true,color:C.txt,fontFace:"Calibri"});
+    s2.addText("Progress Closure",{x:6.8,y:4.52,w:6.1,h:0.3,fontSize:11,bold:true,color:C.txt,fontFace:"Segoe UI"});
     s2.addShape(pr.ShapeType.roundRect,{x:6.8,y:4.92,w:5.9,h:0.3,fill:{color:C.lgr},line:{color:C.lgr,width:0},rectRadius:0.05});
     s2.addShape(pr.ShapeType.roundRect,{x:6.8,y:4.92,w:5.9*(parseInt(pct)/100),h:0.3,fill:{color:stC},line:{color:stC,width:0},rectRadius:0.05});
-    s2.addText(pct+"% ("+done+" / "+total+")",{x:6.8,y:5.3,w:5.9,h:0.3,fontSize:12,bold:true,color:stC,fontFace:"Calibri"});
-    s2.addText(open>0?"Masih ada "+open+" item belum diselesaikan":"Semua item telah closed! 🎉",{x:6.8,y:5.62,w:5.9,h:0.9,fontSize:11,color:open>0?C.red:C.grn,fontFace:"Calibri",wrap:true});
+    s2.addText(pct+"% ("+done+" / "+total+")",{x:6.8,y:5.3,w:5.9,h:0.3,fontSize:12,bold:true,color:stC,fontFace:"Segoe UI"});
+    s2.addText(open>0?"Masih ada "+open+" item belum diselesaikan":"Semua item telah closed! 🎉",{x:6.8,y:5.62,w:5.9,h:0.9,fontSize:11,color:open>0?C.red:C.grn,fontFace:"Segoe UI",wrap:true});
     _ftr(s2,pr,ftrlbl,2,6);
 
     /* S3 DISTRIBUSI */
@@ -1013,7 +1039,7 @@ async function exportCloseout25PPT(){
     s4.background={color:C.gry};
     s4.addShape(pr.ShapeType.roundRect,{x:0.28,y:1.55,w:12.77,h:0.68,fill:{color:C.navD},line:{color:C.navD,width:0},rectRadius:0.06});
     s4.addText("🤖  AI REKOMENDASI · ISO 45001:2018 & ISM Code · Status HRA Closeout 2025",
-      {x:0.5,y:1.6,w:12.5,h:0.56,fontSize:11,bold:true,color:C.cyan,fontFace:"Calibri"});
+      {x:0.5,y:1.6,w:12.5,h:0.56,fontSize:11,bold:true,color:C.cyan,fontFace:"Segoe UI"});
     var reks4c=[
       {cat:open>0?"⚠️ PERCEPATAN CLOSURE":"✅ CLOSEOUT COMPLETE",catc:open>0?C.red:C.grn,catbg:open>0?"FFEAEC":"E3FAEB",
        sub:"Target: semua item closed sebelum akhir tahun — eskalasi jika ada kendala resources",
@@ -1025,15 +1051,15 @@ async function exportCloseout25PPT(){
               "Gunakan lesson learned dari HRA 2025 sebagai masukan penyempurnaan metodologi HRA 2026"]}
     ];
     reks4c.forEach(function(r,i){
-      var ry=2.35+i*2.1;
+      var ry=2.0+i*2.55;
       s4.addShape(pr.ShapeType.roundRect,{x:0.28,y:ry,w:12.77,h:1.98,fill:{color:C.wht},line:{color:r.catc,width:1},rectRadius:0.06});
       s4.addShape(pr.ShapeType.rect,{x:0.28,y:ry,w:12.77,h:0.5,fill:{color:r.catbg},line:{color:r.catc,width:0}});
-      s4.addText(r.cat,{x:0.45,y:ry+0.04,w:8,h:0.42,fontSize:12,bold:true,color:r.catc,fontFace:"Calibri"});
-      s4.addText(r.sub,{x:0.45,y:ry+0.55,w:12.4,h:0.26,fontSize:10,color:C.muted,italic:true,fontFace:"Calibri"});
+      s4.addText(r.cat,{x:0.45,y:ry+0.04,w:8,h:0.42,fontSize:12,bold:true,color:r.catc,fontFace:"Segoe UI"});
+      s4.addText(r.sub,{x:0.45,y:ry+0.55,w:12.4,h:0.26,fontSize:10,color:C.muted,italic:true,fontFace:"Segoe UI"});
       r.items.forEach(function(it,j){
         s4.addShape(pr.ShapeType.ellipse,{x:0.45,y:ry+0.9+j*0.46,w:0.26,h:0.26,fill:{color:r.catc},line:{color:r.catc,width:0}});
-        s4.addText(String(j+1),{x:0.45,y:ry+0.9+j*0.46,w:0.26,h:0.26,fontSize:11,bold:true,color:C.wht,align:"center",fontFace:"Calibri"});
-        s4.addText(it,{x:0.82,y:ry+0.88+j*0.46,w:12.1,h:0.42,fontSize:11,color:C.txt,fontFace:"Calibri",wrap:true});
+        s4.addText(String(j+1),{x:0.45,y:ry+0.9+j*0.46,w:0.26,h:0.26,fontSize:11,bold:true,color:C.wht,align:"center",fontFace:"Segoe UI"});
+        s4.addText(it,{x:0.82,y:ry+0.88+j*0.46,w:12.1,h:0.42,fontSize:11,color:C.txt,fontFace:"Segoe UI",wrap:true});
       });
     });
     _ftr(s4,pr,ftrlbl,4,6);
@@ -1063,15 +1089,15 @@ async function exportCloseout25PPT(){
         {text:ok?"✓ Closed":"⏳ Open",options:{fontSize:10,bold:true,color:ok?C.grn:C.ora,fill:{color:ev},border:{type:"none"},align:"center"}}
       ];
     });
-    s5.addTable([hdrs5].concat(rows5),{x:0.28,y:1.55,w:12.77,colW:[0.4,1.9,2.7,1.8,1.5,1.42,1.25],rowH:0.36,fontFace:"Calibri",border:{type:"none"},fill:{color:C.wht}});
+    s5.addTable([hdrs5].concat(rows5),{x:0.28,y:1.55,w:12.77,colW:[0.4,1.9,2.7,1.8,1.5,1.42,1.25],rowH:0.36,fontFace:"Segoe UI",border:{type:"none"},fill:{color:C.wht}});
     _ftr(s5,pr,ftrlbl,5,6);
 
     /* S6 TINDAK LANJUT */
     var s6=pr.addSlide();
     s6.background={color:C.navD};
     s6.addShape(pr.ShapeType.ellipse,{x:11.5,y:5.0,w:4.5,h:4.5,fill:{color:C.nav2},line:{color:C.nav2,width:0}});
-    s6.addText("TINDAK LANJUT & REKOMENDASI",{x:0.35,y:0.28,w:10,h:0.8,fontSize:32,bold:true,color:C.wht,fontFace:"Calibri"});
-    s6.addText("Closeout HRA 2025 · "+tgl,{x:0.35,y:1.1,w:10,h:0.32,fontSize:14,color:C.cyan,fontFace:"Calibri"});
+    s6.addText("TINDAK LANJUT & REKOMENDASI",{x:0.35,y:0.28,w:10,h:0.8,fontSize:32,bold:true,color:C.wht,fontFace:"Segoe UI"});
+    s6.addText("Closeout HRA 2025 · "+tgl,{x:0.35,y:1.1,w:10,h:0.32,fontSize:14,color:C.cyan,fontFace:"Segoe UI"});
     var reks6c=["Tetapkan PIC & deadline tegas untuk "+open+" item yang masih open",
       "Verifikasi efektivitas semua tindakan pengendalian yang sudah closed",
       "Kompilasi laporan closeout final untuk direksi & audit ISM Code",
@@ -1082,9 +1108,9 @@ async function exportCloseout25PPT(){
     });
     s6.addShape(pr.ShapeType.roundRect,{x:0.28,y:5.18,w:12.77,h:1.68,fill:{color:C.nav},line:{color:C.cyan,width:1},rectRadius:0.08});
     s6.addShape(pr.ShapeType.rect,{x:0.28,y:5.18,w:12.77,h:0.06,fill:{color:C.cyan},line:{color:C.cyan,width:0}});
-    s6.addText("📋  TARGET CLOSEOUT AKHIR TAHUN",{x:0.48,y:5.26,w:12.3,h:0.4,fontSize:12,bold:true,color:C.cyan,fontFace:"Calibri"});
+    s6.addText("📋  TARGET CLOSEOUT AKHIR TAHUN",{x:0.48,y:5.26,w:12.3,h:0.4,fontSize:12,bold:true,color:C.cyan,fontFace:"Segoe UI"});
     s6.addText("Seluruh open item HRA 2025 ditargetkan closed sebelum 31 Desember. Eskalasi ke management jika ada kendala resources atau teknis. Laporan final diserahkan ke direksi dan biro klasifikasi.",
-      {x:0.48,y:5.7,w:12.3,h:0.96,fontSize:11.5,color:C.wht,fontFace:"Calibri",wrap:true});
+      {x:0.48,y:5.7,w:12.3,h:0.96,fontSize:11.5,color:C.wht,fontFace:"Segoe UI",wrap:true});
     _ftr(s6,pr,ftrlbl,6,6);
     pr.writeFile({fileName:"Laporan_Closeout_HRA_2025_"+tgl.replace(/ /g,"_")+".pptx"});
     showToast("PPT Closeout HRA 2025 berhasil didownload!","success");
