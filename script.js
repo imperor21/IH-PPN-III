@@ -461,6 +461,16 @@ document.addEventListener("DOMContentLoaded",()=>{
   document.querySelectorAll('.nav-item[data-menu="menu5"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(renderAlkesPage,80));});
   document.querySelectorAll('.nav-item[data-menu="medsurv"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(renderMCUPage,80));});
   document.querySelectorAll('.nav-item[data-menu="accesslog"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(loadAccessLog,80));});
+  /* Mobile logout FAB — tampil hanya di mobile */
+  function updateMobileLogout(){
+    var btn=document.getElementById('mLogoutBtn');
+    if(!btn)return;
+    var isMobile=window.innerWidth<=768;
+    btn.style.display=isMobile?'flex':'none';
+  }
+  updateMobileLogout();
+  window.addEventListener('resize',updateMobileLogout);
+
   /* Re-apply demo overlay saat pindah halaman */
   document.querySelectorAll(".nav-item").forEach(item=>{
     item.addEventListener("click",()=>{if(isDemo())setTimeout(applyDemoOverlay,250);});
@@ -3479,8 +3489,8 @@ function _hzBg(col){var m={"1565C0":"EBF5FF","7B1FA2":"F3E5F5","2E7D32":"E8F5E9"
 function _hzFs(s){return String(s).length>9?14:String(s).length>6?18:String(s).length>4?23:29;}
 function _hzFmt(v){if(!v&&v!==0)return"—";var n=parseFloat(v);if(isNaN(n))return String(v);if(n>=1e9)return"Rp "+(n/1e9).toFixed(1)+"M";if(n>=1e6)return"Rp "+(n/1e6).toFixed(1)+"Jt";return String(v);}
 
-function exportHazardPPT(hazardType){
-  if(typeof PptxGenJS==="undefined"){showToast("Library PPT sedang dimuat, coba lagi.","warning");return;}
+async function exportHazardPPT(hazardType){
+  if(typeof _awaitPptx==="function"){var ok=await _awaitPptx();if(!ok){showToast("Library PPT gagal dimuat. Coba refresh halaman.","error");return;}} else if(typeof PptxGenJS==="undefined"){showToast("Library PPT sedang dimuat, coba lagi.","warning");return;}
   var cfg=HAZARD_CONFIG[hazardType];
   if(!cfg){showToast("Konfigurasi hazard tidak ditemukan.","error");return;}
   var data=cfg.data();
@@ -3599,9 +3609,9 @@ function exportHazardPPT(hazardType){
   s1.addShape(pr.ShapeType.rect,{x:0,y:0,w:13.3,h:0.05,fill:{color:AC},line:{color:AC,width:0}});
   s1.addShape(pr.ShapeType.ellipse,{x:8.8,y:-1.5,w:6.5,h:6.5,fill:{color:M.navL},line:{color:M.navL,width:0}});
   s1.addShape(pr.ShapeType.ellipse,{x:10.5,y:5.0,w:4.0,h:4.0,fill:{color:M.nav2},line:{color:M.nav2,width:0}});
-  s1.addText("PT PERTAMINA PATRA NIAGA  ·  Fungsi Health",
+  s1.addText("PT PERTAMINA PATRA NIAGA  ·  SATUAN KERJA REGIONAL III",
     {x:0.28,y:0.2,w:9,h:0.28,fontSize:8.5,bold:true,color:"CADCFC",charSpacing:2,fontFace:"Calibri"});
-  s1.addText("Industrial Hygiene  ·  IH Dashboard v5.0",
+  s1.addText("Divisi Industrial Hygiene & Occupational Health  ·  IH Dashboard v5.0",
     {x:0.28,y:0.5,w:9,h:0.26,fontSize:9.5,color:"8899AA",fontFace:"Calibri"});
   s1.addShape(pr.ShapeType.rect,{x:0.28,y:0.86,w:5.0,h:0.04,fill:{color:M.gld},line:{color:M.gld,width:0}});
   s1.addText("5 HIRARKI PENGENDALIAN RISIKO",
@@ -3764,8 +3774,8 @@ function exportHazardPPT(hazardType){
 /* ═══════════════════════════════════════════════════
    BIOMARKER BENZENE — 5 Slide Premium + Chart
 ═══════════════════════════════════════════════════ */
-function exportBiomarkerPPT(){
-  if(typeof PptxGenJS==="undefined"){showToast("Library PPT sedang dimuat, coba lagi.","warning");return;}
+async function exportBiomarkerPPT(){
+  if(typeof _awaitPptx==="function"){var ok=await _awaitPptx();if(!ok){showToast("Library PPT gagal dimuat. Coba refresh halaman.","error");return;}} else if(typeof PptxGenJS==="undefined"){showToast("Library PPT sedang dimuat, coba lagi.","warning");return;}
   var dataB=typeof filteredBioKimia!=="undefined"?filteredBioKimia:(typeof rawBioKimia!=="undefined"?rawBioKimia:[]);
   var dataP=typeof filteredBenzenePersonal!=="undefined"?filteredBenzenePersonal:(typeof rawBenzenePersonal!=="undefined"?rawBenzenePersonal:[]);
   if(!dataB.length&&!dataP.length){showToast("Tidak ada data Biomarker.","warning");return;}
@@ -3826,7 +3836,7 @@ function exportBiomarkerPPT(){
   s1.addShape(pr.ShapeType.rect,{x:0,y:0,w:13.3,h:0.05,fill:{color:AC},line:{color:AC,width:0}});
   s1.addShape(pr.ShapeType.ellipse,{x:8.8,y:-1.5,w:6.5,h:6.5,fill:{color:M.navL},line:{color:M.navL,width:0}});
   s1.addShape(pr.ShapeType.ellipse,{x:10.5,y:5.0,w:4.0,h:4.0,fill:{color:M.nav2},line:{color:M.nav2,width:0}});
-  s1.addText("PT PERTAMINA PATRA NIAGA  ·  Fungsi Health",
+  s1.addText("PT PERTAMINA PATRA NIAGA  ·  SATUAN KERJA REGIONAL III",
     {x:0.28,y:0.2,w:9,h:0.28,fontSize:8.5,bold:true,color:"CADCFC",charSpacing:2,fontFace:"Calibri"});
   s1.addShape(pr.ShapeType.rect,{x:0.28,y:0.55,w:5.0,h:0.04,fill:{color:M.gld},line:{color:M.gld,width:0}});
   s1.addText("⚗  BIOMONITORING BENZENE",
@@ -4426,8 +4436,8 @@ function _buildSummary(el,cKey){
     return'<div style="display:flex;justify-content:space-between;align-items:flex-start;'
       +'margin-bottom:24px;padding-bottom:14px;border-bottom:3px solid #0F2A4A">'
       +'<div>'
-      +'<div style="font-size:9px;font-weight:700;color:#C9973A;letter-spacing:2px;text-transform:uppercase;margin-bottom:2px">PT PERTAMINA PATRA NIAGA · Fungsi Health</div>'
-      +'<div style="font-size:9px;color:#94A3B8">Industrial Hygiene · IH Dashboard v5.0</div>'
+      +'<div style="font-size:9px;font-weight:700;color:#C9973A;letter-spacing:2px;text-transform:uppercase;margin-bottom:2px">PT PERTAMINA PATRA NIAGA · SATUAN KERJA REGIONAL III</div>'
+      +'<div style="font-size:9px;color:#94A3B8">Divisi Industrial Hygiene & Occupational Health · IH Dashboard v5.0</div>'
       +'</div>'
       +'<div style="text-align:right">'
       +'<div style="font-size:9.5px;font-weight:700;color:#0F2A4A">'+tgl+'</div>'
@@ -5018,7 +5028,12 @@ async function downloadMemo(){
     showToast("Memo berhasil didownload!","success");
   }catch(e){
     console.error("downloadMemo error:",e);
-    showToast("Gagal membuat memo: "+e.message,"error");
+    var errMsg = e.message||String(e);
+    /* Diagnosa spesifik */
+    if(errMsg.includes("Document")||errMsg.includes("Paragraph")||errMsg.includes("AlignmentType")){
+      errMsg += " — Coba refresh halaman, library docx mungkin versi tidak kompatibel.";
+    }
+    showToast("Gagal membuat memo: "+errMsg,"error");
   }finally{
     if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-file-word"></i> Download .docx';}
   }
@@ -5036,6 +5051,8 @@ function _docxReady(){
       var d=candidates[i];
       var Doc=d.Document||d.document;
       var Pk =d.Packer;
+      /* Cek juga AlignmentType & Paragraph tersedia (dipakai di _mp) */
+      var hasAlign=!!(d.AlignmentType||d.AlignmentType);
       if(Doc&&Pk&&(Pk.toBlob||Pk.toBase64String||Pk.toBuffer)){
         return true;
       }
@@ -5076,7 +5093,7 @@ function _memoDoc(children){
 }
 
 function _mp(runs,opts){
-  var D = window.docx;
+  var D = _D();
   opts = opts||{};
   return new D.Paragraph({
     children: Array.isArray(runs)?runs:[runs],
@@ -5106,7 +5123,7 @@ function _mNoBord(){
 
 /* Tabel 3 kolom untuk detail kegiatan */
 function _mDetailTable(rows){
-  var D = window.docx;
+  var D = _D();
   var nb = _mNoBord();
   return new D.Table({
     width:{size:9360,type:D.WidthType.DXA},
@@ -5144,7 +5161,7 @@ function _mDetailTable(rows){
 
 /* Tabel 3 kolom untuk Lampiran / Perihal */
 function _mHeaderTable(perihal){
-  var D = window.docx;
+  var D = _D();
   var nb = _mNoBord();
   return new D.Table({
     width:{size:9360,type:D.WidthType.DXA},
