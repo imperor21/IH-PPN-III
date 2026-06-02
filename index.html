@@ -42,29 +42,32 @@
     tryNext();
   }
 
-  /* ── Load docx — try multiple CDNs and versions ── */
+  /* ── Load docx ──
+     PRIORITAS: file lokal (vendor/) — satu origin, lolos firewall korporat,
+     tidak bergantung CDN sama sekali. CDN hanya cadangan.
+     CATATAN PENTING: docx v8 TIDAK punya build/index.js — file yang benar
+     adalah build/index.umd.js (set window.docx). v7.8.2 pakai build/index.js. */
   loadScript([
-    'https://unpkg.com/docx@8.5.0/build/index.js',
-    'https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.js',
-    'https://unpkg.com/docx@8.2.3/build/index.js',
-    'https://cdn.jsdelivr.net/npm/docx@8.2.3/build/index.js',
-    'https://unpkg.com/docx@7.8.2/build/index.js',
+    'vendor/docx.umd.min.js',
+    'https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js',
+    'https://unpkg.com/docx@8.5.0/build/index.umd.js',
     'https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.js',
+    'https://unpkg.com/docx@7.8.2/build/index.js',
   ], 'docx', function(ok){
     window._docxLibLoaded=ok;
-    if(!ok) console.error('[LibLoader] docx gagal dari semua CDN');
+    if(!ok) console.error('[LibLoader] docx gagal dari lokal + semua CDN');
   });
 
-  /* ── Load PptxGenJS — try multiple CDNs ── */
+  /* ── Load PptxGenJS ──
+     PRIORITAS: file lokal (vendor/) yang sudah membundel JSZip. CDN cadangan. */
   loadScript([
+    'vendor/pptxgen.bundle.min.js',
     'https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js',
     'https://unpkg.com/pptxgenjs@3.12.0/dist/pptxgen.bundle.js',
     'https://cdnjs.cloudflare.com/ajax/libs/pptxgen/3.11.0/pptxgen.bundle.js',
-    'https://cdn.jsdelivr.net/npm/pptxgenjs@3.11.0/dist/pptxgen.bundle.js',
-    'https://unpkg.com/pptxgenjs@3.11.0/dist/pptxgen.bundle.js',
   ], 'PptxGenJS', function(ok){
     window._pptxLibLoaded=ok;
-    if(!ok) console.error('[LibLoader] PptxGenJS gagal dari semua CDN');
+    if(!ok) console.error('[LibLoader] PptxGenJS gagal dari lokal + semua CDN');
   });
 })();
 </script>
