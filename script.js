@@ -4645,7 +4645,7 @@ function _buildSummary(el,cKey){
     /* Info cards DAT */
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">'
     +infoCard("fa-shield-halved","Standar Compliance DAT",
-      "MLC 2006 Reg.4.3 mewajibkan program pencegahan penyalahgunaan alkohol dan narkotika di atas kapal. Benchmark internasional ILO menetapkan threshold prevalensi &lt;1% untuk armada tanker.",
+      "Mengacu OCIMF Guidelines for the Control of Drugs and Alcohol in the Maritime Industry (2024) serta MLC 2006 Reg.4.3 dan ISM Code. Mendukung pemenuhan elemen kesehatan TMSA &amp; inspeksi SIRE 2.0; benchmark prevalensi positif &lt;1% untuk armada tanker.",
       "#2E7D32")
     +infoCard("fa-flask","Metode Pemeriksaan",
       "Pemeriksaan wajib mencakup urine drug test (UDT) dan alcohol breathalyzer test (ABT). Spesimen harus ditangani dengan chain-of-custody oleh laboratorium terakreditasi KAN.",
@@ -5242,20 +5242,24 @@ async function _buildMemoFleet(){
     _mblank(1),
     /* Pembuka */
     _mp([_mt("Dengan Hormat,",{s:22})],{a:100,align:D.AlignmentType.JUSTIFIED}),
-    /* Paragraf 1 */
+    /* Paragraf 1 — komitmen pengendalian D&A */
     _mp([_mt(
-      "Dalam rangka memastikan lingkungan kerja pelayaran yang aman, sehat, "+
-      "dan bebas dari pengaruh narkotika, psikotropika, serta alkohol, perusahaan "+
-      "berkomitmen untuk mencegah pengoperasian kapal oleh individu yang berada di "+
-      "bawah pengaruh zat terlarang.",
+      "Dalam rangka menjamin keselamatan operasi pelayaran serta lingkungan kerja "+
+      "yang sehat dan bebas dari pengaruh narkotika, psikotropika, dan alkohol, "+
+      "perusahaan menerapkan kebijakan pengendalian drug & alcohol yang mencakup "+
+      "langkah preventif, suportif, program pengujian (testing programme), serta "+
+      "tindakan disipliner secara berkelanjutan.",
     {s:22})],{a:100,align:D.AlignmentType.JUSTIFIED}),
-    /* Paragraf 2 */
+    /* Paragraf 2 — dasar acuan OCIMF 2024 + TMSA/SIRE 2.0 */
     _mp([
-      _mt("Sejalan dengan persyaratan dan rekomendasi dari ",{s:22}),
-      _mt("Oil Companies International Marine Forum (OCIMF)",{s:22,it:true}),
-      _mt(", khususnya dalam mendukung kepatuhan terhadap standar inspeksi ",{s:22}),
-      _mt("Ship Inspection Report Programme (SIRE)",{s:22,it:true}),
-      _mt(", HSSE Fungsi Health berencana melaksanakan ",{s:22}),
+      _mt("Kebijakan tersebut selaras dengan pedoman ",{s:22}),
+      _mt("Oil Companies International Marine Forum (OCIMF) — Guidelines for the Control of Drugs and Alcohol in the Maritime Industry (2024)",{s:22,it:true}),
+      _mt(", serta mendukung pemenuhan elemen kesehatan pada ",{s:22}),
+      _mt("Tanker Management and Self Assessment (TMSA)",{s:22,it:true}),
+      _mt(" dan inspeksi ",{s:22}),
+      _mt("Ship Inspection Report Programme (SIRE 2.0)",{s:22,it:true}),
+      _mt(". Sebagai bagian dari program pengujian berkala dimaksud, Fungsi Health–HSSE "+
+          "akan melaksanakan ",{s:22}),
       _mt("Annual External Drug and Alcohol Test",{s:22,bold:true}),
       _mt(" terhadap awak kapal berikut:",{s:22})
     ],{a:100,align:D.AlignmentType.JUSTIFIED}),
@@ -5329,10 +5333,12 @@ async function _buildMemoKlinik(){
     _mp([_mt("Dengan Hormat,",{s:22})],{a:100,align:D.AlignmentType.JUSTIFIED}),
     /* Paragraf 1 */
     _mp([
-      _mt("Sehubungan dengan pelaksanaan kegiatan ",{s:22}),
+      _mt("Sehubungan dengan pelaksanaan ",{s:22}),
       _mt("Annual External Drugs and Alcohol Test",{s:22,bold:true,it:true}),
-      _mt(" pada armada kapal milik PT Pertamina International Shipping, "+
-          "dengan ini kami mohon bantuan ",{s:22}),
+      _mt(" pada armada kapal milik PT Pertamina International Shipping — sebagai "+
+          "bagian dari program pengujian berkala mengacu pada pedoman ",{s:22}),
+      _mt("OCIMF Guidelines for the Control of Drugs and Alcohol in the Maritime Industry (2024)",{s:22,it:true}),
+      _mt(" — dengan ini kami mohon bantuan ",{s:22}),
       _mt(klinik,{s:22,bold:true}),
       _mt(" sebagai pelaksana di lapangan. "+
           "Adapun detail kegiatan adalah sebagai berikut:",{s:22})
