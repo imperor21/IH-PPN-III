@@ -380,87 +380,35 @@ Kirim ulang kode OTP
 
 <!-- ===== PAGE HRA ===== -->
 <section class="page-content active" id="page-hra">
-<div class="filter-bar">
-<div class="filter-group">
-<label>Bulan</label>
-<select id="hra-filter-bulan" onchange="applyHRAFilters()">
-<option value="">Semua Bulan</option>
-<option>Januari</option><option>Februari</option><option>Maret</option><option>April</option><option>Mei</option><option>Juni</option><option>Juli</option>
-<option>Agustus</option><option>September</option><option>Oktober</option>
-<option>November</option><option>Desember</option>
-</select>
+<!-- FILTER BAR — tersembunyi, tetap fungsional untuk clearHRAFilters/applyHRAFilters -->
+<div style="display:none">
+  <select id="hra-filter-bulan" onchange="applyHRAFilters()"><option value=""></option><option>Januari</option><option>Februari</option><option>Maret</option><option>April</option><option>Mei</option><option>Juni</option><option>Juli</option><option>Agustus</option><option>September</option><option>Oktober</option><option>November</option><option>Desember</option></select>
+  <select id="hra-filter-fleet" onchange="applyHRAFilters()"><option value=""></option><option>FP I</option><option>FP II</option><option>FC</option><option>FGP</option></select>
+  <input type="text" id="hra-filter-kapal" oninput="applyHRAFilters()">
+  <select id="hra-filter-jenis" onchange="applyHRAFilters()"><option value=""></option><option value="HRA">HRA</option><option value="IH">IH</option></select>
+  <!-- KPI targets lama (tetap agar tidak error) -->
+  <span id="hra-done"></span><span id="hra-belum"></span>
+  <span id="hra-budget"></span><span id="hra-coverage"></span>
+  <span id="hra-hra-done"></span><span id="hra-ih-done"></span>
+  <span id="hra-hra-pct"></span><span id="hra-ih-pct"></span>
+  <span id="hra-total"></span>
+  <select id="hra-hazard-bulan" onchange="renderHRAHazard()"><option value=""></option></select>
+  <input type="text" id="hra-search" oninput="searchHRATable()">
 </div>
-<div class="filter-group">
-<label>Jenis Fleet</label>
-<select id="hra-filter-fleet" onchange="applyHRAFilters()">
-<option value="">Semua Fleet</option>
-<option>FP I</option><option>FP II</option><option>FC</option><option>FGP</option>
-</select>
+<!-- EXECUTIVE DASHBOARD — diisi penuh oleh renderHRAPage() -->
+<div id="hra-exec-page"></div>
+<!-- Chart canvases — tetap ada agar chart functions tidak error -->
+<div style="display:none">
+  <canvas id="hraBarChart"></canvas>
+  <canvas id="hraDonutChart"></canvas>
+  <div id="hazardList"></div>
 </div>
-<div class="filter-group">
-<label>Nama Kapal</label>
-<input type="text" id="hra-filter-kapal" placeholder="Cari nama kapal..." oninput="applyHRAFilters()">
-</div>
-<button class="btn-clear" onclick="clearHRAFilters()"><i class="fas fa-xmark"></i> Reset</button>
-<button class="btn-export-ppt" onclick="exportHRAPPT()" title="Export data saat ini ke PowerPoint"><i class="fas fa-file-powerpoint"></i> Export PPT</button>
-</div>
-<div class="kpi-grid">
-<div class="kpi-card blue"><a class="kpi-link" href="#">View Detail</a><div class="kpi-icon"><i class="fas fa-ship"></i></div><div class="kpi-body"><div class="kpi-value" id="hra-total">85</div><div class="kpi-label">Total Kapal</div></div></div>
-<div class="kpi-card green"><a class="kpi-link" href="#">View Detail</a><div class="kpi-icon"><i class="fas fa-circle-check"></i></div><div class="kpi-body"><div class="kpi-value" id="hra-done">—</div><div class="kpi-label">Sudah Monitoring</div></div></div>
-<div class="kpi-card orange"><a class="kpi-link" href="#">View Detail</a><div class="kpi-icon"><i class="fas fa-clock"></i></div><div class="kpi-body"><div class="kpi-value" id="hra-belum">—</div><div class="kpi-label">Belum Monitoring</div></div></div>
-<div class="kpi-card purple"><a class="kpi-link" href="#">View Detail</a><div class="kpi-icon"><i class="fas fa-sack-dollar"></i></div><div class="kpi-body"><div class="kpi-value" id="hra-budget">—</div><div class="kpi-label">Est. Budget</div></div></div>
-<div class="kpi-card teal"><a class="kpi-link" href="#">View Detail</a><div class="kpi-icon"><i class="fas fa-percent"></i></div><div class="kpi-body"><div class="kpi-value" id="hra-coverage">—</div><div class="kpi-label">Coverage</div></div></div>
-</div>
-<div class="hcv-btn-row">
-  <button class="hcv-trigger-btn" onclick="openHazardMap()">
-    <i class="fas fa-map-location-dot"></i>
-    <span>Hazard Control View</span>
-    <i class="fas fa-arrow-up-right-from-square hcv-ext-icon"></i>
-  </button>
-</div>
-<div class="chart-row">
-<div class="chart-card">
-<div class="chart-header">
-<span class="chart-title"><i class="fas fa-chart-column"></i> Monitoring per Bulan</span>
-<div class="pill-group"><button class="pill active" onclick="toggleHRAChartType(this,'bar')">Bar</button><button class="pill" onclick="toggleHRAChartType(this,'line')">Line</button></div>
-</div>
-<div class="chart-body"><canvas id="hraBarChart"></canvas></div>
-</div>
-<div class="chart-card">
-<div class="chart-header"><span class="chart-title"><i class="fas fa-chart-pie"></i> Distribusi Fleet</span></div>
-<div class="chart-body"><canvas id="hraDonutChart"></canvas></div>
-</div>
-</div>
-<div class="bottom-row">
-<div class="hazard-card">
-<div class="chart-header">
-<span class="chart-title"><i class="fas fa-triangle-exclamation"></i> Top Hazard</span>
-<select id="hra-hazard-bulan" onchange="renderHRAHazard()" style="font-size:11px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:var(--font)">
-<option value="">Semua</option><option>Januari</option><option>Februari</option><option>Maret</option><option>April</option><option>Mei</option><option>Juni</option><option>Juli</option><option>Agustus</option><option>September</option><option>Oktober</option><option>November</option><option>Desember</option>
-</select>
-</div>
-<div id="hazardList" class="hazard-list"></div>
-</div>
-<div class="table-card">
-<div class="chart-header">
-<span class="chart-title"><i class="fas fa-table-list"></i> Data Monitoring IH</span>
-<input type="text" id="hra-search" placeholder="🔍 Cari data..." oninput="searchHRATable()" class="search-input">
-</div>
-<div class="table-wrap">
-<table class="data-table" id="hraTable"><thead><tr>
-<th onclick="sortHRATable(0)">Kapal <i class="fas fa-sort fa-xs"></i></th>
-<th onclick="sortHRATable(1)">Fleet <i class="fas fa-sort fa-xs"></i></th>
-<th onclick="sortHRATable(2)">Bulan <i class="fas fa-sort fa-xs"></i></th>
-<th onclick="sortHRATable(3)">Vendor <i class="fas fa-sort fa-xs"></i></th>
-<th onclick="sortHRATable(4)">Status <i class="fas fa-sort fa-xs"></i></th>
-<th onclick="sortHRATable(5)">Est. Budget <i class="fas fa-sort fa-xs"></i></th>
-</tr></thead><tbody id="hraTableBody"></tbody></table>
-</div>
-<div class="table-footer" id="hraTableFooter">Memuat data...</div>
-</div>
+<!-- Table — tetap ada untuk sort/search functions -->
+<div style="display:none">
+  <table><tbody id="hraTableBody"></tbody></table>
+  <div id="hraTableFooter"></div>
 </div>
 </section>
-
 <!-- ===== PAGE DAT ===== -->
 <section class="page-content" id="page-dat">
 <div class="filter-bar">
