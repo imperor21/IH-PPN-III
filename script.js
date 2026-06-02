@@ -5849,7 +5849,21 @@ function renderAlkesPage(){
   var cT=data.filter(function(r){return r._status==='TIDAK LENGKAP';}).length;
   var cE=data.filter(function(r){return r._status==='EXPIRED';}).length;
   var avgPct=data.length?Math.round(data.reduce(function(s,r){return s+r._kelengkapanPct;},0)/data.length):0;
-  var aedOk=data.filter(function(r){return!r._expiredAED;}).length;
+  /* AED Valid = AED statusnya "ADA" DAN tidak expired
+     Bug lama: hanya cek !_expiredAED → kapal tanpa AED (BELUM ADA) ikut dihitung valid */
+  var aedOk=data.filter(function(r){
+    /* Cek dari _alkesDetail (GAS) jika ada */
+    if(r._alkesDetail&&r._alkesDetail.length>0){
+      var aedItem=r._alkesDetail.find(function(d){return d.nama==='Aed';});
+      if(aedItem&&aedItem.status!=='ADA') return false;
+    } else {
+      /* Fallback: cek langsung kolom Aed */
+      var aedVal=String(r['Aed']||r['AED']||'').toUpperCase().trim();
+      if(aedVal!=='ADA') return false;
+    }
+    /* Dan tidak expired */
+    return !r._expiredAED;
+  }).length;
   var aedPct=data.length?Math.round(aedOk/data.length*100):0;
   var fullPct=data.length?Math.round(cL/data.length*100):0;
   var fleets=[...new Set(rawAlkes.map(function(r){return(r['Fleet']||'').trim();}).filter(Boolean))].sort();
