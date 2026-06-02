@@ -3599,7 +3599,7 @@ function exportHazardPPT(hazardType){
   s1.addShape(pr.ShapeType.rect,{x:0,y:0,w:13.3,h:0.05,fill:{color:AC},line:{color:AC,width:0}});
   s1.addShape(pr.ShapeType.ellipse,{x:8.8,y:-1.5,w:6.5,h:6.5,fill:{color:M.navL},line:{color:M.navL,width:0}});
   s1.addShape(pr.ShapeType.ellipse,{x:10.5,y:5.0,w:4.0,h:4.0,fill:{color:M.nav2},line:{color:M.nav2,width:0}});
-  s1.addText("PT PERTAMINA PATRA NIAGA  ·  SATUAN KERJA REGIONAL III",
+  s1.addText("PT PERTAMINA PATRA NIAGA  ·  Fungsi Health",
     {x:0.28,y:0.2,w:9,h:0.28,fontSize:8.5,bold:true,color:"CADCFC",charSpacing:2,fontFace:"Calibri"});
   s1.addText("Divisi Industrial Hygiene & Occupational Health  ·  IH Dashboard v5.0",
     {x:0.28,y:0.5,w:9,h:0.26,fontSize:9.5,color:"8899AA",fontFace:"Calibri"});
@@ -3826,7 +3826,7 @@ function exportBiomarkerPPT(){
   s1.addShape(pr.ShapeType.rect,{x:0,y:0,w:13.3,h:0.05,fill:{color:AC},line:{color:AC,width:0}});
   s1.addShape(pr.ShapeType.ellipse,{x:8.8,y:-1.5,w:6.5,h:6.5,fill:{color:M.navL},line:{color:M.navL,width:0}});
   s1.addShape(pr.ShapeType.ellipse,{x:10.5,y:5.0,w:4.0,h:4.0,fill:{color:M.nav2},line:{color:M.nav2,width:0}});
-  s1.addText("PT PERTAMINA PATRA NIAGA  ·  SATUAN KERJA REGIONAL III",
+  s1.addText("PT PERTAMINA PATRA NIAGA  ·  Fungsi Health",
     {x:0.28,y:0.2,w:9,h:0.28,fontSize:8.5,bold:true,color:"CADCFC",charSpacing:2,fontFace:"Calibri"});
   s1.addShape(pr.ShapeType.rect,{x:0.28,y:0.55,w:5.0,h:0.04,fill:{color:M.gld},line:{color:M.gld,width:0}});
   s1.addText("⚗  BIOMONITORING BENZENE",
@@ -4426,7 +4426,7 @@ function _buildSummary(el,cKey){
     return'<div style="display:flex;justify-content:space-between;align-items:flex-start;'
       +'margin-bottom:24px;padding-bottom:14px;border-bottom:3px solid #0F2A4A">'
       +'<div>'
-      +'<div style="font-size:9px;font-weight:700;color:#C9973A;letter-spacing:2px;text-transform:uppercase;margin-bottom:2px">PT PERTAMINA PATRA NIAGA · SATUAN KERJA REGIONAL III</div>'
+      +'<div style="font-size:9px;font-weight:700;color:#C9973A;letter-spacing:2px;text-transform:uppercase;margin-bottom:2px">PT PERTAMINA PATRA NIAGA · Fungsi Health</div>'
       +'<div style="font-size:9px;color:#94A3B8">Divisi Industrial Hygiene & Occupational Health · IH Dashboard v5.0</div>'
       +'</div>'
       +'<div style="text-align:right">'
