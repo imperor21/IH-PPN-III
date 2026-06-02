@@ -4978,27 +4978,55 @@ function _mv(id){
 }
 
 async function downloadMemo(){
-  var btn = document.getElementById("btnDownloadMemo");
+  var btn=document.getElementById("btnDownloadMemo");
   if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Membuat dokumen...';}
   try{
-    if(!window.docx){ showToast("Library docx belum dimuat, tunggu sebentar.","warning"); return; }
-    if(_memoType === "fleet") await _buildMemoFleet();
+    /* Tunggu library docx max 8 detik dengan retry */
+    var waited=0;
+    while(!_docxReady()&&waited<8000){
+      await new Promise(function(r){setTimeout(r,300);});
+      waited+=300;
+    }
+    if(!_docxReady()){
+      showToast("Library docx gagal dimuat. Coba refresh halaman.","error");
+      return;
+    }
+    if(_memoType==="fleet") await _buildMemoFleet();
     else await _buildMemoKlinik();
     closeMemoModal();
     showToast("Memo berhasil didownload!","success");
   }catch(e){
-    console.error(e);
+    console.error("downloadMemo error:",e);
     showToast("Gagal membuat memo: "+e.message,"error");
   }finally{
     if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-file-word"></i> Download .docx';}
   }
 }
 
+/* Cek apakah window.docx sudah siap dan punya Document + Packer */
+function _docxReady(){
+  try{
+    var d=window.docx;
+    if(!d) return false;
+    /* Cek Document tersedia */
+    var Doc=d.Document||( d.default&&d.default.Document);
+    if(!Doc) return false;
+    /* Cek Packer tersedia */
+    var Pk=d.Packer||(d.default&&d.default.Packer);
+    if(!Pk) return false;
+    /* Cek minimal ada toBlob atau toBase64String */
+    return !!(Pk.toBlob||Pk.toBase64String);
+  }catch(e){return false;}
+}
+
 /* ════════════════════════════════════════════════════
    Builder helpers — pakai window.docx
 ════════════════════════════════════════════════════ */
+/* _D(): ambil namespace docx, support UMD (window.docx.X) dan ESM default (window.docx.default.X) */
+function _D(){return window.docx.Document?window.docx:(window.docx.default||window.docx);}
+
 function _memoDoc(children){
-  var D = window.docx;
+  var D = _D();
   return new D.Document({
     sections:[{
       properties:{
@@ -5025,18 +5053,18 @@ function _mp(runs,opts){
 
 function _mt(text,opts){
   opts = opts||{};
-  return new (window.docx.TextRun)({
+  return new (_D().TextRun)({
     text:text, font:"Arial", size:opts.s||22,
     bold:opts.bold||false, italics:opts.it||false, color:opts.c||"000000"
   });
 }
 
 function _mblank(n){
-  return new (window.docx.Paragraph)({spacing:{before:0,after:(n||1)*100}});
+  return new (_D().Paragraph)({spacing:{before:0,after:(n||1)*100}});
 }
 
 function _mNoBord(){
-  var b = window.docx.BorderStyle.NONE;
+  var b = _D().BorderStyle ? _D().BorderStyle.NONE : 'none';
   var nb = {style:b,size:0,color:"FFFFFF"};
   return {top:nb,bottom:nb,left:nb,right:nb,insideH:nb,insideV:nb};
 }
@@ -5103,24 +5131,40 @@ function _mHeaderTable(perihal){
 }
 
 function _mSave(doc, filename){
-  return window.docx.Packer.toBuffer(doc).then(function(buf){
-    var blob = new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
-    var url  = URL.createObjectURL(blob);
-    var a    = document.createElement("a");
-    a.href   = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  });
+  /* Browser: gunakan Packer.toBlob (bukan Node-only method) */
+  var packer = window.docx.Packer || window.docx.default && window.docx.default.Packer;
+  if(!packer) return Promise.reject(new Error("Packer tidak ditemukan di window.docx"));
+  var toBlob = packer.toBlob ? packer.toBlob.bind(packer) : null;
+  var toB64  = packer.toBase64String ? packer.toBase64String.bind(packer) : null;
+  if(toBlob){
+    return toBlob(doc).then(function(blob){
+      var url = URL.createObjectURL(blob);
+      var a   = document.createElement("a");
+      a.href  = url; a.download = filename;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a); URL.revokeObjectURL(url);
+    });
+  } else if(toB64){
+    return toB64(doc).then(function(b64){
+      var bin=atob(b64),arr=new Uint8Array(bin.length);
+      for(var i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);
+      var blob=new Blob([arr],{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
+      var url=URL.createObjectURL(blob);
+      var a=document.createElement("a");
+      a.href=url; a.download=filename;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a); URL.revokeObjectURL(url);
+    });
+  } else {
+    return Promise.reject(new Error("Packer.toBlob dan Packer.toBase64String tidak tersedia"));
+  }
 }
 
 /* ════════════════════════════════════════════════════
    MEMO 1 — Manager Fleet Product
 ════════════════════════════════════════════════════ */
 async function _buildMemoFleet(){
-  var D       = window.docx;
+  var D       = _D();
   var tgl     = _mv("mf_tgl")     || "Jakarta, ___________";
   var tujuan  = _mv("mf_tujuan")  || "Manager Fleet Product I";
   var kapal   = _mv("mf_kapal")   || "_______________";
@@ -5202,7 +5246,7 @@ async function _buildMemoFleet(){
    MEMO 2 — Klinik / Vendor Pelaksana
 ════════════════════════════════════════════════════ */
 async function _buildMemoKlinik(){
-  var D        = window.docx;
+  var D        = _D();
   var tgl      = _mv("mf_tgl")      || "Jakarta, ___________";
   var klinik   = _mv("mf_klinik")   || "_______________";
   var instansi = _mv("mf_instansi") || "";
