@@ -10,10 +10,64 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <link rel="stylesheet" href="style.css">
-<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
-<script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
+<script>
+/* ── Dynamic Library Loader — multi-CDN fallback ── */
+(function(){
+  function loadScript(urls, globalCheck, onDone){
+    var idx=0;
+    function tryNext(){
+      if(idx>=urls.length){
+        console.warn('[LibLoader] Semua CDN gagal untuk: '+globalCheck);
+        onDone&&onDone(false);return;
+      }
+      var s=document.createElement('script');
+      s.src=urls[idx++];
+      s.async=true;
+      s.onload=function(){
+        if(window[globalCheck]||eval('typeof '+globalCheck)!=='undefined'){
+          console.log('[LibLoader] OK: '+globalCheck);
+          onDone&&onDone(true);
+        } else {
+          /* Script loaded but global not set — common with ESM/CJS bundles */
+          /* Try to find the export */
+          console.log('[LibLoader] Loaded but global not found, retrying CDN: '+globalCheck);
+          tryNext();
+        }
+      };
+      s.onerror=function(){console.warn('[LibLoader] CDN failed: '+s.src);tryNext();};
+      document.head.appendChild(s);
+    }
+    tryNext();
+  }
+
+  /* ── Load docx — try multiple CDNs and versions ── */
+  loadScript([
+    'https://unpkg.com/docx@8.5.0/build/index.js',
+    'https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.js',
+    'https://unpkg.com/docx@8.2.3/build/index.js',
+    'https://cdn.jsdelivr.net/npm/docx@8.2.3/build/index.js',
+    'https://unpkg.com/docx@7.8.2/build/index.js',
+    'https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.js',
+  ], 'docx', function(ok){
+    window._docxLibLoaded=ok;
+    if(!ok) console.error('[LibLoader] docx gagal dari semua CDN');
+  });
+
+  /* ── Load PptxGenJS — try multiple CDNs ── */
+  loadScript([
+    'https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js',
+    'https://unpkg.com/pptxgenjs@3.12.0/dist/pptxgen.bundle.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/pptxgen/3.11.0/pptxgen.bundle.js',
+    'https://cdn.jsdelivr.net/npm/pptxgenjs@3.11.0/dist/pptxgen.bundle.js',
+    'https://unpkg.com/pptxgenjs@3.11.0/dist/pptxgen.bundle.js',
+  ], 'PptxGenJS', function(ok){
+    window._pptxLibLoaded=ok;
+    if(!ok) console.error('[LibLoader] PptxGenJS gagal dari semua CDN');
+  });
+})();
+</script>
 </head>
 <body>
 
