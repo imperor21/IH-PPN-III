@@ -847,6 +847,18 @@ function clearEmptyChart(canvasId){
 
 /* HRA PAGE */
 
+
+/* ── PPT Library Waiter ── */
+async function _awaitPptx(){
+  var waited=0;
+  while(typeof PptxGenJS==="undefined"&&waited<15000){
+    await new Promise(function(r){setTimeout(r,500);});
+    waited+=500;
+  }
+  return typeof PptxGenJS!=="undefined";
+}
+
+/* ── DOCX Library Waiter ── */
 /* ── HRA/IH JENIS HELPER ── */
 function hraJenis(namaKapal){
   var n=String(namaKapal||'').trim();
@@ -4981,14 +4993,23 @@ async function downloadMemo(){
   var btn=document.getElementById("btnDownloadMemo");
   if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Membuat dokumen...';}
   try{
-    /* Tunggu library docx max 8 detik dengan retry */
+    /* Tunggu library docx max 15 detik dengan retry setiap 500ms */
     var waited=0;
-    while(!_docxReady()&&waited<8000){
-      await new Promise(function(r){setTimeout(r,300);});
-      waited+=300;
+    while(!_docxReady()&&waited<15000){
+      await new Promise(function(r){setTimeout(r,500);});
+      waited+=500;
+      if(btn&&waited%2000===0){
+        btn.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Memuat library ('+Math.round(waited/1000)+'s)...';
+      }
     }
     if(!_docxReady()){
-      showToast("Library docx gagal dimuat. Coba refresh halaman.","error");
+      /* Diagnosis lebih detail untuk debugging */
+      var diagMsg="Library docx gagal dimuat setelah 15 detik. ";
+      if(!window.docx) diagMsg+="window.docx=undefined. ";
+      else diagMsg+="window.docx ada tapi Packer tidak ditemukan. ";
+      diagMsg+="Pastikan koneksi internet aktif lalu refresh.";
+      showToast(diagMsg,"error");
+      console.error("[DOCX]",diagMsg,"window.docx=",window.docx);
       return;
     }
     if(_memoType==="fleet") await _buildMemoFleet();
@@ -5006,16 +5027,20 @@ async function downloadMemo(){
 /* Cek apakah window.docx sudah siap dan punya Document + Packer */
 function _docxReady(){
   try{
-    var d=window.docx;
-    if(!d) return false;
-    /* Cek Document tersedia */
-    var Doc=d.Document||( d.default&&d.default.Document);
-    if(!Doc) return false;
-    /* Cek Packer tersedia */
-    var Pk=d.Packer||(d.default&&d.default.Packer);
-    if(!Pk) return false;
-    /* Cek minimal ada toBlob atau toBase64String */
-    return !!(Pk.toBlob||Pk.toBase64String);
+    /* docx UMD dapat expose ke: window.docx, window.docx.default, atau window.Document */
+    var candidates=[
+      window.docx,
+      window.docx&&window.docx.default,
+    ].filter(Boolean);
+    for(var i=0;i<candidates.length;i++){
+      var d=candidates[i];
+      var Doc=d.Document||d.document;
+      var Pk =d.Packer;
+      if(Doc&&Pk&&(Pk.toBlob||Pk.toBase64String||Pk.toBuffer)){
+        return true;
+      }
+    }
+    return false;
   }catch(e){return false;}
 }
 
@@ -5023,7 +5048,17 @@ function _docxReady(){
    Builder helpers — pakai window.docx
 ════════════════════════════════════════════════════ */
 /* _D(): ambil namespace docx, support UMD (window.docx.X) dan ESM default (window.docx.default.X) */
-function _D(){return window.docx.Document?window.docx:(window.docx.default||window.docx);}
+function _D(){
+  /* Ambil namespace docx yang benar — handle UMD, ESM-wrapped, dan CommonJS */
+  if(!window.docx) throw new Error("window.docx tidak tersedia");
+  var d=window.docx;
+  /* Pola 1: langsung {Document, Packer, ...} */
+  if(d.Document&&d.Packer) return d;
+  /* Pola 2: { default: {Document, Packer, ...} } */
+  if(d.default&&d.default.Document&&d.default.Packer) return d.default;
+  /* Pola 3: mungkin versi lama expose berbeda */
+  return d;
+}
 
 function _memoDoc(children){
   var D = _D();
@@ -5131,32 +5166,33 @@ function _mHeaderTable(perihal){
 }
 
 function _mSave(doc, filename){
-  /* Browser: gunakan Packer.toBlob (bukan Node-only method) */
-  var packer = window.docx.Packer || window.docx.default && window.docx.default.Packer;
-  if(!packer) return Promise.reject(new Error("Packer tidak ditemukan di window.docx"));
-  var toBlob = packer.toBlob ? packer.toBlob.bind(packer) : null;
-  var toB64  = packer.toBase64String ? packer.toBase64String.bind(packer) : null;
-  if(toBlob){
-    return toBlob(doc).then(function(blob){
-      var url = URL.createObjectURL(blob);
-      var a   = document.createElement("a");
-      a.href  = url; a.download = filename;
-      document.body.appendChild(a); a.click();
-      document.body.removeChild(a); URL.revokeObjectURL(url);
-    });
-  } else if(toB64){
-    return toB64(doc).then(function(b64){
+  var D=_D();
+  var Pk=D.Packer;
+  if(!Pk) return Promise.reject(new Error("Packer tidak ditemukan"));
+  function doDownload(blob){
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement("a");
+    a.href=url; a.download=filename;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){URL.revokeObjectURL(url);},1000);
+  }
+  /* Priority: toBlob (browser) > toBase64String > toBuffer (Node, tapi coba juga) */
+  if(Pk.toBlob){
+    return Pk.toBlob(doc).then(function(blob){doDownload(blob);});
+  } else if(Pk.toBase64String){
+    return Pk.toBase64String(doc).then(function(b64){
       var bin=atob(b64),arr=new Uint8Array(bin.length);
       for(var i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);
-      var blob=new Blob([arr],{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
-      var url=URL.createObjectURL(blob);
-      var a=document.createElement("a");
-      a.href=url; a.download=filename;
-      document.body.appendChild(a); a.click();
-      document.body.removeChild(a); URL.revokeObjectURL(url);
+      doDownload(new Blob([arr],{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"}));
+    });
+  } else if(Pk.toBuffer){
+    /* toBuffer ada di beberapa versi browser bundle juga */
+    return Promise.resolve(Pk.toBuffer(doc)).then(function(buf){
+      doDownload(new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"}));
     });
   } else {
-    return Promise.reject(new Error("Packer.toBlob dan Packer.toBase64String tidak tersedia"));
+    return Promise.reject(new Error("Tidak ada method Packer yang tersedia (toBlob/toBase64String/toBuffer)"));
   }
 }
 
