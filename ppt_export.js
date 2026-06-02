@@ -41,6 +41,16 @@ function _guard(){
     return false;
   }return true;
 }
+/* Tunggu PptxGenJS termuat (lokal/CDN) hingga 20 detik dengan polling.
+   Inilah fungsi yang sebelumnya hilang sehingga klik dini langsung gagal. */
+async function _awaitPptx(){
+  var waited=0;
+  while(typeof PptxGenJS==="undefined" && waited<20000){
+    await new Promise(function(r){setTimeout(r,300);});
+    waited+=300;
+  }
+  return typeof PptxGenJS!=="undefined";
+}
 async function _guardAsync(){
   if(typeof _awaitPptx==="function"){
     var ok=await _awaitPptx();
@@ -193,68 +203,50 @@ function _donutChart(s,pr,x,y,w,h,vals,labels,clrs,title){
 function _cover(pr,judul1,judul2,sub,periode,kpis,watermark){
   var s=pr.addSlide();
   s.background={color:C.wht};
-  /* Sidebar navy kiri */
-  s.addShape(pr.ShapeType.rect,{x:0,y:0,w:4.6,h:7.5,
-    fill:{color:C.navD},line:{color:C.navD,width:0}});
-  /* Gold accent kiri */
-  s.addShape(pr.ShapeType.rect,{x:4.6,y:0,w:0.06,h:7.5,
-    fill:{color:C.gold},line:{color:C.gold,width:0}});
-  /* Merah tipis atas kanan */
-  s.addShape(pr.ShapeType.rect,{x:4.66,y:0,w:8.67,h:0.06,
-    fill:{color:C.red},line:{color:C.red,width:0}});
-  /* Label atas kiri */
-  s.addText("PERTAMINA\nPATRA NIAGA",{x:0.22,y:0.24,w:4.0,h:0.80,
-    fontSize:11,bold:true,color:C.gold,align:"center",fontFace:"Segoe UI",lineSpacingMultiple:1.3});
-  /* Garis separator */
-  s.addShape(pr.ShapeType.rect,{x:0.50,y:1.16,w:3.2,h:0.02,
-    fill:{color:C.gold},line:{color:C.gold,width:0}});
-  /* Watermark kiri */
-  if(watermark)s.addText(watermark,{x:0.10,y:1.6,w:4.2,h:3.0,
-    fontSize:42,bold:true,color:C.nav,fontFace:"Segoe UI",
-    valign:"middle",align:"center",lineSpacingMultiple:0.85,transparency:0});
-  /* KPI boxes kiri */
+  /* Sidebar navy berlapis — kesan kedalaman */
+  s.addShape(pr.ShapeType.rect,{x:0,y:0,w:4.6,h:7.5,fill:{color:C.navD},line:{color:C.navD,width:0}});
+  s.addShape(pr.ShapeType.rect,{x:0,y:0,w:4.6,h:1.40,fill:{color:C.nav},line:{color:C.nav,width:0}});
+  /* Aksen gold vertikal + merah tipis atas kanan */
+  s.addShape(pr.ShapeType.rect,{x:4.60,y:0,w:0.07,h:7.5,fill:{color:C.gold},line:{color:C.gold,width:0}});
+  s.addShape(pr.ShapeType.rect,{x:4.67,y:0,w:8.66,h:0.07,fill:{color:C.red},line:{color:C.red,width:0}});
+  /* Brand */
+  s.addText("PERTAMINA\nPATRA NIAGA",{x:0.22,y:0.30,w:4.0,h:0.80,
+    fontSize:13,bold:true,color:C.gold,align:"center",fontFace:"Segoe UI",charSpacing:2,lineSpacingMultiple:1.25});
+  s.addShape(pr.ShapeType.rect,{x:1.30,y:1.18,w:2.0,h:0.018,fill:{color:C.gold},line:{color:C.gold,width:0}});
+  /* Watermark / inisial */
+  if(watermark)s.addText(watermark,{x:0.10,y:1.70,w:4.2,h:2.9,
+    fontSize:46,bold:true,color:C.nav2,fontFace:"Segoe UI",valign:"middle",align:"center",lineSpacingMultiple:0.85});
+  /* KPI pills — tab gold di kiri, angka kontras */
   (kpis||[]).slice(0,3).forEach(function(k,i){
-    var ky=4.90+i*0.82;
-    s.addShape(pr.ShapeType.roundRect,{x:0.26,y:ky,w:3.88,h:0.70,
-      fill:{color:C.nav},line:{color:C.gold,width:0.5},rectRadius:0.06});
-    s.addText(String(k.v),{x:0.26,y:ky,w:1.20,h:0.70,
-      fontSize:_fs(k.v),bold:true,color:k.c||C.gold,align:"center",valign:"middle",fontFace:"Segoe UI"});
-    s.addText(k.l,{x:1.52,y:ky+0.06,w:2.5,h:0.58,
-      fontSize:10,color:"AABBD0",valign:"middle",fontFace:"Segoe UI"});
+    var ky=4.86+i*0.84;
+    s.addShape(pr.ShapeType.roundRect,{x:0.26,y:ky,w:3.90,h:0.72,fill:{color:C.nav},line:{color:C.nav,width:0},rectRadius:0.07});
+    s.addShape(pr.ShapeType.rect,{x:0.26,y:ky+0.10,w:0.07,h:0.52,fill:{color:k.c||C.gold},line:{color:k.c||C.gold,width:0}});
+    s.addText(String(k.v),{x:0.36,y:ky,w:1.18,h:0.72,fontSize:_fs(k.v),bold:true,color:k.c||C.gold,align:"center",valign:"middle",fontFace:"Segoe UI"});
+    s.addText(k.l,{x:1.58,y:ky+0.07,w:2.46,h:0.58,fontSize:10,color:"AABBD0",valign:"middle",fontFace:"Segoe UI"});
   });
-  /* JUDUL kanan atas */
-  s.addText(judul1,{x:5.0,y:0.60,w:8.0,h:2.0,
-    fontSize:48,bold:true,color:C.navD,fontFace:"Segoe UI",lineSpacingMultiple:0.9});
-  s.addText(judul2,{x:5.0,y:2.62,w:8.0,h:0.72,
-    fontSize:22,bold:false,color:C.red,fontFace:"Segoe UI"});
-  /* Garis pemisah */
-  s.addShape(pr.ShapeType.rect,{x:5.0,y:3.44,w:8.0,h:0.02,
-    fill:{color:C.lgr},line:{color:C.lgr,width:0}});
+  /* Kanan — eyebrow, judul, rule gold */
+  s.addText("LAPORAN KOMPREHENSIF · INDUSTRIAL HYGIENE",{x:5.0,y:0.50,w:8.0,h:0.30,
+    fontSize:10.5,bold:true,color:C.red,charSpacing:2,fontFace:"Segoe UI"});
+  s.addText(judul1,{x:4.97,y:0.92,w:8.1,h:1.9,fontSize:46,bold:true,color:C.navD,fontFace:"Segoe UI",lineSpacingMultiple:0.92});
+  s.addText(judul2,{x:5.0,y:2.78,w:8.0,h:0.70,fontSize:21,bold:false,color:C.red,fontFace:"Segoe UI"});
+  s.addShape(pr.ShapeType.rect,{x:5.0,y:3.52,w:1.30,h:0.035,fill:{color:C.gold},line:{color:C.gold,width:0}});
+  s.addShape(pr.ShapeType.rect,{x:6.30,y:3.555,w:6.7,h:0.012,fill:{color:C.lgr},line:{color:C.lgr,width:0}});
   /* Sub */
-  s.addText(sub,{x:5.0,y:3.54,w:8.0,h:0.36,
-    fontSize:11,color:C.muted,italic:true,fontFace:"Segoe UI"});
-  /* Periode badge */
-  s.addShape(pr.ShapeType.roundRect,{x:5.0,y:4.08,w:2.40,h:0.44,
-    fill:{color:C.navD},line:{color:C.navD,width:0},rectRadius:0.06});
-  s.addText(periode,{x:5.0,y:4.08,w:2.40,h:0.44,
-    fontSize:11,bold:true,color:C.wht,align:"center",fontFace:"Segoe UI"});
-  /* Info */
-  s.addText("PT Pertamina Patra Niaga · Satuan Kerja Regional III",{x:5.0,y:4.66,w:8.0,h:0.28,
-    fontSize:9.5,color:C.muted,fontFace:"Segoe UI"});
-  s.addText("Laporan Komprehensif Industrial Hygiene",{x:5.0,y:4.96,w:8.0,h:0.28,
-    fontSize:9.5,color:C.muted,fontFace:"Segoe UI"});
-  /* Footer kanan */
-  s.addShape(pr.ShapeType.rect,{x:4.66,y:7.20,w:8.67,h:0.30,
-    fill:{color:C.gry},line:{color:C.lgr,width:0}});
-  s.addText("Prepared by: IH Officer  ·  "+_now()+"  ·  CONFIDENTIAL",{
-    x:5.0,y:7.22,w:6.0,h:0.24,fontSize:8,color:C.muted,italic:true,fontFace:"Segoe UI"});
-  s.addText("IH DASHBOARD v5.0",{x:11.0,y:7.22,w:2.10,h:0.24,
-    fontSize:8,bold:true,color:C.navD,align:"right",fontFace:"Segoe UI"});
-  /* Footer kiri (sidebar) */
-  s.addShape(pr.ShapeType.rect,{x:0,y:7.34,w:4.6,h:0.16,
-    fill:{color:C.nav},line:{color:C.nav,width:0}});
-  s.addText(_now(),{x:0.26,y:7.34,w:4.0,h:0.14,
-    fontSize:7,color:"7A8EA8",align:"center",valign:"middle",fontFace:"Segoe UI"});
+  s.addText(sub,{x:5.0,y:3.66,w:8.0,h:0.40,fontSize:11,color:C.muted,italic:true,fontFace:"Segoe UI"});
+  /* Badge periode */
+  s.addShape(pr.ShapeType.roundRect,{x:5.0,y:4.22,w:2.55,h:0.46,fill:{color:C.navD},line:{color:C.gold,width:0.75},rectRadius:0.07});
+  s.addText(periode,{x:5.0,y:4.22,w:2.55,h:0.46,fontSize:11,bold:true,color:C.wht,align:"center",valign:"middle",fontFace:"Segoe UI"});
+  /* Info instansi */
+  s.addText("PT Pertamina Patra Niaga · Satuan Kerja Regional III",{x:5.0,y:4.86,w:8.0,h:0.28,fontSize:9.5,color:C.muted,fontFace:"Segoe UI"});
+  s.addText("Dokumen Internal — Health & HSSE",{x:5.0,y:5.14,w:8.0,h:0.28,fontSize:9.5,color:C.muted,fontFace:"Segoe UI"});
+  /* Footer band CONFIDENTIAL */
+  s.addShape(pr.ShapeType.rect,{x:4.67,y:7.10,w:8.66,h:0.40,fill:{color:C.gry},line:{color:C.gry,width:0}});
+  s.addShape(pr.ShapeType.rect,{x:4.67,y:7.10,w:8.66,h:0.025,fill:{color:C.gold},line:{color:C.gold,width:0}});
+  s.addText("Prepared by IH Officer  ·  "+_now(),{x:5.0,y:7.16,w:6.0,h:0.26,fontSize:8.5,color:C.muted,italic:true,fontFace:"Segoe UI"});
+  s.addText("CONFIDENTIAL — UNTUK PENGGUNAAN INTERNAL",{x:8.0,y:7.16,w:5.10,h:0.26,fontSize:8.5,bold:true,color:C.red,align:"right",charSpacing:1,fontFace:"Segoe UI"});
+  /* Footer sidebar */
+  s.addShape(pr.ShapeType.rect,{x:0,y:7.10,w:4.6,h:0.40,fill:{color:C.nav},line:{color:C.nav,width:0}});
+  s.addText("IH DASHBOARD",{x:0.26,y:7.16,w:4.0,h:0.26,fontSize:8.5,bold:true,color:C.gold,align:"center",valign:"middle",charSpacing:1,fontFace:"Segoe UI"});
 }
 
 async function exportDATPPT(){
@@ -546,7 +538,7 @@ async function exportDATPPT(){
       {x:0.48,y:5.7,w:12.3,h:0.96,fontSize:11.5,color:C.wht,fontFace:"Segoe UI",wrap:true});
     _ftr(s8,pr,ftrlbl,8,8);
 
-    pr.writeFile({fileName:"Laporan_DAT_"+periodeLabel.replace(/ /g,"_")+".pptx"});
+    await pr.writeFile({fileName:"Laporan_DAT_"+periodeLabel.replace(/ /g,"_")+".pptx"});
     showToast("PPT DAT berhasil didownload!","success");
   }catch(e){console.error(e);showToast("Gagal membuat PPT DAT: "+e.message,"error");}
 }
@@ -752,7 +744,7 @@ async function exportHRAPPT(){
     s8.addText("HRA berikutnya dijadwalkan sebelum masa kontrak berakhir. Koordinasikan dengan vendor IH tersertifikasi. Pastikan temuan lama sudah di-closeout sebelum siklus baru dimulai.",
       {x:0.48,y:5.7,w:12.3,h:0.96,fontSize:11.5,color:C.wht,fontFace:"Segoe UI",wrap:true});
     _ftr(s8,pr,ftrlbl,8,8);
-    pr.writeFile({fileName:"Laporan_HRA_"+tgl.replace(/ /g,"_")+".pptx"});
+    await pr.writeFile({fileName:"Laporan_HRA_"+tgl.replace(/ /g,"_")+".pptx"});
     showToast("PPT HRA berhasil didownload!","success");
   }catch(e){console.error(e);showToast("Gagal PPT HRA: "+e.message,"error");}
 }
@@ -896,7 +888,7 @@ async function exportPestPPT(){
     s6.addText("Pest Control berikutnya dijadwalkan 3 bulan ke depan. Pastikan vendor pest control bersertifikat masih aktif. Review temuan dan tindakan lanjutan sebelum sesi berikutnya.",
       {x:0.48,y:5.7,w:12.3,h:0.96,fontSize:11.5,color:C.wht,fontFace:"Segoe UI",wrap:true});
     _ftr(s6,pr,ftrlbl,6,6);
-    pr.writeFile({fileName:"Laporan_Pest_Control_"+tgl.replace(/ /g,"_")+".pptx"});
+    await pr.writeFile({fileName:"Laporan_Pest_Control_"+tgl.replace(/ /g,"_")+".pptx"});
     showToast("PPT Pest Control berhasil didownload!","success");
   }catch(e){console.error(e);showToast("Gagal PPT Pest: "+e.message,"error");}
 }
@@ -1041,7 +1033,7 @@ async function exportCloseout25PPT(){
     s6.addText("Seluruh open item HRA 2025 ditargetkan closed sebelum 31 Desember. Eskalasi ke management jika ada kendala resources atau teknis. Laporan final diserahkan ke direksi dan biro klasifikasi.",
       {x:0.48,y:5.7,w:12.3,h:0.96,fontSize:11.5,color:C.wht,fontFace:"Segoe UI",wrap:true});
     _ftr(s6,pr,ftrlbl,6,6);
-    pr.writeFile({fileName:"Laporan_Closeout_HRA_2025_"+tgl.replace(/ /g,"_")+".pptx"});
+    await pr.writeFile({fileName:"Laporan_Closeout_HRA_2025_"+tgl.replace(/ /g,"_")+".pptx"});
     showToast("PPT Closeout HRA 2025 berhasil didownload!","success");
   }catch(e){console.error(e);showToast("Gagal PPT Closeout: "+e.message,"error");}
 }
