@@ -846,14 +846,390 @@ function clearEmptyChart(canvasId){
 }
 
 /* HRA PAGE */
-function renderHRAPage(){const data=filteredHRA;const done=new Set(data.filter(r=>(r["Status"]||"").toLowerCase()==="done").map(r=>r["Nama Kapal"])).size;const belum=TOTAL_KAPAL-done;const budget=data.reduce((s,r)=>s+parseFloat(r["Est Budget"]||0),0);const coverage=((done/TOTAL_KAPAL)*100).toFixed(1);document.getElementById("hra-done").textContent=done;document.getElementById("hra-belum").textContent=belum;document.getElementById("hra-budget").textContent=formatRupiah(budget);document.getElementById("hra-coverage").textContent=coverage+"%";renderHRABarChart(data);renderHRADonutChart(data);renderHRAHazard();renderHRATable(data);}
+
+/* ── HRA/IH JENIS HELPER ── */
+function hraJenis(namaKapal){
+  var n=String(namaKapal||'').trim();
+  if(/\s+HRA$/i.test(n)) return 'HRA';
+  if(/\s+IH$/i.test(n))  return 'IH';
+  return '';  /* tidak ada suffix = tidak dikenali */
+}
+function hraBaseKapal(namaKapal){
+  return String(namaKapal||'').trim().replace(/\s+(HRA|IH)$/i,'').trim();
+}
+
+function renderHRAPage(){
+  var data=filteredHRA;
+  var pg=document.getElementById('hra-exec-page');
+  if(!pg)return;
+
+  /* ── Split HRA vs IH ── */
+  var dataHRA=data.filter(function(r){return hraJenis(r['Nama Kapal'])==='HRA';});
+  var dataIH =data.filter(function(r){return hraJenis(r['Nama Kapal'])==='IH';});
+
+  function uniqueDone(d){
+    return new Set(d.filter(function(r){return(r['Status']||'').toLowerCase()==='done';})
+                    .map(function(r){return hraBaseKapal(r['Nama Kapal']);})).size;
+  }
+  function uniqueTotal(d){
+    return new Set(d.map(function(r){return hraBaseKapal(r['Nama Kapal']);})).size;
+  }
+
+  var doneAll =new Set(data.filter(function(r){return(r['Status']||'').toLowerCase()==='done';})
+                           .map(function(r){return r['Nama Kapal'];})).size;
+  var doneHRA =uniqueDone(dataHRA);  var totalHRA=uniqueTotal(dataHRA);
+  var doneIH  =uniqueDone(dataIH);   var totalIH =uniqueTotal(dataIH);
+  var budget  =data.reduce(function(s,r){return s+parseFloat(r['Est Budget']||0);},0);
+  var covAll  =TOTAL_KAPAL>0?((doneAll/TOTAL_KAPAL)*100).toFixed(1):0;
+  var covHRA  =totalHRA>0?Math.round(doneHRA/totalHRA*100):0;
+  var covIH   =totalIH >0?Math.round(doneIH /totalIH *100):0;
+
+  /* ── Bulan filter options ── */
+  var selBulan=(document.getElementById('hra-filter-bulan')||{}).value||'';
+  var selFleet=(document.getElementById('hra-filter-fleet')||{}).value||'';
+  var selJenis=(document.getElementById('hra-filter-jenis')||{}).value||'';
+
+  /* ── Top hazards ── */
+  var hazCounts={};
+  rawHRA.forEach(function(r){
+    var h=(r['Top 3 Hazard']||'').trim();if(!h)return;
+    h.split(/[,;]/).map(function(x){return x.trim();}).filter(Boolean).forEach(function(hz){
+      hazCounts[hz]=(hazCounts[hz]||0)+1;
+    });
+  });
+  var topHaz=Object.entries(hazCounts).sort(function(a,b){return b[1]-a[1];}).slice(0,5);
+
+  /* ── Per-fleet breakdown ── */
+  var fleetMap={};
+  data.forEach(function(r){
+    var f=r['Jenis Fleet']||'—';
+    if(!fleetMap[f])fleetMap[f]={total:0,done:0};
+    fleetMap[f].total++;
+    if((r['Status']||'').toLowerCase()==='done')fleetMap[f].done++;
+  });
+
+  /* ── Per-bulan monitoring trend ── */
+  var bulanCounts={};
+  BULAN_ORDER.forEach(function(b){bulanCounts[b]={hra:0,ih:0};});
+  data.forEach(function(r){
+    var b=r['Bulan Pelaksanaan'];if(!b||!bulanCounts[b])return;
+    var j=hraJenis(r['Nama Kapal']);
+    if(j==='HRA')bulanCounts[b].hra++;
+    else if(j==='IH')bulanCounts[b].ih++;
+  });
+
+  /* ── HELPERS ── */
+  function svgRing(pct,col,sz){
+    var r=sz/2-7,ci=2*Math.PI*r,da=ci*pct/100;
+    return'<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 '+sz+' '+sz+'" style="transform:rotate(-90deg)">'+
+      '<circle cx="'+sz/2+'" cy="'+sz/2+'" r="'+r+'" fill="none" stroke="rgba(255,255,255,.09)" stroke-width="6"/>'+
+      '<circle cx="'+sz/2+'" cy="'+sz/2+'" r="'+r+'" fill="none" stroke="'+col+'" stroke-width="6" stroke-linecap="round" stroke-dasharray="'+da.toFixed(1)+' '+ci.toFixed(1)+'"/></svg>';
+  }
+  function miniBar(pct,col){
+    return'<div style="display:flex;align-items:center;gap:6px">'+
+      '<div style="flex:1;height:5px;background:rgba(255,255,255,.12);border-radius:3px;overflow:hidden">'+
+      '<div style="width:'+pct+'%;height:100%;background:'+col+';border-radius:3px;transition:width .6s ease"></div></div>'+
+      '<span style="font-size:10px;font-weight:700;color:'+col+';min-width:30px">'+pct+'%</span></div>';
+  }
+  function statusDot(status){
+    var s=(status||'').toLowerCase();
+    if(s==='done')return'<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(67,160,71,.15);color:#43A047;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700"><i class="fas fa-circle-check" style="font-size:9px"></i>Done</span>';
+    return'<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(251,140,0,.15);color:#FB8C00;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700"><i class="fas fa-clock" style="font-size:9px"></i>Pending</span>';
+  }
+  var BULAN_SHORT=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+
+  /* ═══════════════════════════════════════════
+     EXECUTIVE HEADER — Navy gradient + filters
+  ═══════════════════════════════════════════ */
+  var html=''
+    +'<div style="background:linear-gradient(135deg,#0D2B4E 0%,#1A4A7A 55%,#1E5799 100%);'
+    +'border-radius:16px;padding:24px 28px;margin-bottom:18px;position:relative;overflow:hidden">'
+    /* Dekorasi background */
+    +'<div style="position:absolute;right:-30px;top:-30px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.04)"></div>'
+    +'<div style="position:absolute;right:80px;bottom:-40px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.03)"></div>'
+    /* Header row */
+    +'<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px;position:relative">'
+    +'<div>'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
+    +'<i class="fas fa-magnifying-glass-chart" style="font-size:17px;color:#90CAF9"></i>'
+    +'<span style="font-size:10px;font-weight:700;color:#90CAF9;letter-spacing:.9px;text-transform:uppercase">Monitoring &amp; Assessment</span>'
+    +'</div>'
+    +'<h1 style="font-size:20px;font-weight:800;color:#fff;margin:0 0 3px">HRA &amp; IH Dashboard</h1>'
+    +'<p style="font-size:11px;color:rgba(255,255,255,.55);margin:0">Hazard Recognition &amp; Assessment · Industrial Hygiene · Pertamina Patra Niaga</p>'
+    +'</div>'
+    /* Filter controls */
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
+    +'<select onchange="applyHRAFilters();renderHRAPage()" style="font-size:11px;padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.12);color:#fff" id="hra-filter-bulan2">'
+    +'<option value="">Semua Bulan</option>'
+    +BULAN_ORDER.map(function(b){return'<option style="color:#000"'+(b===selBulan?' selected':'')+'>'+b+'</option>';}).join('')
+    +'</select>'
+    +'<select onchange="applyHRAFilters();renderHRAPage()" style="font-size:11px;padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.12);color:#fff" id="hra-filter-fleet2">'
+    +'<option value="">Semua Fleet</option>'
+    +['FP I','FP II','FC','FGP'].map(function(f){return'<option style="color:#000"'+(f===selFleet?' selected':'')+'>'+f+'</option>';}).join('')
+    +'</select>'
+    +'<select onchange="applyHRAFilters();renderHRAPage()" style="font-size:11px;padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.12);color:#fff" id="hra-filter-jenis2">'
+    +'<option value="">Semua Jenis</option>'
+    +'<option style="color:#000"'+(selJenis==='HRA'?' selected':'')+' value="HRA">HRA</option>'
+    +'<option style="color:#000"'+(selJenis==='IH'?' selected':'')+' value="IH">IH</option>'
+    +'</select>'
+    +'<button onclick="hraResetFilters()" style="padding:7px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#fff;font-size:11px;cursor:pointer;font-weight:600">'
+    +'<i class="fas fa-xmark" style="margin-right:4px"></i>Reset</button>'
+    +'<button onclick="openHazardMap()" style="padding:7px 14px;border-radius:8px;border:none;background:#C9973A;color:#fff;font-size:11px;cursor:pointer;font-weight:700">'
+    +'<i class="fas fa-map-location-dot" style="margin-right:5px"></i>Hazard Map</button>'
+    +'<button onclick="exportHRAPPT()" style="padding:7px 14px;border-radius:8px;border:none;background:rgba(255,255,255,.15);color:#fff;font-size:11px;cursor:pointer;font-weight:600">'
+    +'<i class="fas fa-file-powerpoint" style="margin-right:5px"></i>Export PPT</button>'
+    +'</div></div>'
+    /* KPI STRIP */
+    +'<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:18px;position:relative">'
+    +[
+      {l:'Total Kapal',    v:TOTAL_KAPAL, ico:'fa-ship',           c:'#E3F2FD'},
+      {l:'Sudah Monitoring',v:doneAll,    ico:'fa-circle-check',   c:'#A5D6A7'},
+      {l:'Belum Monitoring',v:TOTAL_KAPAL-doneAll,ico:'fa-clock',  c:'#FFE0B2'},
+      {l:'Est. Budget',    v:formatRupiah(budget),ico:'fa-sack-dollar',c:'#FFF9C4'},
+      {l:'Coverage',       v:covAll+'%',  ico:'fa-percent',         c:'#BBDEFB'},
+    ].map(function(k){
+      return'<div style="background:rgba(255,255,255,.11);border-radius:10px;padding:12px 14px;backdrop-filter:blur(4px)">'
+        +'<div style="display:flex;justify-content:space-between;align-items:flex-start">'
+        +'<div>'
+        +'<div style="font-size:10px;color:rgba(255,255,255,.65);font-weight:600;margin-bottom:3px">'+k.l+'</div>'
+        +'<div style="font-size:'+(typeof k.v==='string'&&k.v.length>6?'16':'24')+'px;font-weight:800;color:#fff;line-height:1">'+k.v+'</div>'
+        +'</div>'
+        +'<div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center">'
+        +'<i class="fas '+k.ico+'" style="font-size:13px;color:'+k.c+'"></i></div></div></div>';
+    }).join('')
+    +'</div></div>';
+
+  /* ═══════════════════════════════════════════
+     ROW 1: 3 DONUT RINGS (Coverage Overall, HRA, IH)
+  ═══════════════════════════════════════════ */
+  html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:18px">';
+  [
+    {pct:parseFloat(covAll),col:'#1E88E5',label:'Coverage Keseluruhan',sub:doneAll+' dari '+TOTAL_KAPAL+' armada',tag:''},
+    {pct:covHRA,            col:'#5C6BC0',label:'Coverage HRA',        sub:doneHRA+' dari '+totalHRA+' kapal',tag:'HRA'},
+    {pct:covIH,             col:'#00ACC1',label:'Coverage IH',         sub:doneIH +' dari '+totalIH +' kapal',tag:'IH'},
+  ].forEach(function(rg){
+    html+='<div class="stat-card" style="text-align:center;padding:22px 16px">'
+      +'<div style="position:relative;display:inline-block;margin-bottom:12px">'+svgRing(rg.pct,rg.col,90)
+      +'<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">'
+      +(rg.tag?'<span style="font-size:8px;font-weight:700;color:'+rg.col+';letter-spacing:.5px">'+rg.tag+'</span>':'')
+      +'<span style="font-size:16px;font-weight:800;color:var(--text)">'+rg.pct+'%</span>'
+      +'</div></div>'
+      +'<div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:3px">'+esc(rg.label)+'</div>'
+      +'<div style="font-size:11px;color:var(--text-muted)">'+esc(rg.sub)+'</div></div>';
+  });
+  html+='</div>';
+
+  /* ═══════════════════════════════════════════
+     ROW 2: Trend Bulanan (bar inline) + Top Hazard
+  ═══════════════════════════════════════════ */
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px">';
+
+  /* Trend per bulan */
+  var maxBulan=Math.max.apply(null,BULAN_ORDER.map(function(b){return bulanCounts[b].hra+bulanCounts[b].ih;}));
+  maxBulan=maxBulan||1;
+  html+='<div class="stat-card" style="padding:16px 20px">'
+    +'<div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:8px">'
+    +'<i class="fas fa-chart-column" style="color:#1E88E5"></i>Monitoring per Bulan'
+    +'<div style="margin-left:auto;display:flex;gap:8px;font-size:10px;font-weight:700">'
+    +'<span style="color:#5C6BC0">\u25a0 HRA</span><span style="color:#00ACC1">\u25a0 IH</span></div></div>';
+  BULAN_ORDER.forEach(function(b,idx){
+    var hv=bulanCounts[b].hra,iv=bulanCounts[b].ih,tot=hv+iv;
+    var barW=tot?Math.round((tot/maxBulan)*100):0;
+    var hW=tot?Math.round(hv/tot*100):0;
+    html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">'
+      +'<span style="font-size:9px;font-weight:600;color:var(--text-muted);width:24px;flex-shrink:0">'+BULAN_SHORT[idx]+'</span>'
+      +'<div style="flex:1;height:10px;background:var(--border);border-radius:5px;overflow:hidden">'
+      +(tot?'<div style="display:flex;height:100%;width:'+barW+'%">'
+        +'<div style="background:#5C6BC0;flex:'+hW+'"></div>'
+        +'<div style="background:#00ACC1;flex:'+(100-hW)+'"></div></div>'
+        :'')
+      +'</div>'
+      +'<span style="font-size:9px;font-weight:700;color:var(--text);min-width:16px;text-align:right">'+tot+'</span>'
+      +'</div>';
+  });
+  html+='</div>';
+
+  /* Top Hazard */
+  html+='<div class="stat-card" style="padding:16px 20px">'
+    +'<div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:16px;display:flex;align-items:center;gap:8px">'
+    +'<i class="fas fa-triangle-exclamation" style="color:#FB8C00"></i>Top 5 Hazard Teridentifikasi</div>';
+  var hazColors=['#E53935','#FB8C00','#FDD835','#43A047','#1E88E5'];
+  if(!topHaz.length){
+    html+='<div style="text-align:center;padding:30px;color:var(--text-muted);font-size:12px">'
+      +'<i class="fas fa-inbox" style="font-size:24px;opacity:.2;display:block;margin-bottom:8px"></i>Belum ada data hazard</div>';
+  } else {
+    var maxHz=topHaz[0][1]||1;
+    topHaz.forEach(function(e,i){
+      var name=e[0],count=e[1],pct=Math.round(count/maxHz*100);
+      html+='<div style="margin-bottom:10px">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">'
+        +'<div style="display:flex;align-items:center;gap:7px">'
+        +'<div style="width:18px;height:18px;border-radius:50%;background:'+hazColors[i]+';display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff;flex-shrink:0">'+(i+1)+'</div>'
+        +'<span style="font-size:11px;font-weight:600;color:var(--text)">'+esc(name)+'</span></div>'
+        +'<span style="font-size:10px;font-weight:700;color:'+hazColors[i]+'">'+count+'x</span></div>'
+        +'<div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-left:25px">'
+        +'<div style="width:'+pct+'%;height:100%;background:'+hazColors[i]+';border-radius:2px;transition:width .5s"></div></div>'
+        +'</div>';
+    });
+  }
+  html+='</div></div>';
+
+  /* ═══════════════════════════════════════════
+     ROW 3: Per-Fleet cards
+  ═══════════════════════════════════════════ */
+  var fleetKeys=Object.keys(fleetMap);
+  if(fleetKeys.length){
+    html+='<h3 style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">'
+      +'<i class="fas fa-anchor" style="color:#1E88E5;margin-right:6px"></i>Status per Fleet</h3>'
+      +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:18px">';
+    var fleetColors={'FP I':'#1E88E5','FP II':'#5C6BC0','FC':'#00ACC1','FGP':'#43A047'};
+    fleetKeys.sort().forEach(function(f){
+      var fm=fleetMap[f],fp=fm.total>0?Math.round(fm.done/fm.total*100):0;
+      var fc=fleetColors[f]||'#607D8B';
+      html+='<div class="stat-card" style="padding:14px 16px;border-top:3px solid '+fc+'">'
+        +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">'
+        +'<div><div style="font-size:13px;font-weight:700;color:var(--text)">'+esc(f)+'</div>'
+        +'<div style="font-size:10px;color:var(--text-muted);margin-top:1px">'+fm.done+' selesai / '+fm.total+' total</div></div>'
+        +'<span style="font-size:16px;font-weight:800;color:'+fc+'">'+fp+'%</span></div>'
+        +miniBar(fp,fc)+'</div>';
+    });
+    html+='</div>';
+  }
+
+  /* ═══════════════════════════════════════════
+     ROW 4: TABEL FULL — search + filter inline
+  ═══════════════════════════════════════════ */
+  html+='<div class="stat-card" style="padding:0;overflow:hidden">'
+    +'<div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+    +'<span style="font-size:12px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px">'
+    +'<i class="fas fa-table-list" style="color:#1E88E5"></i>Data Monitoring HRA &amp; IH</span>'
+    +'<div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">'
+    +'<input type="text" placeholder="\uD83D\uDD0D Cari nama kapal..." oninput="hraExecSearch(this.value)" '
+    +'style="font-size:11px;padding:6px 10px;border-radius:7px;border:1px solid var(--border);background:var(--bg);color:var(--text);width:180px">'
+    +'</div></div>'
+    +'<div style="overflow-x:auto">'
+    +'<table style="width:100%;border-collapse:collapse;font-size:12px">'
+    +'<thead>'
+    +'<tr style="background:var(--card)">'
+    +'<th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap">Nama Kapal</th>'
+    +'<th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">Jenis</th>'
+    +'<th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">Fleet</th>'
+    +'<th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">Bulan</th>'
+    +'<th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">Vendor</th>'
+    +'<th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">Status</th>'
+    +'<th style="padding:10px 14px;text-align:right;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">Est. Budget</th>'
+    +'</tr>'
+    +'</thead>'
+    +'<tbody id="hra-exec-tbody">';
+
+  if(!data.length){
+    html+='<tr><td colspan="7" style="padding:48px;text-align:center;color:var(--text-muted)">'
+      +'<i class="fas fa-inbox" style="font-size:28px;opacity:.2;display:block;margin-bottom:10px"></i>'
+      +'Belum ada data HRA &amp; IH</td></tr>';
+  } else {
+    data.forEach(function(r){
+      var jenis=hraJenis(r['Nama Kapal']);
+      var jenisHtml=jenis==='HRA'
+        ?'<span style="background:#E8EAF6;color:#3949AB;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700">HRA</span>'
+        :jenis==='IH'
+        ?'<span style="background:#E0F2F1;color:#00695C;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700">IH</span>'
+        :'<span style="color:var(--text-muted);font-size:10px">—</span>';
+      var isDone=(r['Status']||'').toLowerCase()==='done';
+      html+='<tr style="border-top:1px solid var(--border);transition:background .15s" '
+        +'onmouseover="this.style.background=\'var(--card)\'" onmouseout="this.style.background=\'\'">'
+        +'<td style="padding:10px 14px"><strong style="color:var(--text)">'+esc(hraBaseKapal(r['Nama Kapal']))+'</strong></td>'
+        +'<td style="padding:10px 14px">'+jenisHtml+'</td>'
+        +'<td style="padding:10px 14px"><span style="background:#E3F2FD;color:#1565C0;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700">'+esc(r['Jenis Fleet']||'—')+'</span></td>'
+        +'<td style="padding:10px 14px;color:var(--text-muted)">'+esc(r['Bulan Pelaksanaan']||'—')+'</td>'
+        +'<td style="padding:10px 14px;color:var(--text-muted);font-size:11px">'+esc(r['Vendor Pelaksana']||'—')+'</td>'
+        +'<td style="padding:10px 14px">'+statusDot(r['Status'])+'</td>'
+        +'<td style="padding:10px 14px;text-align:right;font-weight:700;color:var(--text)">Rp '+fmtNum(parseFloat(r['Est Budget']||0))+'</td>'
+        +'</tr>';
+    });
+  }
+
+  html+='</tbody></table></div>'
+    +'<div style="padding:10px 18px;font-size:11px;color:var(--text-muted);border-top:1px solid var(--border)">'
+    +'Menampilkan '+data.length+' dari '+rawHRA.length+' entri</div></div>';
+
+  pg.innerHTML=html;
+
+  /* Sync filter header ke hidden inputs */
+  document.getElementById('hra-filter-bulan').value=selBulan;
+  document.getElementById('hra-filter-fleet').value=selFleet;
+  document.getElementById('hra-filter-jenis').value=selJenis;
+
+  /* Sync filter visible ke hidden */
+  ['bulan','fleet','jenis'].forEach(function(k){
+    var vis=document.getElementById('hra-filter-'+k+'2');
+    var hid=document.getElementById('hra-filter-'+k);
+    if(vis&&hid) vis.onchange=function(){hid.value=this.value;applyHRAFilters();};
+  });
+}
+
+function hraResetFilters(){
+  ['hra-filter-bulan','hra-filter-fleet','hra-filter-jenis','hra-filter-kapal'].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.value='';
+  });
+  filteredHRA=[...rawHRA];
+  renderHRAPage();
+}
+
+function hraExecSearch(q){
+  var qq=q.toLowerCase();
+  var rows=document.querySelectorAll('#hra-exec-tbody tr');
+  rows.forEach(function(row){
+    row.style.display=row.textContent.toLowerCase().includes(qq)?'':'none';
+  });
+}
 function renderHRABarChart(data){const counts={};BULAN_ORDER.forEach(b=>counts[b]=0);data.forEach(r=>{const b=r["Bulan Pelaksanaan"];if(b&&counts[b]!==undefined)counts[b]++;});const ctx=document.getElementById("hraBarChart").getContext("2d");if(hraBarChart)hraBarChart.destroy();hraBarChart=new Chart(ctx,{type:hraChartType,data:{labels:BULAN_ORDER,datasets:[{label:"Monitoring",data:BULAN_ORDER.map(b=>counts[b]),backgroundColor:hraChartType==="line"?"rgba(21,101,192,0.12)":"#1976D2",borderColor:"#1565C0",borderWidth:hraChartType==="line"?2.5:1,borderRadius:hraChartType==="bar"?6:0,fill:hraChartType==="line",tension:0.4,pointBackgroundColor:"#1565C0",pointRadius:hraChartType==="line"?4:0}]},options:chartOpts()});}
 function renderHRADonutChart(data){const fleets={"FP I":0,"FP II":0,"FC":0,"FGP":0};data.forEach(r=>{const f=r["Jenis Fleet"];if(f&&fleets[f]!==undefined)fleets[f]++;});const ctx=document.getElementById("hraDonutChart").getContext("2d");if(hraDonutChart)hraDonutChart.destroy();hraDonutChart=new Chart(ctx,{type:"doughnut",data:{labels:Object.keys(fleets),datasets:[{data:Object.values(fleets),backgroundColor:["#1976D2","#43A047","#FB8C00","#8E24AA"],borderColor:"#fff",borderWidth:3,hoverOffset:8}]},options:donutOpts()});}
 function toggleHRAChartType(btn,type){hraChartType=type;btn.closest(".pill-group").querySelectorAll(".pill").forEach(p=>p.classList.remove("active"));btn.classList.add("active");renderHRABarChart(filteredHRA);}
 function renderHRAHazard(){const bulan=document.getElementById("hra-hazard-bulan").value;const data=bulan?rawHRA.filter(r=>r["Bulan Pelaksanaan"]===bulan):rawHRA;const counts={};data.forEach(r=>{const h=(r["Top 3 Hazard"]||"").trim();if(!h)return;h.split(/[,;]/).map(x=>x.trim()).filter(Boolean).forEach(hz=>{counts[hz]=(counts[hz]||0)+1;});});const sorted=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,5);const el=document.getElementById("hazardList");if(!sorted.length){el.innerHTML='<div class="hazard-empty"><i class="fas fa-inbox" style="font-size:24px;opacity:.3;margin-bottom:8px;display:block"></i>Tidak ada data hazard</div>';return;}el.innerHTML=sorted.map(([name,count],i)=>`<div class="hazard-item"><div class="hazard-rank r${i+1}">${i+1}</div><div class="hazard-name">${esc(name)}</div><div class="hazard-count">${count}x</div></div>`).join("");}
-function renderHRATable(data){const tbody=document.getElementById("hraTableBody");if(!tbody)return;if(!data.length){tbody.innerHTML=emptyState("Belum ada data HRA","fa-lungs");document.getElementById("hraTableFooter").textContent="Tidak ada data";return;}tbody.innerHTML=data.map(r=>`<tr><td><strong style="color:var(--text)">${esc(r["Nama Kapal"]||"")}</strong></td><td><span style="background:#E3F2FD;color:#1565C0;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">${esc(r["Jenis Fleet"]||"")}</span></td><td>${esc(r["Bulan Pelaksanaan"]||"")}</td><td>${esc(r["Vendor Pelaksana"]||"")}</td><td>${statusBadge(r["Status"])}</td><td style="font-weight:700">Rp ${fmtNum(parseFloat(r["Est Budget"]||0))}</td></tr>`).join("");document.getElementById("hraTableFooter").textContent=`Menampilkan ${data.length} dari ${rawHRA.length} entri kapal`;}
-function applyHRAFilters(){const b=document.getElementById("hra-filter-bulan").value;const f=document.getElementById("hra-filter-fleet").value;const k=document.getElementById("hra-filter-kapal").value.toLowerCase();filteredHRA=rawHRA.filter(r=>(!b||r["Bulan Pelaksanaan"]===b)&&(!f||r["Jenis Fleet"]===f)&&(!k||(r["Nama Kapal"]||"").toLowerCase().includes(k)));renderHRAPage();}
-function clearHRAFilters(){["hra-filter-bulan","hra-filter-fleet"].forEach(id=>document.getElementById(id).value="");document.getElementById("hra-filter-kapal").value="";filteredHRA=[...rawHRA];renderHRAPage();}
+function renderHRATable(data){
+  var tbody=document.getElementById('hraTableBody');
+  if(!tbody)return;
+  if(!data.length){
+    tbody.innerHTML=emptyState('Belum ada data HRA','fa-lungs');
+    document.getElementById('hraTableFooter').textContent='Tidak ada data';
+    return;
+  }
+  tbody.innerHTML=data.map(function(r){
+    var jenis=hraJenis(r['Nama Kapal']);
+    var jenisHtml=jenis==='HRA'
+      ?'<span style="background:#E3F2FD;color:#1565C0;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700">HRA</span>'
+      :jenis==='IH'
+      ?'<span style="background:#E0F2F1;color:#006064;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700">IH</span>'
+      :'<span style="color:var(--text-muted);font-size:10px">—</span>';
+    return'<tr>'+
+      '<td><strong style="color:var(--text)">'+esc(hraBaseKapal(r['Nama Kapal']))+'</strong></td>'+
+      '<td>'+jenisHtml+'</td>'+
+      '<td><span style="background:#E3F2FD;color:#1565C0;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">'+esc(r['Jenis Fleet']||'')+'</span></td>'+
+      '<td>'+esc(r['Bulan Pelaksanaan']||'')+'</td>'+
+      '<td>'+esc(r['Vendor Pelaksana']||'')+'</td>'+
+      '<td>'+statusBadge(r['Status'])+'</td>'+
+      '<td style="font-weight:700">Rp '+fmtNum(parseFloat(r['Est Budget']||0))+'</td>'+
+      '</tr>';
+  }).join('');
+  document.getElementById('hraTableFooter').textContent=
+    'Menampilkan '+data.length+' dari '+rawHRA.length+' entri';
+}
+function applyHRAFilters(){
+  var b=(document.getElementById('hra-filter-bulan')||{}).value||'';
+  var f=(document.getElementById('hra-filter-fleet')||{}).value||'';
+  var k=((document.getElementById('hra-filter-kapal')||{}).value||'').toLowerCase();
+  var j=(document.getElementById('hra-filter-jenis')||{}).value||'';
+  filteredHRA=rawHRA.filter(function(r){
+    if(b&&r['Bulan Pelaksanaan']!==b)return false;
+    if(f&&r['Jenis Fleet']!==f)return false;
+    if(k&&!(r['Nama Kapal']||'').toLowerCase().includes(k))return false;
+    if(j&&hraJenis(r['Nama Kapal'])!==j)return false;
+    return true;
+  });
+  renderHRAPage();
+}
+function clearHRAFilters(){["hra-filter-bulan","hra-filter-fleet"].forEach(id=>document.getElementById(id).value="");document.getElementById("hra-filter-kapal").value="";filteredHRA=[...rawHRA];var jEl=document.getElementById('hra-filter-jenis');if(jEl)jEl.value='';
+  renderHRAPage();}
 function searchHRATable(){const q=document.getElementById("hra-search").value.toLowerCase();document.querySelectorAll("#hraTableBody tr").forEach(row=>{row.style.display=row.textContent.toLowerCase().includes(q)?"":"none";});}
 function sortHRATable(col){if(hraSortCol===col)hraSortDir*=-1;else{hraSortCol=col;hraSortDir=1;}const keys=["Nama Kapal","Jenis Fleet","Bulan Pelaksanaan","Vendor Pelaksana","Status","Est Budget"];filteredHRA.sort((a,b)=>String(a[keys[col]]||"").localeCompare(String(b[keys[col]]||""),"id")*hraSortDir);renderHRATable(filteredHRA);}
 
