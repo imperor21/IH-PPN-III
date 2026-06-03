@@ -153,6 +153,193 @@ function _rec(s,pr,x,y,w,h,num,text){
     fontSize:11,color:C.txt,fontFace:"Segoe UI",wrap:true,valign:"middle"});
 }
 
+/* ══════════════════════════════════════════════════════════
+   AI RECOMMENDATION ENGINE — berbasis data + regulasi tertanam
+   Mengembalikan {analisis, recs:[{pri,text,reg}]}
+══════════════════════════════════════════════════════════ */
+var _PRI={TINGGI:{c:C.red,bg:C.redL},SEDANG:{c:C.amber,bg:C.amberL},RUTIN:{c:C.teal,bg:C.tealL}};
+
+/* Map nama hazard bebas → jenis hirarki + acuan regulasi */
+function _hazClass(name){
+  var n=(name||"").toLowerCase();
+  if(/bising|noise|kebisingan|getar|vibrat|panas|heat|suhu|pencahayaan|cahaya|radiasi/.test(n))
+    return {tipe:"Fisika",reg:"Permenaker 05/2018 · ACGIH TLV 2024 · SNI 16-7063"};
+  if(/benzene|benzena|kimia|voc|uap|gas|debu|dust|h2s|co|solvent|pelarut|b3/.test(n))
+    return {tipe:"Kimia",reg:"ACGIH BEI/TLV 2024 · IARC · Permenaker 05/2018"};
+  if(/bakteri|virus|jamur|mikro|biolog|legionella|sanitasi|air bersih|food/.test(n))
+    return {tipe:"Biologi",reg:"IHR 2005 (WHO) · MLC 2006 Title 3 · Permenkes"};
+  if(/ergonom|angkat|postur|msd|manual handling|repetit|beban/.test(n))
+    return {tipe:"Ergonomi",reg:"ISO 11228 · NIOSH Lifting Eq. · Permenaker 05/2018"};
+  if(/stres|stress|psiko|fatigue|lelah|beban kerja|mental|jam kerja/.test(n))
+    return {tipe:"Psikososial",reg:"MLC 2006 (jam kerja/istirahat) · ILO PSY"};
+  return {tipe:"Umum",reg:"ISO 45001:2018 · Permenaker 05/2018"};
+}
+/* Saran hirarki pengendalian sesuai jenis (mirror HIRARKI_PENGENDALIAN dashboard) */
+function _hirById(tipe){
+  var H=(typeof HIRARKI_PENGENDALIAN!=="undefined")?HIRARKI_PENGENDALIAN:null;
+  var key={Fisika:"fisika",Kimia:"kimia",Biologi:"biologi",Ergonomi:"ergonomi",Psikososial:"psikososial"}[tipe];
+  if(H&&key&&H[key])return H[key];
+  return null;
+}
+
+function _ai(modul,m){
+  var R=[],an="";
+  function add(pri,text,reg){R.push({pri:pri,text:text,reg:reg});}
+
+  if(modul==="DAT"){
+    an=(m.pos>0
+      ? "Terdeteksi "+m.pos+" hasil positif dari "+m.crew+" crew yang diperiksa (tingkat positif "+m.rate+"%). "
+      : "Seluruh "+m.crew+" crew yang diperiksa menunjukkan hasil negatif (compliance "+m.cov+"% armada). ")
+      + (m.belum>0 ? m.belum+" kapal belum menjalani DAT — coverage armada "+m.cov+"%." : "Coverage pemeriksaan armada telah mencapai "+m.cov+"%.");
+    if(m.pos>0)add("TINGGI",
+      "Tindak lanjut medis untuk "+m.pos+" crew positif: nonaktifkan tugas berisiko, lakukan uji konfirmasi (GC-MS), konseling, dan keputusan fit-to-sail oleh dokter sebelum keberangkatan.",
+      "MLC 2006 Reg.4.3 · STCW 2010 Sec.A-I/9");
+    if(m.belum>0)add(m.cov<50?"TINGGI":"SEDANG",
+      "Percepat DAT pada "+m.belum+" kapal yang belum diperiksa (target coverage 100%); koordinasikan vendor & akses crew dengan nakhoda.",
+      "Kebijakan Zero-Tolerance · OCIMF");
+    add("RUTIN",
+      "Selenggarakan random/unannounced testing minimal 25% populasi per kuartal sebagai efek deteren dan penguatan budaya keselamatan.",
+      "ISGOTT · OCIMF Drug & Alcohol Policy");
+    add("RUTIN",
+      "Arsipkan hasil sebagai bukti kepatuhan dan integrasikan ke Health Record crew untuk audit PSC & biro klasifikasi"+(m.biaya>0?" (estimasi biaya program "+m.biayaR+")":"")+".",
+      "MLC 2006 Reg.4.3 · ISM Code");
+  }
+
+  else if(modul==="HRA"){
+    var hz=m.hazTop&&m.hazTop.length?m.hazTop[0][0]:null;
+    var cls=hz?_hazClass(hz):null;
+    an=(m.cov<80
+      ? "Coverage HRA armada baru "+m.cov+"% ("+m.done+"/"+m.tot+" kapal) — di bawah target 80%. "
+      : "Coverage HRA armada "+m.cov+"% ("+m.done+"/"+m.tot+" kapal) telah memenuhi target. ")
+      + (hz ? "Bahaya paling sering teridentifikasi: "+hz+" ("+m.hazTop[0][1]+"×), tergolong hazard "+cls.tipe+"." : "Profil bahaya belum terisi pada periode ini.");
+    if(m.belum>0)add(m.cov<50?"TINGGI":"SEDANG",
+      "Percepat HRA pada "+m.belum+" armada tersisa; prioritaskan kapal dengan profil risiko tinggi agar coverage menembus target >80%.",
+      "ISO 45001:2018 cl.6.1 · Permenaker 05/2018");
+    if(hz){
+      var hir=_hirById(cls.tipe);
+      add("TINGGI",
+        "Kendalikan bahaya dominan \""+hz+"\" mengikuti hirarki pengendalian — dahulukan eliminasi/substitusi/rekayasa sebelum APD"+(hir?": "+String(hir["3"]).split("—")[0].trim():"")+".",
+        cls.reg);
+    }
+    add("SEDANG",
+      "Ukur paparan kuantitatif (noise/dust/gas/iklim kerja) pada area berisiko dan bandingkan terhadap NAB/TLV untuk verifikasi efektivitas pengendalian.",
+      "ACGIH TLV 2024 · Permenaker 05/2018");
+    add("RUTIN",
+      "Perbarui register bahaya, integrasikan temuan ke medical surveillance, dan selaraskan anggaran pengendalian ("+m.budgetR+") dengan tingkat risiko.",
+      "ISO 45001:2018 · Permenaker 05/2018 Lamp.IV");
+  }
+
+  else if(modul==="PEST"){
+    var hama=m.hamaTop&&m.hamaTop.length?m.hamaTop[0][0]:null;
+    an=(hama
+      ? "Hama dominan periode ini: "+hama+" ("+m.hamaTop[0][1]+" temuan) dari "+m.totalKeg+" kegiatan di "+m.totalLok+" lokasi. "
+      : "Tercatat "+m.totalKeg+" kegiatan pengendalian di "+m.totalLok+" lokasi. ")
+      + "Pengendalian vektor menjaga sanitasi & mencegah penyakit terbawa vektor di lingkungan kerja kapal.";
+    if(hama)add("TINGGI",
+      "Fokuskan treatment pada "+hama+": tutup titik akses, eliminasi sumber pakan/air, dan terapkan Integrated Vector Management pada lokasi terdampak.",
+      "IHR 2005 (WHO) · MLC 2006 Title 3 (Akomodasi)");
+    add("SEDANG",
+      "Tingkatkan sanitasi pantry, gudang, dan ruang kerja untuk memutus siklus perkembangbiakan vektor; jadwalkan inspeksi higiene berkala.",
+      "MLC 2006 Reg.3.2 · Permenkes Sanitasi Kapal");
+    add("RUTIN",
+      "Pertahankan jadwal pengendalian rutin dan dokumentasikan temuan/before-after sebagai bukti Ship Sanitation Control untuk PSC.",
+      "IHR 2005 · Ship Sanitation Certificate");
+    add("RUTIN",
+      "Evaluasi anggaran ("+m.biayaR+") terhadap frekuensi & jenis temuan untuk efisiensi program pengendalian.",
+      "Prinsip ALARP");
+  }
+
+  else if(modul==="CLOSEOUT"){
+    an=(m.open>0
+      ? "Dari "+m.total+" temuan, "+m.done+" telah closed dan "+m.open+" masih terbuka (progress "+m.pct+"%). "
+      : "Seluruh "+m.total+" temuan telah diselesaikan (closed 100%). ")
+      + (m.hirTop&&m.hirTop.length ? "Pengendalian terbanyak: "+m.hirTop[0][0]+" ("+m.hirTop[0][1]+" item)." : "");
+    if(m.open>0)add(m.pct<50?"TINGGI":"SEDANG",
+      "Tetapkan PIC dan target tanggal untuk "+m.open+" item terbuka; pantau mingguan hingga closed dan eskalasi item melewati tenggat.",
+      "ISO 45001:2018 cl.10.2 (Tindakan Korektif)");
+    if(m.hirTop&&m.hirTop.length)add("SEDANG",
+      "Verifikasi efektivitas pengendalian \""+m.hirTop[0][0]+"\" secara aktual di lapangan — utamakan kontrol di puncak hirarki, bukan sekadar administratif/APD.",
+      "Hierarchy of Controls · ISO 45001:2018");
+    add("RUTIN",
+      "Lampirkan bukti penyelesaian (foto/laporan pengukuran ulang) pada setiap closeout untuk ketertelusuran audit.",
+      "ISM Code · Dokumentasi K3");
+    add("RUTIN",
+      "Kompilasi lesson learned dan integrasikan ke siklus HRA berikutnya untuk mencegah temuan berulang.",
+      "Continual Improvement · ISO 45001:2018");
+  }
+
+  else if(modul==="SUMMARY"){
+    an="Status keseluruhan program IH: coverage HRA "+m.hraCov+"%, kepatuhan DAT "+m.datPct+"% ("+m.datPos+" positif), "+m.pestCount+" kegiatan pest control. "
+      +(m.overallOk?"Indikator utama dalam batas normal.":"Beberapa indikator memerlukan tindak lanjut prioritas.");
+    add(parseFloat(m.hraCov)<80?"TINGGI":"RUTIN",
+      parseFloat(m.hraCov)<80
+        ? "Percepat HRA hingga coverage >80% melalui penjadwalan armada prioritas berbasis tingkat risiko."
+        : "Pertahankan coverage HRA dan perbarui register bahaya secara berkala.",
+      "ISO 45001:2018 · Permenaker 05/2018");
+    add(m.datPos>0?"TINGGI":"RUTIN",
+      m.datPos>0
+        ? "Tindak lanjuti "+m.datPos+" crew positif DAT (uji konfirmasi + keputusan fit-to-sail) sebelum keberangkatan."
+        : "Jaga zero positive rate DAT dengan random testing berkala.",
+      "MLC 2006 Reg.4.3 · STCW 2010");
+    add("SEDANG",
+      "Lanjutkan pest control rutin & dokumentasi temuan; sinkronkan dengan program sanitasi kapal.",
+      "IHR 2005 · MLC 2006 Title 3");
+    add("RUTIN",
+      "Selaraskan anggaran ("+m.budgetR+") dengan profil risiko lintas modul untuk efisiensi dan prioritas pengendalian.",
+      "Prinsip ALARP · ISO 45001:2018");
+  }
+  return {analisis:an,recs:R};
+}
+
+/* Kotak analisis AI (narasi data-driven) */
+function _aiBox(s,pr,x,y,w,h,text){
+  s.addShape(pr.ShapeType.roundRect,{x:x,y:y,w:w,h:h,
+    fill:{color:C.ink},line:{type:"none"},rectRadius:0.09});
+  s.addShape(pr.ShapeType.rect,{x:x,y:y,w:0.08,h:h,fill:{color:C.aqua},line:{type:"none"}});
+  s.addText("ANALISIS",{x:x+0.26,y:y+0.12,w:2.2,h:0.26,
+    fontSize:9,bold:true,color:C.aqua,charSpacing:1.5,fontFace:"Segoe UI"});
+  s.addText(text,{x:x+0.26,y:y+0.40,w:w-0.5,h:h-0.52,
+    fontSize:10.5,color:"DCE6F2",fontFace:"Segoe UI",wrap:true,valign:"top"});
+}
+
+/* Kartu rekomendasi profesional: chip prioritas + teks + sitasi regulasi */
+function _recPro(s,pr,x,y,w,h,idx,pri,text,reg){
+  var P=_PRI[pri]||_PRI.RUTIN;
+  s.addShape(pr.ShapeType.roundRect,{x:x,y:y,w:w,h:h,
+    fill:{color:C.wht},line:{color:C.line,width:0.6},rectRadius:0.09});
+  s.addShape(pr.ShapeType.rect,{x:x,y:y,w:0.08,h:h,fill:{color:P.c},line:{type:"none"}});
+  /* nomor */
+  s.addText(String(idx),{x:x+0.18,y:y,w:0.5,h:h,
+    fontSize:20,bold:true,color:P.c,align:"center",valign:"middle",fontFace:"Segoe UI"});
+  /* chip prioritas */
+  s.addShape(pr.ShapeType.roundRect,{x:x+0.78,y:y+0.14,w:1.15,h:0.30,
+    fill:{color:P.bg},line:{color:P.c,width:0.75},rectRadius:0.06});
+  s.addText(pri,{x:x+0.78,y:y+0.14,w:1.15,h:0.30,
+    fontSize:8,bold:true,color:P.c,align:"center",valign:"middle",charSpacing:0.5,fontFace:"Segoe UI"});
+  /* teks rekomendasi */
+  s.addText(text,{x:x+2.05,y:y+0.10,w:w-2.25,h:h-0.42,
+    fontSize:10.5,color:C.txt,fontFace:"Segoe UI",wrap:true,valign:"top"});
+  /* sitasi regulasi */
+  s.addText([{text:"⚖ ",options:{color:P.c}},{text:String(reg||""),options:{color:C.mut,italic:true}}],
+    {x:x+2.05,y:y+h-0.34,w:w-2.25,h:0.28,fontSize:8.5,fontFace:"Segoe UI",valign:"middle"});
+}
+
+/* Render slide rekomendasi lengkap (analisis + kartu) untuk satu modul */
+function _slideRek(pr,modul,m,ftr,pg,tot,subjudul){
+  var s=pr.addSlide();
+  _hdr(s,pr,"Rekomendasi Tindak Lanjut (AI)",subjudul);
+  var ai=_ai(modul,m);
+  _aiBox(s,pr,0.45,1.28,12.43,1.12,ai.analisis);
+  var recs=ai.recs.slice(0,4);
+  var gap=0.16, top=2.66, avail=7.06-top, ch=(avail-gap*(recs.length-1))/recs.length;
+  if(ch>1.18)ch=1.18;
+  recs.forEach(function(r,i){
+    _recPro(s,pr,0.45,top+i*(ch+gap),12.43,ch,i+1,r.pri,r.text,r.reg);
+  });
+  _ftr(s,pr,ftr,pg,tot);
+  return s;
+}
+
 /* Bar chart native — labels[] & values[] paralel */
 function _bars(s,pr,x,y,w,h,labels,values,color,title){
   var hasData=values.some(function(v){return (parseFloat(v)||0)>0;});
@@ -374,15 +561,9 @@ async function exportDATPPT(){
       fontSize:9,italic:true,color:C.mut,fontFace:"Segoe UI"});
     _ftr(s4,pr,ftr,4,TOTP);
 
-    /* S5 Rekomendasi */
-    var s5=pr.addSlide(); _hdr(s5,pr,"Rekomendasi & Tindak Lanjut","Berbasis hasil DAT dan standar regulasi");
-    var rk=[];
-    if(pos>0)rk.push("Tindak lanjuti "+pos+" crew positif: pemeriksaan ulang, konseling, dan keputusan layak berlayar sesuai prosedur medis.");
-    if(belum>0)rk.push(belum+" kapal belum DAT — jadwalkan pemeriksaan dan koordinasikan vendor serta akses crew dengan nakhoda.");
-    rk.push("Pertahankan dokumentasi hasil sebagai bukti kepatuhan MLC 2006 Reg.4.3 & STCW 2010.");
-    rk.push("Lakukan DAT acak berkala untuk efek deteren dan budaya keselamatan kerja.");
-    rk.slice(0,4).forEach(function(t,i){_rec(s5,pr,0.45,1.35+i*1.28,12.43,1.12,i+1,t);});
-    _ftr(s5,pr,ftr,5,TOTP);
+    /* S5 Rekomendasi (AI) */
+    _slideRek(pr,"DAT",{pos:pos,crew:crew,rate:rate,cov:cov,belum:belum,biaya:biaya,biayaR:_rp(biaya)},
+      ftr,5,TOTP,"Disesuaikan dari data DAT & regulasi MLC/STCW/OCIMF");
 
     _closing(pr,"Drugs & Alcohol Test · "+periode);
     await _download(pr,"Laporan_DAT_"+new Date().toISOString().slice(0,10)+".pptx");
@@ -458,14 +639,9 @@ async function exportHRAPPT(){
     }
     _ftr(s4,pr,ftr,4,TOTP);
 
-    var s5=pr.addSlide(); _hdr(s5,pr,"Rekomendasi & Tindak Lanjut","Berbasis status HRA dan profil bahaya");
-    var rk=[];
-    if(belum>0)rk.push("Percepat HRA pada "+belum+" armada yang tersisa; prioritaskan kapal dengan profil risiko tinggi.");
-    if(hazTop.length)rk.push("Bahaya dominan: "+hazTop[0][0]+". Terapkan pengendalian sesuai hierarki (eliminasi → APD) dan ukur paparan berkala.");
-    rk.push("Perbarui register bahaya dan integrasikan temuan ke program medical surveillance.");
-    rk.push("Susun rencana anggaran pengendalian sesuai estimasi "+_rp(budget)+".");
-    rk.slice(0,4).forEach(function(t,i){_rec(s5,pr,0.45,1.35+i*1.28,12.43,1.12,i+1,t);});
-    _ftr(s5,pr,ftr,5,TOTP);
+    /* S5 Rekomendasi (AI) */
+    _slideRek(pr,"HRA",{cov:parseFloat(cov),done:done,tot:TOT,hazTop:hazTop,belum:belum,budgetR:_rp(budget)},
+      ftr,5,TOTP,"Disesuaikan dari status HRA, profil bahaya & hirarki pengendalian ISO 45001");
 
     _closing(pr,"Hazard Recognition & Assessment · "+tgl);
     await _download(pr,"Laporan_HRA_"+new Date().toISOString().slice(0,10)+".pptx");
@@ -546,14 +722,9 @@ async function exportPestPPT(){
       fontSize:9,italic:true,color:C.mut,fontFace:"Segoe UI"});
     _ftr(s4,pr,ftr,4,TOTP);
 
-    var s5=pr.addSlide(); _hdr(s5,pr,"Rekomendasi & Tindak Lanjut","Berbasis temuan pengendalian hama");
-    var rk=[];
-    if(hamaTop.length)rk.push("Hama dominan: "+hamaDom+". Fokuskan treatment dan perbaiki titik akses serta sumber makanan di lokasi terdampak.");
-    rk.push("Pertahankan jadwal pengendalian berkala dan dokumentasi temuan untuk evaluasi efektivitas.");
-    rk.push("Tingkatkan sanitasi pantry/ruang kerja guna mencegah perkembangbiakan vektor.");
-    rk.push("Evaluasi anggaran ("+_rp(totalBiaya)+") terhadap frekuensi temuan untuk efisiensi program.");
-    rk.slice(0,4).forEach(function(t,i){_rec(s5,pr,0.45,1.35+i*1.28,12.43,1.12,i+1,t);});
-    _ftr(s5,pr,ftr,5,TOTP);
+    /* S5 Rekomendasi (AI) */
+    _slideRek(pr,"PEST",{hamaTop:hamaTop,totalKeg:totalKeg,totalLok:totalLok,biayaR:_rp(totalBiaya)},
+      ftr,5,TOTP,"Disesuaikan dari temuan hama & regulasi IHR 2005 / MLC 2006");
 
     _closing(pr,"Pest & Rodent Control · "+tgl);
     await _download(pr,"Laporan_Pest_"+new Date().toISOString().slice(0,10)+".pptx");
@@ -618,14 +789,9 @@ async function exportCloseout25PPT(){
     ],"Status Penyelesaian");
     _ftr(s3,pr,ftr,3,TOTP);
 
-    var s4=pr.addSlide(); _hdr(s4,pr,"Rekomendasi — Percepatan Closeout","Tindak lanjut untuk menutup temuan terbuka");
-    var rk=[];
-    if(open>0)rk.push("Tetapkan PIC dan target tanggal untuk "+open+" item terbuka; pantau mingguan hingga closed.");
-    if(hirTop.length)rk.push("Pengendalian terbanyak: "+hirTop[0][0]+". Verifikasi efektivitas pengendalian di lapangan, bukan sekadar administratif.");
-    rk.push("Dokumentasikan bukti penyelesaian (foto/laporan) sebagai lampiran closeout.");
-    rk.push("Integrasikan pelajaran (lesson learned) ke siklus HRA berikutnya.");
-    rk.slice(0,4).forEach(function(t,i){_rec(s4,pr,0.45,1.35+i*1.28,12.43,1.12,i+1,t);});
-    _ftr(s4,pr,ftr,4,TOTP);
+    /* S4 Rekomendasi (AI) */
+    _slideRek(pr,"CLOSEOUT",{total:total,done:done,open:open,pct:pct,hirTop:hirTop},
+      ftr,4,TOTP,"Disesuaikan dari status temuan & ISO 45001:2018 (tindakan korektif)");
 
     _closing(pr,"Closeout HRA 2025 · "+tgl);
     await _download(pr,"Closeout_HRA_2025_"+new Date().toISOString().slice(0,10)+".pptx");
@@ -684,16 +850,9 @@ async function exportSummaryPPT(){
       fontFace:"Segoe UI",fontSize:10.5,color:C.txt,align:"center",valign:"middle",rowH:0.40,fill:{color:C.wht}});
     _ftr(s2,pr,ftr,2,TOTP);
 
-    var s3=pr.addSlide(); _hdr(s3,pr,"Rekomendasi Strategis","Prioritas tindak lanjut lintas program IH");
-    var rk=[];
-    rk.push(parseFloat(hraCov)<80?"Percepat pelaksanaan HRA hingga coverage >80% melalui penjadwalan armada prioritas."
-                                 :"Pertahankan coverage HRA dan perbarui register bahaya secara berkala.");
-    rk.push(datPos>0?"Tindak lanjuti "+datPos+" crew positif DAT sesuai prosedur medis sebelum keberangkatan."
-                    :"Jaga zero positive rate DAT dengan pemeriksaan acak berkala.");
-    rk.push("Lanjutkan program Pest Control rutin dan dokumentasikan temuan untuk evaluasi sanitasi.");
-    rk.push("Selaraskan anggaran ("+_rp(budget)+") dengan profil risiko untuk efisiensi program IH.");
-    rk.slice(0,4).forEach(function(t,i){_rec(s3,pr,0.45,1.35+i*1.28,12.43,1.12,i+1,t);});
-    _ftr(s3,pr,ftr,3,TOTP);
+    /* S3 Rekomendasi Strategis (AI) */
+    _slideRek(pr,"SUMMARY",{hraCov:hraCov,datPct:datPct,datPos:datPos,pestCount:pestCount,overallOk:overallOk,budgetR:_rp(budget)},
+      ftr,3,TOTP,"Sintesis lintas modul IH dari data & regulasi");
 
     _closing(pr,"Industrial Hygiene Summary · "+tgl);
     await _download(pr,"IH_Summary_"+new Date().toISOString().slice(0,10)+".pptx");
