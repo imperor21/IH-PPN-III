@@ -250,22 +250,22 @@ function _ai(modul,m){
   }
 
   else if(modul==="CLOSEOUT"){
-    an=(m.open>0
-      ? "Dari "+m.total+" temuan, "+m.done+" berstatus CLOSE dan "+m.open+" masih OPEN (progress "+m.pct+"%). "
-      : "Seluruh "+m.total+" temuan telah CLOSE (100%). ")
-      + ((m.hraCount||m.ihmCount) ? "Komposisi: "+(m.hraCount||0)+" HRA, "+(m.ihmCount||0)+" IHM." : "")
-      + (m.fleetTopOpen ? " Item terbuka terbanyak pada "+m.fleetTopOpen+" ("+m.fleetTopOpenN+" item)." : "");
-    if(m.open>0)add(m.pct<50?"TINGGI":"SEDANG",
-      "Tetapkan PIC dan target tanggal untuk "+m.open+" item OPEN"+(m.fleetTopOpen?", prioritaskan "+m.fleetTopOpen+" ("+m.fleetTopOpenN+" item)":"")+"; pantau mingguan dan eskalasi item melewati tenggat.",
+    an=(m.kapalOpen>0
+      ? "Dari "+m.totalKapal+" kapal, "+m.kapalClose+" sudah CLOSE dan "+m.kapalOpen+" masih OPEN serta perlu ditindaklanjuti (progress "+m.pct+"%). "
+      : "Seluruh "+m.totalKapal+" kapal telah CLOSE (100%). ")
+      + ((m.itemOpen||m.itemClose)?"Total temuan "+(m.total||0)+" ("+(m.itemClose||0)+" close / "+(m.itemOpen||0)+" open). ":"")
+      + (m.fleetTopOpen ? "Kapal open terbanyak pada "+m.fleetTopOpen+" ("+m.fleetTopOpenN+" kapal)." : "");
+    if(m.kapalOpen>0)add(m.pct<50?"TINGGI":"SEDANG",
+      "Tetapkan PIC dan target tanggal untuk "+m.kapalOpen+" kapal berstatus OPEN"+(m.fleetTopOpen?", prioritaskan "+m.fleetTopOpen+" ("+m.fleetTopOpenN+" kapal)":"")+"; pantau mingguan dan eskalasi yang melewati tenggat.",
       "ISO 45001:2018 cl.10.2 (Tindakan Korektif)");
     add("SEDANG",
-      "Verifikasi efektivitas pengendalian secara aktual di lapangan (foto/pengukuran ulang) — utamakan kontrol di puncak hirarki, bukan sekadar administratif/APD.",
+      "Verifikasi efektivitas pengendalian di tiap kapal secara aktual (foto/pengukuran ulang) — utamakan kontrol di puncak hirarki, bukan sekadar administratif/APD.",
       "Hierarchy of Controls · ISO 45001:2018");
     add("RUTIN",
-      "Lampirkan bukti penyelesaian pada setiap item CLOSE untuk ketertelusuran audit PSC & biro klasifikasi.",
+      "Lampirkan bukti penyelesaian pada setiap kapal CLOSE untuk ketertelusuran audit PSC & biro klasifikasi.",
       "ISM Code · Dokumentasi K3");
     add("RUTIN",
-      "Kompilasi lesson learned dari temuan "+m.total+" item dan integrasikan ke siklus HRA berikutnya untuk mencegah temuan berulang.",
+      "Kompilasi lesson learned dari "+m.totalKapal+" kapal dan integrasikan ke siklus HRA berikutnya untuk mencegah temuan berulang.",
       "Continual Improvement · ISO 45001:2018");
   }
 
@@ -743,85 +743,134 @@ async function exportCloseout25PPT(){
   if(!raw.length){_toast("Tidak ada data Closeout.","warning");return;}
   _toast("Membuat PPT Closeout...","info");
   try{
-    var tgl=_now(), total=raw.length;
+    var tgl=_now();
     function _cz(r){return String(r.closeout!==undefined?r.closeout:(r["Closeout Status"]||"")).trim().toUpperCase();}
     function _jn(r){return String(r.jenis!==undefined?r.jenis:(r["Jenis"]||"")).trim().toUpperCase();}
     function _fl(r){return String(r.fleet!==undefined?r.fleet:(r["Fleet"]||"")).trim();}
-    var done=raw.filter(function(r){return _cz(r)==="CLOSE";}).length;
-    var open=raw.filter(function(r){return _cz(r)==="OPEN";}).length;
-    var pct=total>0?Math.round(done/total*100):0;
+    function _kp(r){return String(r.kapal!==undefined?r.kapal:(r["Nama Kapal"]||"")).trim()||"—";}
+
+    /* ── AGREGASI PER KAPAL ──
+       Kapal OPEN  = punya minimal 1 temuan OPEN (perlu tindak lanjut)
+       Kapal CLOSE = semua temuannya sudah CLOSE                     */
+    var shipMap={};
+    raw.forEach(function(r){
+      var k=_kp(r);
+      if(!shipMap[k])shipMap[k]={open:0,close:0,fleet:_fl(r),jenis:_jn(r)};
+      var st=_cz(r);
+      if(st==="OPEN")shipMap[k].open++; else if(st==="CLOSE")shipMap[k].close++;
+      if(!shipMap[k].fleet)shipMap[k].fleet=_fl(r);
+      if(!shipMap[k].jenis)shipMap[k].jenis=_jn(r);
+    });
+    var shipNames=Object.keys(shipMap);
+    var totalKapal=shipNames.length;
+    var openList=shipNames.filter(function(k){return shipMap[k].open>0;});
+    var kapalOpen=openList.length;
+    var kapalClose=shipNames.filter(function(k){return shipMap[k].open===0&&shipMap[k].close>0;}).length;
+    var pct=totalKapal>0?Math.round(kapalClose/totalKapal*100):0;
     var stC=pct>=80?C.grn:pct>=50?C.amber:C.red;
-    /* Distribusi per FLEET (close/open) — sama seperti dashboard */
+    /* item-level (info sekunder) */
+    var itemClose=raw.filter(function(r){return _cz(r)==="CLOSE";}).length;
+    var itemOpen=raw.filter(function(r){return _cz(r)==="OPEN";}).length;
+
+    /* Distribusi KAPAL per fleet */
     var FLEETS=["Fleet Product I","Fleet Product II","Fleet Crude","Fleet Gas & Petchem"];
     var fleetRows=FLEETS.map(function(f){
-      var c=raw.filter(function(r){return _fl(r)===f&&_cz(r)==="CLOSE";}).length;
-      var o=raw.filter(function(r){return _fl(r)===f&&_cz(r)==="OPEN";}).length;
-      return {fleet:f,close:c,open:o,total:c+o};
+      var cl=0,op=0;
+      shipNames.forEach(function(k){if(shipMap[k].fleet===f){if(shipMap[k].open>0)op++;else if(shipMap[k].close>0)cl++;}});
+      return {fleet:f,close:cl,open:op,total:cl+op};
     }).filter(function(x){return x.total>0;});
-    /* Jenis HRA vs IHM */
-    var hraCount=raw.filter(function(r){return _jn(r)==="HRA";}).length;
-    var ihmCount=raw.filter(function(r){return _jn(r)==="IHM";}).length;
-    /* Fleet dengan OPEN terbanyak (untuk rekomendasi) */
     var fleetTopOpen=fleetRows.slice().sort(function(a,b){return b.open-a.open;})[0];
-    var ftr=BRAND.org+" — Closeout HRA 2025 · "+tgl;
-    var TOTP=5, pr=_pres("Closeout HRA 2025 — IH Dashboard");
+    /* jenis (per kapal) */
+    var hraK=shipNames.filter(function(k){return shipMap[k].jenis==="HRA";}).length;
+    var ihmK=shipNames.filter(function(k){return shipMap[k].jenis==="IHM";}).length;
 
-    _cover(pr,"CLOSEOUT\nHRA 2025","Tracking status tindak lanjut temuan",
-      "Pemantauan penyelesaian rekomendasi pengendalian temuan HRA tahun 2025.",tgl,[
-      {v:total,l:"Total Temuan",c:C.aqua},
-      {v:done,l:"Closed",c:C.grn},
-      {v:open,l:"Open Items",c:open>0?C.red:C.grn}
+    var ftr=BRAND.org+" — Closeout HRA 2025 · "+tgl;
+    var TOTP=6, pr=_pres("Closeout HRA 2025 — IH Dashboard");
+
+    _cover(pr,"CLOSEOUT\nHRA 2025","Status tindak lanjut temuan per kapal",
+      "Pemantauan penyelesaian rekomendasi temuan HRA/IHM 2025 berdasarkan status kapal.",tgl,[
+      {v:totalKapal,l:"Total Kapal",c:C.aqua},
+      {v:kapalClose,l:"Kapal Close",c:C.grn},
+      {v:kapalOpen,l:"Kapal Open",c:kapalOpen>0?C.red:C.grn}
     ],"2025");
 
-    var s2=pr.addSlide(); _hdr(s2,pr,"Ringkasan Status Closeout","Overview penyelesaian tindak lanjut temuan HRA 2025");
-    _kpi(s2,pr,0.45,1.30,3.95,2.05,total,"Total Temuan",C.blue,"📋");
-    _kpi(s2,pr,4.55,1.30,3.95,2.05,done,"Item Closed",C.grn,"✅");
-    _kpi(s2,pr,8.65,1.30,4.23,2.05,open,"Open Items",open>0?C.red:C.grn,"⏳");
-    /* Progress panel */
+    /* S2 Ringkasan (berbasis kapal) */
+    var s2=pr.addSlide(); _hdr(s2,pr,"Ringkasan Status Closeout","Status penyelesaian temuan berdasarkan kapal — "+tgl);
+    _kpi(s2,pr,0.45,1.30,3.95,2.05,totalKapal,"Total Kapal",C.blue);
+    _kpi(s2,pr,4.55,1.30,3.95,2.05,kapalClose,"Kapal Close",C.grn);
+    _kpi(s2,pr,8.65,1.30,4.23,2.05,kapalOpen,"Kapal Open — Perlu Tindak Lanjut",kapalOpen>0?C.red:C.grn);
+    /* Progress panel (kapal close) */
     s2.addShape(pr.ShapeType.roundRect,{x:0.45,y:3.55,w:12.43,h:1.85,
       fill:{color:C.wht},line:{color:C.line,width:0.75},rectRadius:0.08});
     s2.addShape(pr.ShapeType.rect,{x:0.45,y:3.55,w:12.43,h:0.08,fill:{color:stC},line:{type:"none"}});
-    s2.addText("Progress Penyelesaian",{x:0.70,y:3.78,w:8,h:0.30,fontSize:12,bold:true,color:C.ink,fontFace:"Segoe UI"});
+    s2.addText("Progress Closeout Kapal",{x:0.70,y:3.78,w:8,h:0.30,fontSize:12,bold:true,color:C.ink,fontFace:"Segoe UI"});
     s2.addText(pct+"%",{x:10.5,y:3.70,w:2.2,h:0.6,fontSize:30,bold:true,color:stC,align:"right",fontFace:"Segoe UI"});
     s2.addShape(pr.ShapeType.roundRect,{x:0.70,y:4.36,w:11.93,h:0.40,fill:{color:C.line},line:{type:"none"},rectRadius:0.06});
     if(pct>0)s2.addShape(pr.ShapeType.roundRect,{x:0.70,y:4.36,w:Math.max(0.2,11.93*(pct/100)),h:0.40,fill:{color:stC},line:{type:"none"},rectRadius:0.06});
-    s2.addText(done+" dari "+total+" item telah diselesaikan.",{x:0.70,y:4.86,w:11.93,h:0.36,fontSize:10.5,color:C.txt,fontFace:"Segoe UI"});
+    s2.addText(kapalClose+" dari "+totalKapal+" kapal sudah CLOSE  ·  total temuan: "+raw.length+" ("+itemClose+" close / "+itemOpen+" open).",
+      {x:0.70,y:4.86,w:11.93,h:0.36,fontSize:10.5,color:C.txt,fontFace:"Segoe UI"});
     _note(s2,pr,0.45,5.62,12.43,1.20,
-      open>0 ? "Masih terdapat "+open+" item terbuka. Tetapkan PIC dan tenggat penyelesaian untuk mempercepat closure."
-             : "Seluruh item telah closed. Pertahankan kedisiplinan tindak lanjut pada siklus HRA berikutnya.",
-      open>0?C.amber:C.grn, open>0?C.amberL:C.grnL);
+      kapalOpen>0 ? kapalOpen+" kapal masih berstatus OPEN dan perlu ditindaklanjuti. Tetapkan PIC dan tenggat penyelesaian untuk mempercepat closure."
+                  : "Seluruh kapal telah berstatus CLOSE. Pertahankan kedisiplinan tindak lanjut pada siklus HRA berikutnya.",
+      kapalOpen>0?C.amber:C.grn, kapalOpen>0?C.amberL:C.grnL);
     _ftr(s2,pr,ftr,2,TOTP);
 
-    var s3=pr.addSlide(); _hdr(s3,pr,"Distribusi Status per Fleet","Sebaran item CLOSE/OPEN per fleet dan jenis temuan");
+    /* S3 Distribusi kapal per fleet */
+    var s3=pr.addSlide(); _hdr(s3,pr,"Distribusi Kapal per Fleet","Jumlah kapal CLOSE/OPEN per fleet dan jenis temuan");
     if(fleetRows.length){
-      s3.addText("Per Fleet (close / open)",{x:0.45,y:1.30,w:7.5,h:0.3,fontSize:11.5,bold:true,color:C.ink,fontFace:"Segoe UI"});
+      s3.addText("Per Fleet (kapal close / total)",{x:0.45,y:1.30,w:7.5,h:0.3,fontSize:11.5,bold:true,color:C.ink,fontFace:"Segoe UI"});
       fleetRows.forEach(function(f,i){
         _row(s3,pr,0.45,1.68+i*0.92,7.5,0.78,
-          f.close+"/"+f.total, f.fleet+"  —  "+f.open+" open",
+          f.close+"/"+f.total, f.fleet+"  —  "+f.open+" kapal open",
           f.open>0?C.amber:C.grn);
       });
     }else{
       _note(s3,pr,0.45,1.40,7.5,1.0,"Belum ada data per fleet.",C.mut,C.bg);
     }
-    /* Jenis HRA vs IHM */
     s3.addShape(pr.ShapeType.roundRect,{x:0.45,y:5.45,w:7.5,h:1.35,fill:{color:C.wht},line:{color:C.line,width:0.75},rectRadius:0.08});
-    s3.addText("Jenis Temuan",{x:0.65,y:5.58,w:7,h:0.28,fontSize:11,bold:true,color:C.ink,fontFace:"Segoe UI"});
-    s3.addText([{text:String(hraCount),options:{fontSize:24,bold:true,color:C.blue}},{text:"  HRA",options:{fontSize:12,color:C.mut}}],
+    s3.addText("Jenis Temuan (kapal)",{x:0.65,y:5.58,w:7,h:0.28,fontSize:11,bold:true,color:C.ink,fontFace:"Segoe UI"});
+    s3.addText([{text:String(hraK),options:{fontSize:24,bold:true,color:C.blue}},{text:"  HRA",options:{fontSize:12,color:C.mut}}],
       {x:0.65,y:5.92,w:3.5,h:0.7,valign:"middle",fontFace:"Segoe UI"});
-    s3.addText([{text:String(ihmCount),options:{fontSize:24,bold:true,color:C.pur}},{text:"  IHM",options:{fontSize:12,color:C.mut}}],
+    s3.addText([{text:String(ihmK),options:{fontSize:24,bold:true,color:C.pur}},{text:"  IHM",options:{fontSize:12,color:C.mut}}],
       {x:4.30,y:5.92,w:3.5,h:0.7,valign:"middle",fontFace:"Segoe UI"});
     _donut(s3,pr,8.15,1.40,4.73,5.20,[
-      {label:"Close",value:done,color:C.grn},
-      {label:"Open",value:open,color:C.red}
-    ],"Status Penyelesaian");
+      {label:"Kapal Close",value:kapalClose,color:C.grn},
+      {label:"Kapal Open",value:kapalOpen,color:C.red}
+    ],"Status Kapal");
     _ftr(s3,pr,ftr,3,TOTP);
 
-    /* S4 Rekomendasi (AI) */
-    _slideRek(pr,"CLOSEOUT",{total:total,done:done,open:open,pct:pct,
+    /* S4 Daftar Kapal OPEN (perlu tindak lanjut) */
+    var s4=pr.addSlide(); _hdr(s4,pr,"Kapal Perlu Tindak Lanjut","Daftar kapal berstatus OPEN yang harus diselesaikan");
+    if(kapalOpen>0){
+      var head=["No","Nama Kapal","Fleet","Jenis","Temuan Open"].map(function(t){return {text:t,options:{bold:true,color:C.wht,fill:{color:C.ink},align:"center"}};});
+      var rows=openList.slice(0,13).map(function(k,i){
+        var s=shipMap[k];
+        return [
+          {text:String(i+1),options:{align:"center"}},
+          {text:k,options:{align:"left",bold:true}},
+          {text:s.fleet||"—",options:{align:"left"}},
+          {text:s.jenis||"—",options:{align:"center"}},
+          {text:String(s.open),options:{align:"center",bold:true,color:C.red}}
+        ];
+      });
+      s4.addTable([head].concat(rows),{x:0.45,y:1.30,w:12.43,
+        colW:[0.9,5.0,3.6,1.5,1.43],border:{type:"solid",color:C.line,pt:0.5},
+        fontFace:"Segoe UI",fontSize:10.5,color:C.txt,align:"center",valign:"middle",rowH:0.40,fill:{color:C.wht}});
+      if(kapalOpen>13)s4.addText("… dan "+(kapalOpen-13)+" kapal open lainnya.",{x:0.45,y:6.62,w:12.43,h:0.3,
+        fontSize:9,italic:true,color:C.mut,fontFace:"Segoe UI"});
+    }else{
+      _note(s4,pr,0.45,1.50,12.43,1.4,
+        "Tidak ada kapal berstatus OPEN. Seluruh "+totalKapal+" kapal telah menyelesaikan tindak lanjut temuan (CLOSE).",
+        C.grn,C.grnL);
+    }
+    _ftr(s4,pr,ftr,4,TOTP);
+
+    /* S5 Rekomendasi (AI) */
+    _slideRek(pr,"CLOSEOUT",{totalKapal:totalKapal,kapalClose:kapalClose,kapalOpen:kapalOpen,pct:pct,
       fleetTopOpen:(fleetTopOpen&&fleetTopOpen.open>0)?fleetTopOpen.fleet:null,
       fleetTopOpenN:(fleetTopOpen&&fleetTopOpen.open>0)?fleetTopOpen.open:0,
-      hraCount:hraCount,ihmCount:ihmCount},
-      ftr,4,TOTP,"Disesuaikan dari status CLOSE/OPEN & ISO 45001:2018 (tindakan korektif)");
+      itemOpen:itemOpen,itemClose:itemClose,total:raw.length},
+      ftr,5,TOTP,"Disesuaikan dari status kapal CLOSE/OPEN & ISO 45001:2018");
 
     _closing(pr,"Closeout HRA 2025 · "+tgl);
     await _download(pr,"Closeout_HRA_2025_"+new Date().toISOString().slice(0,10)+".pptx");
