@@ -3609,9 +3609,9 @@ async function exportHazardPPT(hazardType){
   s1.addShape(pr.ShapeType.rect,{x:0,y:0,w:13.3,h:0.05,fill:{color:AC},line:{color:AC,width:0}});
   s1.addShape(pr.ShapeType.ellipse,{x:8.8,y:-1.5,w:6.5,h:6.5,fill:{color:M.navL},line:{color:M.navL,width:0}});
   s1.addShape(pr.ShapeType.ellipse,{x:10.5,y:5.0,w:4.0,h:4.0,fill:{color:M.nav2},line:{color:M.nav2,width:0}});
-  s1.addText("FUNGSI HEALTH",
+  s1.addText("PT PERTAMINA PATRA NIAGA  ·  SATUAN KERJA REGIONAL III",
     {x:0.28,y:0.2,w:9,h:0.28,fontSize:8.5,bold:true,color:"CADCFC",charSpacing:2,fontFace:"Calibri"});
-  s1.addText("Divisi Industrial Hygiene  ·  IH Dashboard v5.0",
+  s1.addText("Divisi Industrial Hygiene & Occupational Health  ·  IH Dashboard v5.0",
     {x:0.28,y:0.5,w:9,h:0.26,fontSize:9.5,color:"8899AA",fontFace:"Calibri"});
   s1.addShape(pr.ShapeType.rect,{x:0.28,y:0.86,w:5.0,h:0.04,fill:{color:M.gld},line:{color:M.gld,width:0}});
   s1.addText("5 HIRARKI PENGENDALIAN RISIKO",
@@ -3776,8 +3776,12 @@ async function exportHazardPPT(hazardType){
 ═══════════════════════════════════════════════════ */
 async function exportBiomarkerPPT(){
   if(typeof _awaitPptx==="function"){var ok=await _awaitPptx();if(!ok){showToast("Library PPT gagal dimuat. Coba refresh halaman.","error");return;}} else if(typeof PptxGenJS==="undefined"){showToast("Library PPT sedang dimuat, coba lagi.","warning");return;}
-  var dataB=typeof filteredBioKimia!=="undefined"?filteredBioKimia:(typeof rawBioKimia!=="undefined"?rawBioKimia:[]);
-  var dataP=typeof filteredBenzenePersonal!=="undefined"?filteredBenzenePersonal:(typeof rawBenzenePersonal!=="undefined"?rawBenzenePersonal:[]);
+  var _tahunF=((document.getElementById("bio-filter-tahun")||{}).value)||"";
+  var _kapalF=((document.getElementById("bio-filter-kapal")||{}).value)||"";
+  var _srcB=(typeof rawBiomarker!=="undefined")?rawBiomarker:[];
+  var _srcP=(typeof rawPersonal!=="undefined")?rawPersonal:[];
+  var dataB=_srcB.filter(function(r){return(!_tahunF||String(r.tahun)===_tahunF)&&(!_kapalF||r.kapal===_kapalF);});
+  var dataP=_srcP.filter(function(r){return(!_tahunF||String(r.tahun)===_tahunF)&&(!_kapalF||r.kapal===_kapalF);});
   if(!dataB.length&&!dataP.length){showToast("Tidak ada data Biomarker.","warning");return;}
   showToast("Membuat PPT Biomarker Benzene...","info");
   var M={navy:"0F2A4A",navD:"0A1929",navL:"1C3A5A",nav2:"162E42",
@@ -3785,9 +3789,9 @@ async function exportBiomarkerPPT(){
   var AC="7B1FA2"; var BEI=25; var TLV=0.5;
   var tgl=new Date().toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"});
   var totalB=dataB.length;
-  var melB=dataB.filter(function(r){return parseFloat(r["Hasil Urin (µg/g kreat)"]||0)>BEI;}).length;
+  var melB=dataB.filter(function(r){return (parseFloat(r.kreatinin)||0)>(parseFloat(r.rujukan)||BEI);}).length;
   var totalP=dataP.length;
-  var melP=dataP.filter(function(r){return parseFloat(r["Hasil TWA"]||r["Hasil (ppm)"]||0)>TLV;}).length;
+  var melP=dataP.filter(function(r){return (parseFloat(r.hasil)||0)>(parseFloat(r.nab)||TLV);}).length;
   var pctB=totalB>0?(((totalB-melB)/totalB)*100).toFixed(1):"100.0";
   var stC=parseFloat(pctB)>=90?"2E7D32":parseFloat(pctB)>=70?"F59E0B":"C62828";
   var pr=new PptxGenJS();
@@ -3871,7 +3875,7 @@ async function exportBiomarkerPPT(){
   kS(s2,8.18,1.22,4.68,1.45,"Compliance Rate",pctB+"%",stC);
   /* Chart hasil per kapal */
   var kapalBio={};
-  dataB.forEach(function(r){var k=r["Nama Kapal"]||"—";if(!kapalBio[k])kapalBio[k]={t:0,m:0};kapalBio[k].t++;if(parseFloat(r["Hasil Urin (µg/g kreat)"]||0)>BEI)kapalBio[k].m++;});
+  dataB.forEach(function(r){var k=r.kapal||"—";if(!kapalBio[k])kapalBio[k]={t:0,m:0};kapalBio[k].t++;if((parseFloat(r.kreatinin)||0)>(parseFloat(r.rujukan)||BEI))kapalBio[k].m++;});
   var kBioTop=Object.entries(kapalBio).sort(function(a,b){return b[1].m-a[1].m;}).slice(0,8);
   if(kBioTop.length)bChart(s2,0.22,3.0,7.8,2.9,kBioTop.map(function(k){return{lbl:k[0].slice(0,8),v:k[1].m,c:k[1].m>0?"C62828":"2E7D32"};}),
     "Jumlah ABK Melebihi BEI per Kapal");
@@ -3879,9 +3883,9 @@ async function exportBiomarkerPPT(){
   if(dataB.length){
     s2.addText("Data Sampel Urin",{x:8.3,y:3.0,w:4.78,h:0.26,fontSize:9.5,bold:true,color:M.navy,fontFace:"Calibri"});
     var uHdrs=["ABK","Kapal","Hasil","Status"].map(function(h){return{text:h,options:{bold:true,color:M.wht,fill:{color:M.navy},fontSize:9,border:{type:"none"},align:"center"}};});
-    var uRows=dataB.slice(0,8).map(function(r,i){var v=parseFloat(r["Hasil Urin (µg/g kreat)"]||0);var isH=v>BEI;return[
-      {text:String(r["Nama ABK"]||"—").slice(0,14),options:{fontSize:9,fill:{color:i%2===0?M.wht:"F8FAFC"},border:{type:"none"}}},
-      {text:String(r["Nama Kapal"]||"—").slice(0,12),options:{fontSize:9,fill:{color:i%2===0?M.wht:"F8FAFC"},border:{type:"none"}}},
+    var uRows=dataB.slice(0,8).map(function(r,i){var v=parseFloat(r.kreatinin||0);var isH=v>(parseFloat(r.rujukan)||BEI);return[
+      {text:String(r.pekerja||"—").slice(0,14),options:{fontSize:9,fill:{color:i%2===0?M.wht:"F8FAFC"},border:{type:"none"}}},
+      {text:String(r.kapal||"—").slice(0,12),options:{fontSize:9,fill:{color:i%2===0?M.wht:"F8FAFC"},border:{type:"none"}}},
       {text:v.toFixed(1),options:{fontSize:9,bold:isH,color:isH?"C62828":"2E7D32",align:"center",fill:{color:i%2===0?M.wht:"F8FAFC"},border:{type:"none"}}},
       {text:isH?"⚠ Lebih":"✓ OK",options:{fontSize:9,bold:true,color:isH?"C62828":"2E7D32",align:"center",fill:{color:i%2===0?M.wht:"F8FAFC"},border:{type:"none"}}}
     ];});
@@ -3898,13 +3902,13 @@ async function exportBiomarkerPPT(){
   kS(s3,8.18,1.22,4.68,1.45,"Status Compliance",melP===0?"Memenuhi":"Perlu Tindakan",melP===0?"2E7D32":"C62828");
   if(dataP.length){
     var pHdrs=["No","Kapal","Lokasi","TWA (ppm)","TLV","Durasi","Status"].map(function(h){return{text:h,options:{bold:true,color:M.wht,fill:{color:M.navy},fontSize:9.5,border:{type:"none"},align:"center"}};});
-    var pRows=dataP.slice(0,13).map(function(r,i){var v=parseFloat(r["Hasil TWA"]||r["Hasil (ppm)"]||0);var isH=v>TLV;return[
+    var pRows=dataP.slice(0,13).map(function(r,i){var v=parseFloat(r.hasil||0);var isH=v>(parseFloat(r.nab)||TLV);return[
       {text:String(i+1),options:{fontSize:9.5,align:"center",fill:{color:i%2===0?M.wht:"F8FAFC"},border:{type:"none"}}},
-      {text:String(r["Nama Kapal"]||"—"),options:{fontSize:9.5,bold:true,fill:{color:i%2===0?M.wht:"F8FAFC"},border:{type:"none"}}},
-      {text:String(r["Lokasi"]||r["Area"]||"—").slice(0,22),options:{fontSize:9.5,fill:{color:i%2===0?M.wht:"F8FAFC"},border:{type:"none"}}},
+      {text:String(r.kapal||"—"),options:{fontSize:9.5,bold:true,fill:{color:i%2===0?M.wht:"F8FAFC"},border:{type:"none"}}},
+      {text:String(r.lokasi||"—").slice(0,22),options:{fontSize:9.5,fill:{color:i%2===0?M.wht:"F8FAFC"},border:{type:"none"}}},
       {text:v.toFixed(3),options:{fontSize:9.5,bold:isH,color:isH?"C62828":"2E7D32",align:"center",fill:{color:i%2===0?M.wht:"F8FAFC"},border:{type:"none"}}},
-      {text:"0.5",options:{fontSize:9.5,align:"center",fill:{color:i%2===0?M.wht:"F8FAFC"},border:{type:"none"}}},
-      {text:String(r["Durasi"]||"8 jam"),options:{fontSize:9.5,align:"center",fill:{color:i%2===0?M.wht:"F8FAFC"},border:{type:"none"}}},
+      {text:String(r.nab||"0.5"),options:{fontSize:9.5,align:"center",fill:{color:i%2===0?M.wht:"F8FAFC"},border:{type:"none"}}},
+      {text:String(r.durasi||"8 jam"),options:{fontSize:9.5,align:"center",fill:{color:i%2===0?M.wht:"F8FAFC"},border:{type:"none"}}},
       {text:isH?"⚠ Melebihi":"✓ Normal",options:{fontSize:9.5,bold:true,color:isH?"C62828":"2E7D32",align:"center",fill:{color:i%2===0?M.wht:"F8FAFC"},border:{type:"none"}}}
     ];});
     s3.addTable([pHdrs].concat(pRows),{x:0.22,y:2.8,w:12.86,colW:[0.4,2.2,2.6,1.3,0.9,1.0,1.56],rowH:0.36,fontFace:"Calibri",border:{type:"none"}});
@@ -4479,7 +4483,7 @@ function _buildSummary(el,cKey){
 
     /* ── JUDUL UTAMA ── */
     +'<div style="margin-bottom:16px">'
-    +'<div style="font-size:13px;font-weight:400;color:#64748B;letter-spacing:.5px;margin-bottom:10px;text-transform:uppercase">Industrial Hygiene 2026</div>'
+    +'<div style="font-size:13px;font-weight:400;color:#64748B;letter-spacing:.5px;margin-bottom:10px;text-transform:uppercase">Industrial Hygiene &amp; Occupational Health</div>'
     +'<div style="font-size:46px;font-weight:700;color:#0D2B4E;line-height:1.1;letter-spacing:-1px;margin-bottom:4px">Monitoring,</div>'
     +'<div style="font-size:46px;font-weight:700;color:#0D2B4E;line-height:1.1;letter-spacing:-1px;margin-bottom:4px">Assessment</div>'
     +'<div style="font-size:46px;font-weight:300;color:#1A6BB5;line-height:1.1;letter-spacing:-1px">&amp; Hazard Management</div>'
