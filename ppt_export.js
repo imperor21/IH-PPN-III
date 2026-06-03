@@ -251,20 +251,21 @@ function _ai(modul,m){
 
   else if(modul==="CLOSEOUT"){
     an=(m.open>0
-      ? "Dari "+m.total+" temuan, "+m.done+" telah closed dan "+m.open+" masih terbuka (progress "+m.pct+"%). "
-      : "Seluruh "+m.total+" temuan telah diselesaikan (closed 100%). ")
-      + (m.hirTop&&m.hirTop.length ? "Pengendalian terbanyak: "+m.hirTop[0][0]+" ("+m.hirTop[0][1]+" item)." : "");
+      ? "Dari "+m.total+" temuan, "+m.done+" berstatus CLOSE dan "+m.open+" masih OPEN (progress "+m.pct+"%). "
+      : "Seluruh "+m.total+" temuan telah CLOSE (100%). ")
+      + ((m.hraCount||m.ihmCount) ? "Komposisi: "+(m.hraCount||0)+" HRA, "+(m.ihmCount||0)+" IHM." : "")
+      + (m.fleetTopOpen ? " Item terbuka terbanyak pada "+m.fleetTopOpen+" ("+m.fleetTopOpenN+" item)." : "");
     if(m.open>0)add(m.pct<50?"TINGGI":"SEDANG",
-      "Tetapkan PIC dan target tanggal untuk "+m.open+" item terbuka; pantau mingguan hingga closed dan eskalasi item melewati tenggat.",
+      "Tetapkan PIC dan target tanggal untuk "+m.open+" item OPEN"+(m.fleetTopOpen?", prioritaskan "+m.fleetTopOpen+" ("+m.fleetTopOpenN+" item)":"")+"; pantau mingguan dan eskalasi item melewati tenggat.",
       "ISO 45001:2018 cl.10.2 (Tindakan Korektif)");
-    if(m.hirTop&&m.hirTop.length)add("SEDANG",
-      "Verifikasi efektivitas pengendalian \""+m.hirTop[0][0]+"\" secara aktual di lapangan — utamakan kontrol di puncak hirarki, bukan sekadar administratif/APD.",
+    add("SEDANG",
+      "Verifikasi efektivitas pengendalian secara aktual di lapangan (foto/pengukuran ulang) — utamakan kontrol di puncak hirarki, bukan sekadar administratif/APD.",
       "Hierarchy of Controls · ISO 45001:2018");
     add("RUTIN",
-      "Lampirkan bukti penyelesaian (foto/laporan pengukuran ulang) pada setiap closeout untuk ketertelusuran audit.",
+      "Lampirkan bukti penyelesaian pada setiap item CLOSE untuk ketertelusuran audit PSC & biro klasifikasi.",
       "ISM Code · Dokumentasi K3");
     add("RUTIN",
-      "Kompilasi lesson learned dan integrasikan ke siklus HRA berikutnya untuk mencegah temuan berulang.",
+      "Kompilasi lesson learned dari temuan "+m.total+" item dan integrasikan ke siklus HRA berikutnya untuk mencegah temuan berulang.",
       "Continual Improvement · ISO 45001:2018");
   }
 
@@ -736,19 +737,32 @@ async function exportPestPPT(){
 ══════════════════════════════════════════════════════════ */
 async function exportCloseout25PPT(){
   if(!(await _guardAsync()))return;
-  var raw=(typeof rawCloseout25!=="undefined"?rawCloseout25:
-          (typeof rawCloseout!=="undefined"?rawCloseout:[]));
+  var raw=(typeof filteredCO25!=="undefined"&&filteredCO25&&filteredCO25.length)?filteredCO25:
+          (typeof rawCloseout25!=="undefined"&&rawCloseout25?rawCloseout25:
+          (typeof filteredCloseout25!=="undefined"?filteredCloseout25:[]));
   if(!raw.length){_toast("Tidak ada data Closeout.","warning");return;}
   _toast("Membuat PPT Closeout...","info");
   try{
     var tgl=_now(), total=raw.length;
-    function isDone(r){var s=(r["Status Tindak Lanjut"]||"").toLowerCase();return s.indexOf("selesai")>=0||s.indexOf("done")>=0||s.indexOf("closed")>=0;}
-    var done=raw.filter(isDone).length, open=Math.max(0,total-done);
+    function _cz(r){return String(r.closeout!==undefined?r.closeout:(r["Closeout Status"]||"")).trim().toUpperCase();}
+    function _jn(r){return String(r.jenis!==undefined?r.jenis:(r["Jenis"]||"")).trim().toUpperCase();}
+    function _fl(r){return String(r.fleet!==undefined?r.fleet:(r["Fleet"]||"")).trim();}
+    var done=raw.filter(function(r){return _cz(r)==="CLOSE";}).length;
+    var open=raw.filter(function(r){return _cz(r)==="OPEN";}).length;
     var pct=total>0?Math.round(done/total*100):0;
     var stC=pct>=80?C.grn:pct>=50?C.amber:C.red;
-    var hirMap={};
-    raw.forEach(function(r){var h=r["Hirarki Pengendalian"]||r["Hirarki"]||"Lainnya";hirMap[h]=(hirMap[h]||0)+1;});
-    var hirTop=Object.entries(hirMap).sort(function(a,b){return b[1]-a[1];}).slice(0,5);
+    /* Distribusi per FLEET (close/open) — sama seperti dashboard */
+    var FLEETS=["Fleet Product I","Fleet Product II","Fleet Crude","Fleet Gas & Petchem"];
+    var fleetRows=FLEETS.map(function(f){
+      var c=raw.filter(function(r){return _fl(r)===f&&_cz(r)==="CLOSE";}).length;
+      var o=raw.filter(function(r){return _fl(r)===f&&_cz(r)==="OPEN";}).length;
+      return {fleet:f,close:c,open:o,total:c+o};
+    }).filter(function(x){return x.total>0;});
+    /* Jenis HRA vs IHM */
+    var hraCount=raw.filter(function(r){return _jn(r)==="HRA";}).length;
+    var ihmCount=raw.filter(function(r){return _jn(r)==="IHM";}).length;
+    /* Fleet dengan OPEN terbanyak (untuk rekomendasi) */
+    var fleetTopOpen=fleetRows.slice().sort(function(a,b){return b.open-a.open;})[0];
     var ftr=BRAND.org+" — Closeout HRA 2025 · "+tgl;
     var TOTP=5, pr=_pres("Closeout HRA 2025 — IH Dashboard");
 
@@ -778,20 +792,36 @@ async function exportCloseout25PPT(){
       open>0?C.amber:C.grn, open>0?C.amberL:C.grnL);
     _ftr(s2,pr,ftr,2,TOTP);
 
-    var s3=pr.addSlide(); _hdr(s3,pr,"Distribusi per Hirarki Pengendalian","Sebaran temuan berdasarkan jenis pengendalian");
-    if(hirTop.length){
-      var hc=[C.red,C.amber,C.teal,C.blue,C.pur];
-      hirTop.forEach(function(h,i){_row(s3,pr,0.45,1.40+i*0.96,7.5,0.82,h[1]+" item",h[0],hc[i%hc.length]);});
+    var s3=pr.addSlide(); _hdr(s3,pr,"Distribusi Status per Fleet","Sebaran item CLOSE/OPEN per fleet dan jenis temuan");
+    if(fleetRows.length){
+      s3.addText("Per Fleet (close / open)",{x:0.45,y:1.30,w:7.5,h:0.3,fontSize:11.5,bold:true,color:C.ink,fontFace:"Segoe UI"});
+      fleetRows.forEach(function(f,i){
+        _row(s3,pr,0.45,1.68+i*0.92,7.5,0.78,
+          f.close+"/"+f.total, f.fleet+"  —  "+f.open+" open",
+          f.open>0?C.amber:C.grn);
+      });
+    }else{
+      _note(s3,pr,0.45,1.40,7.5,1.0,"Belum ada data per fleet.",C.mut,C.bg);
     }
+    /* Jenis HRA vs IHM */
+    s3.addShape(pr.ShapeType.roundRect,{x:0.45,y:5.45,w:7.5,h:1.35,fill:{color:C.wht},line:{color:C.line,width:0.75},rectRadius:0.08});
+    s3.addText("Jenis Temuan",{x:0.65,y:5.58,w:7,h:0.28,fontSize:11,bold:true,color:C.ink,fontFace:"Segoe UI"});
+    s3.addText([{text:String(hraCount),options:{fontSize:24,bold:true,color:C.blue}},{text:"  HRA",options:{fontSize:12,color:C.mut}}],
+      {x:0.65,y:5.92,w:3.5,h:0.7,valign:"middle",fontFace:"Segoe UI"});
+    s3.addText([{text:String(ihmCount),options:{fontSize:24,bold:true,color:C.pur}},{text:"  IHM",options:{fontSize:12,color:C.mut}}],
+      {x:4.30,y:5.92,w:3.5,h:0.7,valign:"middle",fontFace:"Segoe UI"});
     _donut(s3,pr,8.15,1.40,4.73,5.20,[
-      {label:"Closed",value:done,color:C.grn},
+      {label:"Close",value:done,color:C.grn},
       {label:"Open",value:open,color:C.red}
     ],"Status Penyelesaian");
     _ftr(s3,pr,ftr,3,TOTP);
 
     /* S4 Rekomendasi (AI) */
-    _slideRek(pr,"CLOSEOUT",{total:total,done:done,open:open,pct:pct,hirTop:hirTop},
-      ftr,4,TOTP,"Disesuaikan dari status temuan & ISO 45001:2018 (tindakan korektif)");
+    _slideRek(pr,"CLOSEOUT",{total:total,done:done,open:open,pct:pct,
+      fleetTopOpen:(fleetTopOpen&&fleetTopOpen.open>0)?fleetTopOpen.fleet:null,
+      fleetTopOpenN:(fleetTopOpen&&fleetTopOpen.open>0)?fleetTopOpen.open:0,
+      hraCount:hraCount,ihmCount:ihmCount},
+      ftr,4,TOTP,"Disesuaikan dari status CLOSE/OPEN & ISO 45001:2018 (tindakan korektif)");
 
     _closing(pr,"Closeout HRA 2025 · "+tgl);
     await _download(pr,"Closeout_HRA_2025_"+new Date().toISOString().slice(0,10)+".pptx");
