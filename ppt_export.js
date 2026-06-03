@@ -250,23 +250,27 @@ function _ai(modul,m){
   }
 
   else if(modul==="CLOSEOUT"){
+    var fr=m.fleetRanked||[];
+    var fleetTxt=fr.length?fr.map(function(f){return f.fleet+" ("+f.open+" kapal)";}).join(", "):"";
     an=(m.kapalOpen>0
-      ? "Dari "+m.totalKapal+" kapal, "+m.kapalClose+" sudah CLOSE dan "+m.kapalOpen+" masih OPEN serta perlu ditindaklanjuti (progress "+m.pct+"%). "
-      : "Seluruh "+m.totalKapal+" kapal telah CLOSE (100%). ")
-      + ((m.itemOpen||m.itemClose)?"Total temuan "+(m.total||0)+" ("+(m.itemClose||0)+" close / "+(m.itemOpen||0)+" open). ":"")
-      + (m.fleetTopOpen ? "Kapal open terbanyak pada "+m.fleetTopOpen+" ("+m.fleetTopOpenN+" kapal)." : "");
-    if(m.kapalOpen>0)add(m.pct<50?"TINGGI":"SEDANG",
-      "Tetapkan PIC dan target tanggal untuk "+m.kapalOpen+" kapal berstatus OPEN"+(m.fleetTopOpen?", prioritaskan "+m.fleetTopOpen+" ("+m.fleetTopOpenN+" kapal)":"")+"; pantau mingguan dan eskalasi yang melewati tenggat.",
-      "ISO 45001:2018 cl.10.2 (Tindakan Korektif)");
+      ? "Dari "+m.totalKapal+" kapal, "+m.kapalClose+" sudah CLOSE (temuan selesai) dan "+m.kapalOpen+" masih OPEN (temuan belum selesai) — progress "+m.pct+"%. "
+      : "Seluruh "+m.totalKapal+" kapal telah CLOSE — temuan selesai 100%. ")
+      + (fleetTxt ? "Fleet dengan kapal open: "+fleetTxt+"." : "");
+    if(m.kapalOpen>0){
+      var topf=fr[0];
+      add("TINGGI",
+        "Prioritaskan "+(topf?topf.fleet:"fleet dengan open terbanyak")+(topf?" ("+topf.open+" kapal open)":"")+": tetapkan PIC & target tanggal per kapal, dan jadwalkan penyelesaian temuan bersama manajemen fleet.",
+        "ISO 45001:2018 cl.10.2 (Tindakan Korektif)");
+      if(fr.length>1)add("SEDANG",
+        "Susun rencana closeout bertahap untuk fleet lain: "+fr.slice(1).map(function(f){return f.fleet+" ("+f.open+")";}).join(", ")+"; pantau progres mingguan per fleet.",
+        "Manajemen Fleet · ISO 45001:2018");
+    }
     add("SEDANG",
-      "Verifikasi efektivitas pengendalian di tiap kapal secara aktual (foto/pengukuran ulang) — utamakan kontrol di puncak hirarki, bukan sekadar administratif/APD.",
+      "Verifikasi efektivitas pengendalian di tiap kapal secara aktual (foto/pengukuran ulang) sebelum menetapkan status CLOSE — utamakan kontrol di puncak hirarki, bukan administratif/APD.",
       "Hierarchy of Controls · ISO 45001:2018");
     add("RUTIN",
-      "Lampirkan bukti penyelesaian pada setiap kapal CLOSE untuk ketertelusuran audit PSC & biro klasifikasi.",
-      "ISM Code · Dokumentasi K3");
-    add("RUTIN",
-      "Kompilasi lesson learned dari "+m.totalKapal+" kapal dan integrasikan ke siklus HRA berikutnya untuk mencegah temuan berulang.",
-      "Continual Improvement · ISO 45001:2018");
+      "Lampirkan bukti penyelesaian per kapal CLOSE dan kompilasi lesson learned per fleet untuk mencegah temuan berulang pada siklus HRA berikutnya.",
+      "ISM Code · Continual Improvement");
   }
 
   else if(modul==="SUMMARY"){
@@ -737,14 +741,21 @@ async function exportPestPPT(){
 ══════════════════════════════════════════════════════════ */
 async function exportCloseout25PPT(){
   if(!(await _guardAsync()))return;
-  var raw=(typeof filteredCO25!=="undefined"&&filteredCO25&&filteredCO25.length)?filteredCO25:
-          (typeof rawCloseout25!=="undefined"&&rawCloseout25?rawCloseout25:
+  /* Selalu pakai DATA PENUH agar gambaran close/open lengkap (tidak terpengaruh filter status di layar) */
+  var raw=(typeof rawCloseout25!=="undefined"&&rawCloseout25&&rawCloseout25.length)?rawCloseout25:
+          (typeof filteredCO25!=="undefined"&&filteredCO25&&filteredCO25.length?filteredCO25:
           (typeof filteredCloseout25!=="undefined"?filteredCloseout25:[]));
   if(!raw.length){_toast("Tidak ada data Closeout.","warning");return;}
   _toast("Membuat PPT Closeout...","info");
   try{
     var tgl=_now();
-    function _cz(r){return String(r.closeout!==undefined?r.closeout:(r["Closeout Status"]||"")).trim().toUpperCase();}
+    /* Normalisasi status: CLOSE = temuan selesai, OPEN = masih ada temuan */
+    function _cz(r){
+      var v=String(r.closeout!==undefined?r.closeout:(r["Closeout Status"]||r["closeout"]||"")).trim().toUpperCase();
+      if(v.indexOf("CLOSE")===0||v==="SELESAI"||v==="DONE")return "CLOSE";
+      if(v.indexOf("OPEN")===0||v==="BELUM")return "OPEN";
+      return v;
+    }
     function _jn(r){return String(r.jenis!==undefined?r.jenis:(r["Jenis"]||"")).trim().toUpperCase();}
     function _fl(r){return String(r.fleet!==undefined?r.fleet:(r["Fleet"]||"")).trim();}
     function _kp(r){return String(r.kapal!==undefined?r.kapal:(r["Nama Kapal"]||"")).trim()||"—";}
@@ -866,11 +877,13 @@ async function exportCloseout25PPT(){
     _ftr(s4,pr,ftr,4,TOTP);
 
     /* S5 Rekomendasi (AI) */
+    var fleetRanked=fleetRows.filter(function(f){return f.open>0;}).sort(function(a,b){return b.open-a.open;});
     _slideRek(pr,"CLOSEOUT",{totalKapal:totalKapal,kapalClose:kapalClose,kapalOpen:kapalOpen,pct:pct,
       fleetTopOpen:(fleetTopOpen&&fleetTopOpen.open>0)?fleetTopOpen.fleet:null,
       fleetTopOpenN:(fleetTopOpen&&fleetTopOpen.open>0)?fleetTopOpen.open:0,
+      fleetRanked:fleetRanked,
       itemOpen:itemOpen,itemClose:itemClose,total:raw.length},
-      ftr,5,TOTP,"Disesuaikan dari status kapal CLOSE/OPEN & ISO 45001:2018");
+      ftr,5,TOTP,"Rekomendasi tindak lanjut per fleet · ISO 45001:2018");
 
     _closing(pr,"Closeout HRA 2025 · "+tgl);
     await _download(pr,"Closeout_HRA_2025_"+new Date().toISOString().slice(0,10)+".pptx");
