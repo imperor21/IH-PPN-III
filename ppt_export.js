@@ -796,7 +796,9 @@ async function exportCloseout25PPT(){
     var ihmK=shipNames.filter(function(k){return shipMap[k].jenis==="IHM";}).length;
 
     var ftr=BRAND.org+" — Closeout HRA 2025 · "+tgl;
-    var TOTP=6, pr=_pres("Closeout HRA 2025 — IH Dashboard");
+    var ROWS_PER=13;
+    var numTbl=Math.max(1,Math.ceil(openList.length/ROWS_PER));
+    var TOTP=5+numTbl, pr=_pres("Closeout HRA 2025 — IH Dashboard");
 
     _cover(pr,"CLOSEOUT\nHRA 2025","Status tindak lanjut temuan per kapal",
       "Pemantauan penyelesaian rekomendasi temuan HRA/IHM 2025 berdasarkan status kapal.",tgl,[
@@ -850,40 +852,46 @@ async function exportCloseout25PPT(){
     ],"Status Kapal");
     _ftr(s3,pr,ftr,3,TOTP);
 
-    /* S4 Daftar Kapal OPEN (perlu tindak lanjut) */
-    var s4=pr.addSlide(); _hdr(s4,pr,"Kapal Perlu Tindak Lanjut","Daftar kapal berstatus OPEN yang harus diselesaikan");
+    /* S4.. Daftar Kapal OPEN (perlu tindak lanjut) — berhalaman, tampil SEMUA */
+    var headOpen=["No","Nama Kapal","Fleet","Jenis","Temuan Open"].map(function(t){return {text:t,options:{bold:true,color:C.wht,fill:{color:C.ink},align:"center"}};});
     if(kapalOpen>0){
-      var head=["No","Nama Kapal","Fleet","Jenis","Temuan Open"].map(function(t){return {text:t,options:{bold:true,color:C.wht,fill:{color:C.ink},align:"center"}};});
-      var rows=openList.slice(0,13).map(function(k,i){
-        var s=shipMap[k];
-        return [
-          {text:String(i+1),options:{align:"center"}},
-          {text:k,options:{align:"left",bold:true}},
-          {text:s.fleet||"—",options:{align:"left"}},
-          {text:s.jenis||"—",options:{align:"center"}},
-          {text:String(s.open),options:{align:"center",bold:true,color:C.red}}
-        ];
-      });
-      s4.addTable([head].concat(rows),{x:0.45,y:1.30,w:12.43,
-        colW:[0.9,5.0,3.6,1.5,1.43],border:{type:"solid",color:C.line,pt:0.5},
-        fontFace:"Segoe UI",fontSize:10.5,color:C.txt,align:"center",valign:"middle",rowH:0.40,fill:{color:C.wht}});
-      if(kapalOpen>13)s4.addText("… dan "+(kapalOpen-13)+" kapal open lainnya.",{x:0.45,y:6.62,w:12.43,h:0.3,
-        fontSize:9,italic:true,color:C.mut,fontFace:"Segoe UI"});
+      for(var pgI=0;pgI<numTbl;pgI++){
+        var chunk=openList.slice(pgI*ROWS_PER,(pgI+1)*ROWS_PER);
+        var sT=pr.addSlide();
+        _hdr(sT,pr,"Kapal Perlu Tindak Lanjut"+(numTbl>1?" ("+(pgI+1)+"/"+numTbl+")":""),
+          "Daftar kapal berstatus OPEN yang harus diselesaikan — total "+kapalOpen+" kapal");
+        var rows=chunk.map(function(k,j){
+          var idx=pgI*ROWS_PER+j+1, s=shipMap[k];
+          return [
+            {text:String(idx),options:{align:"center"}},
+            {text:k,options:{align:"left",bold:true}},
+            {text:s.fleet||"—",options:{align:"left"}},
+            {text:s.jenis||"—",options:{align:"center"}},
+            {text:String(s.open),options:{align:"center",bold:true,color:C.red}}
+          ];
+        });
+        sT.addTable([headOpen].concat(rows),{x:0.45,y:1.30,w:12.43,
+          colW:[0.9,5.0,3.6,1.5,1.43],border:{type:"solid",color:C.line,pt:0.5},
+          fontFace:"Segoe UI",fontSize:10.5,color:C.txt,align:"center",valign:"middle",rowH:0.40,fill:{color:C.wht}});
+        _ftr(sT,pr,ftr,4+pgI,TOTP);
+      }
     }else{
-      _note(s4,pr,0.45,1.50,12.43,1.4,
+      var sT0=pr.addSlide();
+      _hdr(sT0,pr,"Kapal Perlu Tindak Lanjut","Status tindak lanjut temuan");
+      _note(sT0,pr,0.45,1.50,12.43,1.4,
         "Tidak ada kapal berstatus OPEN. Seluruh "+totalKapal+" kapal telah menyelesaikan tindak lanjut temuan (CLOSE).",
         C.grn,C.grnL);
+      _ftr(sT0,pr,ftr,4,TOTP);
     }
-    _ftr(s4,pr,ftr,4,TOTP);
 
-    /* S5 Rekomendasi (AI) */
+    /* Rekomendasi (AI) — halaman setelah tabel */
     var fleetRanked=fleetRows.filter(function(f){return f.open>0;}).sort(function(a,b){return b.open-a.open;});
     _slideRek(pr,"CLOSEOUT",{totalKapal:totalKapal,kapalClose:kapalClose,kapalOpen:kapalOpen,pct:pct,
       fleetTopOpen:(fleetTopOpen&&fleetTopOpen.open>0)?fleetTopOpen.fleet:null,
       fleetTopOpenN:(fleetTopOpen&&fleetTopOpen.open>0)?fleetTopOpen.open:0,
       fleetRanked:fleetRanked,
       itemOpen:itemOpen,itemClose:itemClose,total:raw.length},
-      ftr,5,TOTP,"Rekomendasi tindak lanjut per fleet · ISO 45001:2018");
+      ftr,4+numTbl,TOTP,"Rekomendasi tindak lanjut per fleet · ISO 45001:2018");
 
     _closing(pr,"Closeout HRA 2025 · "+tgl);
     await _download(pr,"Closeout_HRA_2025_"+new Date().toISOString().slice(0,10)+".pptx");
