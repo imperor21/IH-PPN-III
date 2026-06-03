@@ -4479,7 +4479,7 @@ function _buildSummary(el,cKey){
 
     /* ── JUDUL UTAMA ── */
     +'<div style="margin-bottom:16px">'
-    +'<div style="font-size:13px;font-weight:400;color:#64748B;letter-spacing:.5px;margin-bottom:10px;text-transform:uppercase">Industrial Hygiene &amp; Occupational Health</div>'
+    +'<div style="font-size:13px;font-weight:400;color:#64748B;letter-spacing:.5px;margin-bottom:10px;text-transform:uppercase">Industrial Hygiene 2026</div>'
     +'<div style="font-size:46px;font-weight:700;color:#0D2B4E;line-height:1.1;letter-spacing:-1px;margin-bottom:4px">Monitoring,</div>'
     +'<div style="font-size:46px;font-weight:700;color:#0D2B4E;line-height:1.1;letter-spacing:-1px;margin-bottom:4px">Assessment</div>'
     +'<div style="font-size:46px;font-weight:300;color:#1A6BB5;line-height:1.1;letter-spacing:-1px">&amp; Hazard Management</div>'
