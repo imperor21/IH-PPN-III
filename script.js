@@ -1257,7 +1257,7 @@ function sortHRATable(col){if(hraSortCol===col)hraSortDir*=-1;else{hraSortCol=co
 
 /* DAT PAGE */
 function renderDATPage(){const data=filteredDAT;const done=new Set(data.map(r=>r["Nama Kapal"])).size;const belum=TOTAL_KAPAL-done;const crew=data.reduce((s,r)=>s+parseInt(r["Total Crew Diperiksa"]||0),0);const pos=data.reduce((s,r)=>s+parseInt(r["Jumlah Crew Positif"]||0),0);const biaya=data.reduce((s,r)=>s+parseFloat(r["Est Biaya"]||0),0);const coverage=((done/TOTAL_KAPAL)*100).toFixed(1);document.getElementById("dat-done").textContent=done;document.getElementById("dat-belum").textContent=belum;document.getElementById("dat-crew").textContent=fmtNum(crew);document.getElementById("dat-positif").textContent=pos;document.getElementById("dat-biaya").textContent=formatRupiah(biaya);document.getElementById("dat-coverage").textContent=coverage+"%";renderDATBarChart(data);renderDATDonutChart(data,crew,pos);renderDATTindakLanjut(data);renderDATTable(data);}
-function renderDATBarChart(data){const counts={};BULAN_ORDER.forEach(b=>counts[b]=0);data.forEach(r=>{const b=r["Bulan Pelaksanaan"];if(b&&counts[b]!==undefined)counts[b]++;});const ctx=document.getElementById("datBarChart").getContext("2d");if(datBarChart)datBarChart.destroy();datBarChart=new Chart(ctx,{type:datChartType,data:{labels:BULAN_ORDER,datasets:[{label:"Kapal DAT",data:BULAN_ORDER.map(b=>counts[b]),backgroundColor:datChartType==="line"?"rgba(67,160,71,0.12)":"#43A047",borderColor:"#2E7D32",borderWidth:datChartType==="line"?2.5:1,borderRadius:datChartType==="bar"?6:0,fill:datChartType==="line",tension:0.4,pointBackgroundColor:"#2E7D32",pointRadius:datChartType==="line"?4:0}]},options:chartOpts()});}
+function renderDATBarChart(data){const done={},plan={};BULAN_ORDER.forEach(b=>{done[b]=0;plan[b]=0;});data.forEach(r=>{const b=r["Bulan Pelaksanaan"];if(!b||done[b]===undefined)return;const hasil=String(r["Hasil"]||"").trim();const nama=String(r["Nama Kapal"]||"").trim();if(hasil!=="")done[b]++;else if(nama)plan[b]++;});const isLine=datChartType==="line";const ctx=document.getElementById("datBarChart").getContext("2d");if(datBarChart)datBarChart.destroy();const opts=chartOpts();opts.plugins.legend={display:true,position:"top",labels:{color:"#607D8B",font:{size:11,family:"Plus Jakarta Sans",weight:"700"},padding:14,boxWidth:12,usePointStyle:true}};if(!isLine){opts.scales.x.stacked=true;opts.scales.y.stacked=true;}datBarChart=new Chart(ctx,{type:datChartType,data:{labels:BULAN_ORDER,datasets:[{label:"Terlaksana",data:BULAN_ORDER.map(b=>done[b]),backgroundColor:isLine?"rgba(67,160,71,0.12)":"#43A047",borderColor:"#2E7D32",borderWidth:isLine?2.5:1,borderRadius:isLine?0:6,fill:isLine,tension:0.4,pointBackgroundColor:"#2E7D32",pointRadius:isLine?4:0,stack:"dat"},{label:"Akan Dilaksanakan",data:BULAN_ORDER.map(b=>plan[b]),backgroundColor:isLine?"rgba(224,145,58,0.12)":"#F0A030",borderColor:"#E0913A",borderWidth:isLine?2.5:1,borderRadius:isLine?0:6,fill:isLine,tension:0.4,pointBackgroundColor:"#E0913A",pointRadius:isLine?4:0,stack:"dat"}]},options:opts});}
 function renderDATDonutChart(data,crew,pos){const neg=crew-pos;const ctx=document.getElementById("datDonutChart").getContext("2d");if(datDonutChart)datDonutChart.destroy();datDonutChart=new Chart(ctx,{type:"doughnut",data:{labels:["Negatif","Positif"],datasets:[{data:[Math.max(0,neg),pos],backgroundColor:["#43A047","#E53935"],borderColor:"#fff",borderWidth:3,hoverOffset:8}]},options:donutOpts()});}
 function toggleDATChartType(btn,type){datChartType=type;btn.closest(".pill-group").querySelectorAll(".pill").forEach(p=>p.classList.remove("active"));btn.classList.add("active");renderDATBarChart(filteredDAT);}
 function renderDATTindakLanjut(data){const diturunkan=data.filter(r=>(r["Tindak Lanjut"]||"").toLowerCase().includes("turun")).reduce((s,r)=>s+parseInt(r["Jumlah Crew Positif"]||0),0);const total_tl=data.filter(r=>r["Tindak Lanjut"]).length;document.getElementById("datTindakLanjut").innerHTML=`<div class="stat-row"><div class="stat-item"><div><div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:3px"><i class="fas fa-arrow-down-from-line" style="color:#C62828;margin-right:5px"></i>Crew Diturunkan</div><div class="stat-label">Hasil positif ditindaklanjuti</div></div><div class="stat-val">${diturunkan}</div></div><div class="stat-item"><div><div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:3px"><i class="fas fa-file-medical" style="color:#E65100;margin-right:5px"></i>Entri Tindak Lanjut</div><div class="stat-label">Kapal dengan tindak lanjut</div></div><div class="stat-val" style="color:#E65100">${total_tl}</div></div></div>`;}
@@ -3609,9 +3609,9 @@ async function exportHazardPPT(hazardType){
   s1.addShape(pr.ShapeType.rect,{x:0,y:0,w:13.3,h:0.05,fill:{color:AC},line:{color:AC,width:0}});
   s1.addShape(pr.ShapeType.ellipse,{x:8.8,y:-1.5,w:6.5,h:6.5,fill:{color:M.navL},line:{color:M.navL,width:0}});
   s1.addShape(pr.ShapeType.ellipse,{x:10.5,y:5.0,w:4.0,h:4.0,fill:{color:M.nav2},line:{color:M.nav2,width:0}});
-  s1.addText("",
+  s1.addText("PT PERTAMINA PATRA NIAGA  ·  SATUAN KERJA REGIONAL III",
     {x:0.28,y:0.2,w:9,h:0.28,fontSize:8.5,bold:true,color:"CADCFC",charSpacing:2,fontFace:"Calibri"});
-  s1.addText("Industrial Hygiene ·  IH Dashboard v5.0",
+  s1.addText("Divisi Industrial Hygiene & Occupational Health  ·  IH Dashboard v5.0",
     {x:0.28,y:0.5,w:9,h:0.26,fontSize:9.5,color:"8899AA",fontFace:"Calibri"});
   s1.addShape(pr.ShapeType.rect,{x:0.28,y:0.86,w:5.0,h:0.04,fill:{color:M.gld},line:{color:M.gld,width:0}});
   s1.addText("5 HIRARKI PENGENDALIAN RISIKO",
@@ -3840,7 +3840,7 @@ async function exportBiomarkerPPT(){
   s1.addShape(pr.ShapeType.rect,{x:0,y:0,w:13.3,h:0.05,fill:{color:AC},line:{color:AC,width:0}});
   s1.addShape(pr.ShapeType.ellipse,{x:8.8,y:-1.5,w:6.5,h:6.5,fill:{color:M.navL},line:{color:M.navL,width:0}});
   s1.addShape(pr.ShapeType.ellipse,{x:10.5,y:5.0,w:4.0,h:4.0,fill:{color:M.nav2},line:{color:M.nav2,width:0}});
-  s1.addText("",
+  s1.addText("PT PERTAMINA PATRA NIAGA  ·  SATUAN KERJA REGIONAL III",
     {x:0.28,y:0.2,w:9,h:0.28,fontSize:8.5,bold:true,color:"CADCFC",charSpacing:2,fontFace:"Calibri"});
   s1.addShape(pr.ShapeType.rect,{x:0.28,y:0.55,w:5.0,h:0.04,fill:{color:M.gld},line:{color:M.gld,width:0}});
   s1.addText("⚗  BIOMONITORING BENZENE",
@@ -4440,8 +4440,8 @@ function _buildSummary(el,cKey){
     return'<div style="display:flex;justify-content:space-between;align-items:flex-start;'
       +'margin-bottom:24px;padding-bottom:14px;border-bottom:3px solid #0F2A4A">'
       +'<div>'
-      +'<div style="font-size:9px;font-weight:700;color:#C9973A;letter-spacing:2px;text-transform:uppercase;margin-bottom:2px"></div>'
-      +'<div style="font-size:9px;color:#94A3B8">Industrial Hygiene· IH Dashboard v5.0</div>'
+      +'<div style="font-size:9px;font-weight:700;color:#C9973A;letter-spacing:2px;text-transform:uppercase;margin-bottom:2px">PT PERTAMINA PATRA NIAGA · SATUAN KERJA REGIONAL III</div>'
+      +'<div style="font-size:9px;color:#94A3B8">Divisi Industrial Hygiene & Occupational Health · IH Dashboard v5.0</div>'
       +'</div>'
       +'<div style="text-align:right">'
       +'<div style="font-size:9.5px;font-weight:700;color:#0F2A4A">'+tgl+'</div>'
@@ -4483,7 +4483,7 @@ function _buildSummary(el,cKey){
 
     /* ── JUDUL UTAMA ── */
     +'<div style="margin-bottom:16px">'
-    +'<div style="font-size:13px;font-weight:400;color:#64748B;letter-spacing:.5px;margin-bottom:10px;text-transform:uppercase">Industrial Hygiene</div>'
+    +'<div style="font-size:13px;font-weight:400;color:#64748B;letter-spacing:.5px;margin-bottom:10px;text-transform:uppercase">Industrial Hygiene &amp; Occupational Health</div>'
     +'<div style="font-size:46px;font-weight:700;color:#0D2B4E;line-height:1.1;letter-spacing:-1px;margin-bottom:4px">Monitoring,</div>'
     +'<div style="font-size:46px;font-weight:700;color:#0D2B4E;line-height:1.1;letter-spacing:-1px;margin-bottom:4px">Assessment</div>'
     +'<div style="font-size:46px;font-weight:300;color:#1A6BB5;line-height:1.1;letter-spacing:-1px">&amp; Hazard Management</div>'
