@@ -930,14 +930,16 @@ function renderHRAPage(){
     if((r['Status']||'').toLowerCase()==='done')fleetMap[f].done++;
   });
 
-  /* ── Per-bulan monitoring trend ── */
+  /* ── Per-bulan monitoring trend (Terlaksana=Status done, Akan=nama kapal saja) ── */
   var bulanCounts={};
-  BULAN_ORDER.forEach(function(b){bulanCounts[b]={hra:0,ih:0};});
+  BULAN_ORDER.forEach(function(b){bulanCounts[b]={hraDone:0,hraPlan:0,ihDone:0,ihPlan:0};});
   data.forEach(function(r){
     var b=r['Bulan Pelaksanaan'];if(!b||!bulanCounts[b])return;
-    var j=hraJenis(r['Nama Kapal']);
-    if(j==='HRA')bulanCounts[b].hra++;
-    else if(j==='IH')bulanCounts[b].ih++;
+    var nama=String(r['Nama Kapal']||'').trim();if(!nama)return;
+    var done=(String(r['Status']||'').toLowerCase()==='done');
+    var j=hraJenis(nama);
+    if(j==='HRA'){if(done)bulanCounts[b].hraDone++;else bulanCounts[b].hraPlan++;}
+    else if(j==='IH'){if(done)bulanCounts[b].ihDone++;else bulanCounts[b].ihPlan++;}
   });
 
   /* ── HELPERS ── */
@@ -1047,26 +1049,29 @@ function renderHRAPage(){
   html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px">';
 
   /* Trend per bulan */
-  var maxBulan=Math.max.apply(null,BULAN_ORDER.map(function(b){return bulanCounts[b].hra+bulanCounts[b].ih;}));
+  var maxBulan=Math.max.apply(null,BULAN_ORDER.map(function(b){var c=bulanCounts[b];return c.hraDone+c.hraPlan+c.ihDone+c.ihPlan;}));
   maxBulan=maxBulan||1;
   html+='<div class="stat-card" style="padding:16px 20px">'
     +'<div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:8px">'
     +'<i class="fas fa-chart-column" style="color:#1E88E5"></i>Monitoring per Bulan'
-    +'<div style="margin-left:auto;display:flex;gap:8px;font-size:10px;font-weight:700">'
-    +'<span style="color:#5C6BC0">\u25a0 HRA</span><span style="color:#00ACC1">\u25a0 IH</span></div></div>';
+    +'<div style="margin-left:auto;display:flex;gap:9px;font-size:9px;font-weight:700;flex-wrap:wrap;justify-content:flex-end">'
+    +'<span style="color:#5C6BC0">\u25a0 HRA</span><span style="color:#00ACC1">\u25a0 IH</span>'
+    +'<span style="color:#9FA8DA">\u25a1 Akan dilaksanakan</span></div></div>';
   BULAN_ORDER.forEach(function(b,idx){
-    var hv=bulanCounts[b].hra,iv=bulanCounts[b].ih,tot=hv+iv;
+    var c=bulanCounts[b];
+    var done=c.hraDone+c.ihDone, plan=c.hraPlan+c.ihPlan, tot=done+plan;
     var barW=tot?Math.round((tot/maxBulan)*100):0;
-    var hW=tot?Math.round(hv/tot*100):0;
     html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">'
       +'<span style="font-size:9px;font-weight:600;color:var(--text-muted);width:24px;flex-shrink:0">'+BULAN_SHORT[idx]+'</span>'
       +'<div style="flex:1;height:10px;background:var(--border);border-radius:5px;overflow:hidden">'
       +(tot?'<div style="display:flex;height:100%;width:'+barW+'%">'
-        +'<div style="background:#5C6BC0;flex:'+hW+'"></div>'
-        +'<div style="background:#00ACC1;flex:'+(100-hW)+'"></div></div>'
+        +'<div style="background:#5C6BC0;flex:'+c.hraDone+'"></div>'
+        +'<div style="background:#C5CAE9;flex:'+c.hraPlan+'"></div>'
+        +'<div style="background:#00ACC1;flex:'+c.ihDone+'"></div>'
+        +'<div style="background:#B2EBF2;flex:'+c.ihPlan+'"></div></div>'
         :'')
       +'</div>'
-      +'<span style="font-size:9px;font-weight:700;color:var(--text);min-width:16px;text-align:right">'+tot+'</span>'
+      +'<span style="font-size:9px;font-weight:700;color:var(--text);min-width:30px;text-align:right" title="Terlaksana '+done+' dari '+tot+'">'+done+'/'+tot+'</span>'
       +'</div>';
   });
   html+='</div>';
