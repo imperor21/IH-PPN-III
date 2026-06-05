@@ -399,6 +399,7 @@ let hraSortCol=-1,hraSortDir=1,datSortCol=-1,datSortDir=1,pestSortCol=-1,pestSor
 let fisikaSortCol=-1,fisikaSortDir=1,kimiaSortCol=-1,kimiaSortDir=1,biologiSortCol=-1,biologiSortDir=1;
 let ergonomiSortCol=-1,ergonomiSortDir=1,psikoSortCol=-1,psikoSortDir=1;
 let hraChartType="bar",datChartType="bar",pestChartType="bar";
+let hraMonitorType="bar";var hraMonitorChart=null,_hraMonitorData=null;
 let fisikaChartType="bar",kimiaChartType="bar",biologiChartType="bar",ergonomiChartType="bar",psikoChartType="bar";
 
 /* INIT */
@@ -1049,32 +1050,22 @@ function renderHRAPage(){
   html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px">';
 
   /* Trend per bulan */
-  var maxBulan=Math.max.apply(null,BULAN_ORDER.map(function(b){var c=bulanCounts[b];return c.hraDone+c.hraPlan+c.ihDone+c.ihPlan;}));
-  maxBulan=maxBulan||1;
+  /* data untuk chart monitoring (Chart.js, bar vertikal seperti DAT) */
+  _hraMonitorData={
+    labels:BULAN_SHORT.slice(),
+    hraDone:BULAN_ORDER.map(function(b){return bulanCounts[b].hraDone;}),
+    hraPlan:BULAN_ORDER.map(function(b){return bulanCounts[b].hraPlan;}),
+    ihDone: BULAN_ORDER.map(function(b){return bulanCounts[b].ihDone;}),
+    ihPlan: BULAN_ORDER.map(function(b){return bulanCounts[b].ihPlan;})
+  };
   html+='<div class="stat-card" style="padding:16px 20px">'
-    +'<div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:8px">'
+    +'<div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:8px">'
     +'<i class="fas fa-chart-column" style="color:#1E88E5"></i>Monitoring per Bulan'
-    +'<div style="margin-left:auto;display:flex;gap:9px;font-size:9px;font-weight:700;flex-wrap:wrap;justify-content:flex-end">'
-    +'<span style="color:#5C6BC0">\u25a0 HRA</span><span style="color:#00ACC1">\u25a0 IH</span>'
-    +'<span style="color:#9FA8DA">\u25a1 Akan dilaksanakan</span></div></div>';
-  BULAN_ORDER.forEach(function(b,idx){
-    var c=bulanCounts[b];
-    var done=c.hraDone+c.ihDone, plan=c.hraPlan+c.ihPlan, tot=done+plan;
-    var barW=tot?Math.round((tot/maxBulan)*100):0;
-    html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">'
-      +'<span style="font-size:9px;font-weight:600;color:var(--text-muted);width:24px;flex-shrink:0">'+BULAN_SHORT[idx]+'</span>'
-      +'<div style="flex:1;height:10px;background:var(--border);border-radius:5px;overflow:hidden">'
-      +(tot?'<div style="display:flex;height:100%;width:'+barW+'%">'
-        +'<div style="background:#5C6BC0;flex:'+c.hraDone+'"></div>'
-        +'<div style="background:#C5CAE9;flex:'+c.hraPlan+'"></div>'
-        +'<div style="background:#00ACC1;flex:'+c.ihDone+'"></div>'
-        +'<div style="background:#B2EBF2;flex:'+c.ihPlan+'"></div></div>'
-        :'')
-      +'</div>'
-      +'<span style="font-size:9px;font-weight:700;color:var(--text);min-width:30px;text-align:right" title="Terlaksana '+done+' dari '+tot+'">'+done+'/'+tot+'</span>'
-      +'</div>';
-  });
-  html+='</div>';
+    +'<div class="pill-group" style="margin-left:auto;display:flex;gap:4px">'
+    +'<button class="pill '+(hraMonitorType==="bar"?"active":"")+'" onclick="toggleHRAMonitorType(this,\'bar\')">Bar</button>'
+    +'<button class="pill '+(hraMonitorType==="line"?"active":"")+'" onclick="toggleHRAMonitorType(this,\'line\')">Line</button>'
+    +'</div></div>'
+    +'<div style="height:240px"><canvas id="hraMonitorChart"></canvas></div></div>';
 
   /* Top Hazard */
   html+='<div class="stat-card" style="padding:16px 20px">'
@@ -1180,6 +1171,7 @@ function renderHRAPage(){
     +'Menampilkan '+data.length+' dari '+rawHRA.length+' entri</div></div>';
 
   pg.innerHTML=html;
+  renderHRAMonitorChart();
 
   /* Sync filter header ke hidden inputs */
   document.getElementById('hra-filter-bulan').value=selBulan;
@@ -1212,6 +1204,8 @@ function hraExecSearch(q){
 function renderHRABarChart(data){const counts={};BULAN_ORDER.forEach(b=>counts[b]=0);data.forEach(r=>{const b=r["Bulan Pelaksanaan"];if(b&&counts[b]!==undefined)counts[b]++;});const ctx=document.getElementById("hraBarChart").getContext("2d");if(hraBarChart)hraBarChart.destroy();hraBarChart=new Chart(ctx,{type:hraChartType,data:{labels:BULAN_ORDER,datasets:[{label:"Monitoring",data:BULAN_ORDER.map(b=>counts[b]),backgroundColor:hraChartType==="line"?"rgba(21,101,192,0.12)":"#1976D2",borderColor:"#1565C0",borderWidth:hraChartType==="line"?2.5:1,borderRadius:hraChartType==="bar"?6:0,fill:hraChartType==="line",tension:0.4,pointBackgroundColor:"#1565C0",pointRadius:hraChartType==="line"?4:0}]},options:chartOpts()});}
 function renderHRADonutChart(data){const fleets={"FP I":0,"FP II":0,"FC":0,"FGP":0};data.forEach(r=>{const f=r["Jenis Fleet"];if(f&&fleets[f]!==undefined)fleets[f]++;});const ctx=document.getElementById("hraDonutChart").getContext("2d");if(hraDonutChart)hraDonutChart.destroy();hraDonutChart=new Chart(ctx,{type:"doughnut",data:{labels:Object.keys(fleets),datasets:[{data:Object.values(fleets),backgroundColor:["#1976D2","#43A047","#FB8C00","#8E24AA"],borderColor:"#fff",borderWidth:3,hoverOffset:8}]},options:donutOpts()});}
 function toggleHRAChartType(btn,type){hraChartType=type;btn.closest(".pill-group").querySelectorAll(".pill").forEach(p=>p.classList.remove("active"));btn.classList.add("active");renderHRABarChart(filteredHRA);}
+function renderHRAMonitorChart(){var d=_hraMonitorData;if(!d)return;var cv=document.getElementById("hraMonitorChart");if(!cv)return;var ctx=cv.getContext("2d");if(hraMonitorChart)hraMonitorChart.destroy();var isLine=hraMonitorType==="line";var opts=chartOpts();opts.plugins.legend={display:true,position:"top",labels:{color:"#607D8B",font:{size:10,family:"Plus Jakarta Sans",weight:"700"},padding:10,boxWidth:11,usePointStyle:true}};if(!isLine){opts.scales.x.stacked=true;opts.scales.y.stacked=true;}function mk(label,arr,solid,line,dash){return{label:label,data:arr,backgroundColor:isLine?"transparent":solid,borderColor:line,borderWidth:isLine?2.5:1,borderRadius:isLine?0:5,borderDash:isLine&&dash?[5,4]:[],fill:false,tension:0.4,pointBackgroundColor:line,pointRadius:isLine?3:0,stack:"hra"};}hraMonitorChart=new Chart(ctx,{type:hraMonitorType,data:{labels:d.labels,datasets:[mk("HRA Terlaksana",d.hraDone,"#5C6BC0","#5C6BC0",false),mk("HRA Akan",d.hraPlan,"#C5CAE9","#9FA8DA",true),mk("IH Terlaksana",d.ihDone,"#00ACC1","#00ACC1",false),mk("IH Akan",d.ihPlan,"#B2EBF2","#4DD0E1",true)]},options:opts});}
+function toggleHRAMonitorType(btn,type){hraMonitorType=type;btn.closest(".pill-group").querySelectorAll(".pill").forEach(function(p){p.classList.remove("active");});btn.classList.add("active");renderHRAMonitorChart();}
 function renderHRAHazard(){const bulan=document.getElementById("hra-hazard-bulan").value;const data=bulan?rawHRA.filter(r=>r["Bulan Pelaksanaan"]===bulan):rawHRA;const counts={};data.forEach(r=>{const h=(r["Top 3 Hazard"]||"").trim();if(!h)return;h.split(/[,;]/).map(x=>x.trim()).filter(Boolean).forEach(hz=>{counts[hz]=(counts[hz]||0)+1;});});const sorted=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,5);const el=document.getElementById("hazardList");if(!sorted.length){el.innerHTML='<div class="hazard-empty"><i class="fas fa-inbox" style="font-size:24px;opacity:.3;margin-bottom:8px;display:block"></i>Tidak ada data hazard</div>';return;}el.innerHTML=sorted.map(([name,count],i)=>`<div class="hazard-item"><div class="hazard-rank r${i+1}">${i+1}</div><div class="hazard-name">${esc(name)}</div><div class="hazard-count">${count}x</div></div>`).join("");}
 function renderHRATable(data){
   var tbody=document.getElementById('hraTableBody');
