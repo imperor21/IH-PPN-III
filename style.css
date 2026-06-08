@@ -1577,21 +1577,88 @@ html,body{max-width:100%;overflow-x:hidden;}
 /* ── Pusat Perhatian & Pengaturan: animasi panel ── */
 @keyframes notifSlide{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
 
-/* ── Mode gelap (eksperimental, opt-in via toggle Pengaturan) ── */
+/* ═══════════════════════════════════════════════════════════════
+   MODE GELAP MENYELURUH (opt-in via toggle Pengaturan)
+   Strategi: override variabel inti dulu (mencakup mayoritas komponen
+   yang memakai var), lalu override elemen ber-warna hardcoded (#fff)
+   termasuk sidebar / menu bar, topbar, kartu, tabel, bottom-nav.
+═══════════════════════════════════════════════════════════════ */
 html.theme-dark{
-  --mpage:#0E1726; --mcard:#16223A; --mborder:#243149;
-  --mtext:#E6EDF6; --mtext-sub:#9AA9BD;
+  --bg:#0E1726; --bg-card:#16223A;
+  --text:#E6EDF6; --text-mid:#C4D0E0; --text-muted:#94A3B8;
+  --border:#26334C; --border-soft:#1E2A40;
+  --sidebar-bg:#111C30;
+  --blue-soft:#15243B; --blue-bg:#15243B;
+  --mpage:#0E1726; --mcard:#16223A; --mborder:#26334C;
+  --mtext:#E6EDF6; --mtext-sub:#94A3B8;
 }
-html.theme-dark body{background:#0E1726;color:#E6EDF6;}
-html.theme-dark .main{background:#0E1726;}
-html.theme-dark .page-content{background:#0E1726;}
-html.theme-dark .topbar{background:#16223A;border-color:#243149;}
+html.theme-dark body,
+html.theme-dark .main,
+html.theme-dark .page-content{background:#0E1726;color:#E6EDF6;}
+
+/* Sidebar / menu bar */
+html.theme-dark .sidebar{background:#111C30;border-right-color:#26334C;box-shadow:2px 0 20px rgba(0,0,0,.4);}
+html.theme-dark .sidebar-header{border-bottom-color:#26334C;}
+html.theme-dark .nav-item{color:#AEBBCE;}
+html.theme-dark .nav-item:hover{background:#1B2A44;color:#fff;}
+html.theme-dark .nav-item.active{background:#15243B;color:#fff;}
+html.theme-dark .nav-group-hdr{color:#AEBBCE;}
+html.theme-dark .nav-group-hdr:hover{background:#1B2A44;}
+html.theme-dark .nav-group.open .nav-group-hdr{background:#15243B;}
+html.theme-dark .nav-group-label,
+html.theme-dark .nav-group.open .nav-group-label{color:#C4D0E0;}
+html.theme-dark .nav-group-icon{color:#94A3B8;}
+html.theme-dark .nav-group-count{background:#26334C;color:#C4D0E0;}
+html.theme-dark .nav-group-body{background:rgba(0,0,0,.15);}
+html.theme-dark .nav-section-title,
+html.theme-dark .nav-section{color:#7C8AA0;}
+
+/* Topbar & breadcrumb */
+html.theme-dark .topbar{background:#16223A;border-bottom-color:#26334C;}
+html.theme-dark .page-title{color:#E6EDF6;}
+html.theme-dark .breadcrumb-sep{color:#4A5A74;}
+html.theme-dark .topbar-icon-btn{background:#1C2A45;border-color:#2C3C58;color:#9AA9BD;}
+html.theme-dark .topbar-icon-btn:hover{background:#23344F;color:#fff;}
+
+/* Kartu, chart, tabel */
 html.theme-dark .card,
 html.theme-dark .table-card,
 html.theme-dark .kpi-card,
-html.theme-dark .chart-card{background:#16223A;border-color:#243149;color:#E6EDF6;}
-html.theme-dark .data-table tbody td{color:#D2DCEA;border-color:#243149;}
-html.theme-dark .data-table thead th{background:#1C2A45;color:#9AA9BD;}
-html.theme-dark .page-title,
-html.theme-dark .kpi-value{color:#E6EDF6;}
-html.theme-dark .topbar-icon-btn{background:#1C2A45;border-color:#2C3C58;color:#9AA9BD;}
+html.theme-dark .chart-card,
+html.theme-dark .stat-card,
+html.theme-dark .info-card{background:#16223A;border-color:#26334C;color:#E6EDF6;}
+html.theme-dark .kpi-value,
+html.theme-dark .card-title,
+html.theme-dark .chart-title{color:#E6EDF6;}
+html.theme-dark .kpi-label,
+html.theme-dark .card-sub,
+html.theme-dark .stat-label{color:#94A3B8;}
+html.theme-dark .data-table{background:#16223A;}
+html.theme-dark .data-table tbody td{color:#D2DCEA;border-color:#26334C;}
+html.theme-dark .data-table tbody tr:hover{background:#1B2A44;}
+html.theme-dark .data-table thead th{background:#1C2A45;color:#9AA9BD;border-color:#26334C;}
+html.theme-dark .table-wrap{background:#16223A;}
+
+/* Form & filter */
+html.theme-dark .filter-select,
+html.theme-dark .search-input,
+html.theme-dark input,
+html.theme-dark select,
+html.theme-dark textarea{background:#1C2A45;border-color:#2C3C58;color:#E6EDF6;}
+html.theme-dark .filter-select option,
+html.theme-dark select option{background:#16223A;color:#E6EDF6;}
+html.theme-dark .pill{background:#1C2A45;border-color:#2C3C58;color:#C4D0E0;}
+html.theme-dark .pill.active{background:var(--blue);color:#fff;}
+
+/* Bottom-nav mobile */
+html.theme-dark .m-bottom-nav{background:#111C30;border-top-color:#26334C;}
+html.theme-dark .m-nav-btn{color:#94A3B8;}
+html.theme-dark .m-nav-btn.active{color:#00C2A8;}
+html.theme-dark .m-topbar-strip{background:#111C30;border-color:#26334C;}
+
+/* Panel notif & pengaturan dasar (header tetap navy, body gelap) */
+html.theme-dark #notifPanel,
+html.theme-dark #settingsPanel{background:#16223A !important;border-color:#26334C !important;}
+
+/* Animasi panel */
+@keyframes notifSlide{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
