@@ -1414,3 +1414,162 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
   /* Chart lebih pendek di HP kecil */
   .chart-body{height:170px}
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   RESPONSIVE ENHANCEMENTS v5.3 — Audit fix (HP + Tablet)
+   Blok ini ditambahkan paling akhir agar menimpa aturan sebelumnya
+   melalui cascade. Tidak menghapus apa pun di atas.
+   Cakupan: tablet (769–1024px), HP (≤768px), HP kecil (≤400px),
+   tabel touch-friendly, target sentuh ≥44px, anti overflow horizontal.
+═══════════════════════════════════════════════════════════════════ */
+
+/* ── Global: cegah scroll horizontal tak disengaja di semua perangkat ── */
+html,body{max-width:100%;overflow-x:hidden;}
+*,*::before,*::after{box-sizing:border-box;}
+
+/* ════════════════════════════════════════════
+   TABLET — 769px s/d 1024px
+   Sebelumnya tablet memakai layout desktop penuh
+   (sidebar 260px tetap) sehingga konten sempit.
+   Di sini sidebar jadi off-canvas seperti HP,
+   tapi grid & font tetap lapang ala desktop.
+════════════════════════════════════════════ */
+@media(min-width:769px) and (max-width:1024px){
+  :root{--sidebar-w:260px;}
+  /* Sidebar off-canvas + tombol hamburger muncul */
+  .sidebar{transform:translateX(-100%);z-index:200;}
+  .sidebar.open{transform:translateX(0);box-shadow:0 0 0 9999px rgba(0,0,0,.4);}
+  .sidebar-overlay{z-index:199;}
+  .sidebar-toggle{display:flex;}
+  .main{margin-left:0;}
+
+  /* Manfaatkan lebar penuh */
+  .page-content{padding:20px 22px 28px;}
+
+  /* KPI: 3–4 kolom enak di tablet */
+  .kpi-grid{grid-template-columns:repeat(3,1fr);gap:14px;}
+  .kpi-row{grid-template-columns:repeat(3,1fr);gap:12px;}
+
+  /* Chart tetap 2 kolom bila muat */
+  .chart-row{grid-template-columns:1fr 1fr;gap:14px;}
+  .bottom-row{grid-template-columns:1fr 1fr;gap:14px;}
+  .chart-body{height:240px;}
+
+  /* Tabel: scroll horizontal halus, tinggi lega */
+  .table-wrap{max-height:420px;overflow-x:auto;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+  .data-table{min-width:640px;}
+
+  /* Bottom nav mobile TIDAK tampil di tablet (pakai sidebar) */
+  .m-bottom-nav{display:none !important;}
+  .m-topbar-strip,.m-filter-chips{display:none !important;}
+}
+
+/* ════════════════════════════════════════════
+   TABEL TOUCH-FRIENDLY — berlaku ≤1024px
+   Memperbaiki konflik 3 aturan .table-wrap lama
+   (330px / 240px / overflow-x) jadi satu perilaku
+   konsisten: scroll dua arah, header lengket.
+════════════════════════════════════════════ */
+@media(max-width:1024px){
+  .table-wrap{
+    overflow-x:auto;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior-x:contain;
+    position:relative;
+  }
+  /* Header tabel tetap terlihat saat scroll vertikal */
+  .data-table thead th{position:sticky;top:0;z-index:6;}
+  /* Bar scroll lebih jelas di sentuh */
+  .table-wrap::-webkit-scrollbar{height:7px;width:7px;}
+  .table-wrap::-webkit-scrollbar-thumb{background:rgba(0,107,184,.35);border-radius:4px;}
+  .table-wrap::-webkit-scrollbar-track{background:rgba(0,0,0,.04);}
+}
+
+/* ════════════════════════════════════════════
+   HP — ≤768px : penyempurnaan
+════════════════════════════════════════════ */
+@media(max-width:768px){
+  /* Tabel: tinggi lebih lega dari 240px lama, ada momentum scroll.
+     Aturan ini menimpa .table-wrap{max-height:240px} sebelumnya. */
+  .table-wrap{
+    max-height:62vh;
+    border-radius:0 0 14px 14px;
+  }
+  .data-table{min-width:560px;}
+  .data-table tbody td{padding:11px 13px;font-size:12.5px;}
+  .data-table thead th{padding:10px 13px;font-size:9.5px;}
+
+  /* Hint geser tabel — muncul sekali di pojok kanan atas table-card */
+  .table-card{position:relative;}
+  .table-card::after{
+    content:"\2194 Geser";
+    font-weight:700;position:absolute;top:8px;right:10px;z-index:7;
+    font-size:9px;letter-spacing:.5px;color:var(--blue);
+    background:rgba(235,245,255,.95);border:1px solid rgba(0,107,184,.2);
+    padding:3px 8px;border-radius:20px;pointer-events:none;
+    opacity:.9;animation:tblHintFade 4s ease forwards;
+  }
+  @keyframes tblHintFade{0%,70%{opacity:.9}100%{opacity:0;visibility:hidden}}
+
+  /* Target sentuh ≥44px (pedoman aksesibilitas mobile) */
+  .btn-refresh,.topbar-icon-btn,.sidebar-toggle,
+  .btn-export-ppt,.hcv-trigger-btn,.pill,
+  .filter-select,.dok-tab,.m-chip{
+    min-height:40px;
+  }
+  .nav-item{min-height:42px;display:flex;align-items:center;}
+  .m-nav-btn{min-height:56px;}
+
+  /* Filter & search: stack penuh, mudah ditekan */
+  .filter-bar{flex-wrap:wrap;gap:8px;}
+  .filter-select{
+    flex:1 1 calc(50% - 4px);min-width:0;
+    font-size:13px;padding:10px 12px;border-radius:10px;
+  }
+  .search-input{width:100% !important;max-width:100%;font-size:13px;padding:11px 14px;}
+
+  /* Header tiap halaman: judul + aksi rapi bertumpuk */
+  .page-header-row{flex-direction:column;align-items:stretch;gap:10px;}
+  .page-header-row > div:last-child{width:100%;display:flex;flex-wrap:wrap;gap:8px;}
+  .page-header-row .btn-export-ppt{flex:1;justify-content:center;}
+
+  /* Pill group (toggle bar/line chart): jangan mepet */
+  .pill-group{flex-wrap:wrap;gap:6px;}
+  .pill{padding:7px 13px;font-size:11.5px;}
+
+  /* Modal HCV (ship map) lebih ramah HP */
+  .hcv-box{height:96vh;max-width:100%;}
+  .hcv-detail{width:100%;}
+  .hcv-body{flex-direction:column;}
+
+  /* Toast tidak ketutup bottom nav & tidak melebihi layar */
+  .toast,#driveToast{left:12px !important;right:12px !important;max-width:none !important;
+    bottom:calc(var(--mobile-nav,68px) + 12px) !important;}
+
+  /* Recipe/segala grid 5 kolom paksa jadi 2 di HP */
+  [style*="repeat(5"],[style*="repeat(4"]{grid-template-columns:repeat(2,1fr) !important;}
+}
+
+/* ════════════════════════════════════════════
+   HP KECIL — ≤400px
+════════════════════════════════════════════ */
+@media(max-width:400px){
+  .page-content{padding:10px 9px calc(var(--mobile-nav,68px) + 12px);}
+  .kpi-value{font-size:19px;}
+  .kpi-label{font-size:8.5px;}
+  .chart-body{height:160px;}
+  .filter-select{flex:1 1 100%;}
+  .m-nav-lbl{font-size:8px;}
+  .data-table{min-width:480px;}
+  /* Judul halaman tidak terpotong */
+  .page-title{font-size:14px;}
+}
+
+/* ════════════════════════════════════════════
+   ORIENTASI LANDSCAPE HP — chart jangan terlalu tinggi
+════════════════════════════════════════════ */
+@media(max-width:920px) and (orientation:landscape){
+  .chart-body{height:200px;}
+  .table-wrap{max-height:54vh;}
+}
