@@ -5653,7 +5653,8 @@ function renderMCUPage(){
     '<select id="mcu-sel-fleet" onchange="mcuApplyFilter()" style="font-size:11px;padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.12);color:#fff">'+
     '<option value="">Semua Fleet</option>'+allFleets.map(function(f){return'<option style="color:#000"'+(f===selFleet?' selected':'')+'>'+esc(f)+'</option>';}).join('')+'</select>'+
     '<select id="mcu-sel-kapal" onchange="mcuApplyFilter()" style="font-size:11px;padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.12);color:#fff">'+
-    '<option value="">Semua Kapal</option>'+allKapal.map(function(k){return'<option style="color:#000"'+(k===selKapal?' selected':'')+'>'+esc(k)+'</option>';}).join('')+'</select></div></div>'+
+    '<option value="">Semua Kapal</option>'+allKapal.map(function(k){return'<option style="color:#000"'+(k===selKapal?' selected':'')+'>'+esc(k)+'</option>';}).join('')+'</select>'+
+    '<button onclick="exportMCUPPT()" title="Export laporan MCU ke PowerPoint" style="font-size:11px;padding:7px 13px;border-radius:8px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.18);color:#fff;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px"><i class="fas fa-file-powerpoint"></i> Export PPT</button></div></div>'+
     '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px;position:relative">'+
     [{v:d.length,l:'Total Crew MCU',ico:'fa-users',c:'#E0F7FA'},
      {v:fit,     l:'FIT',           ico:'fa-circle-check',c:'#A5D6A7'},
@@ -5934,7 +5935,8 @@ function renderAlkesPage(){
     '<select id="alkes-sel-status" onchange="applyAlkesFilters()" style="font-size:11px;padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.12);color:#fff">'+
     '<option value="">Semua Status</option>'+
     ['LENGKAP','PARSIAL','TIDAK LENGKAP','EXPIRED'].map(function(s){return'<option style="color:#000"'+(s===selStatus?' selected':'')+'>'+s+'</option>';}).join('')+
-    '</select></div></div>'+
+    '</select>'+
+    '<button onclick="exportAlkesPPT()" title="Export laporan Alkes ke PowerPoint" style="font-size:11px;padding:7px 13px;border-radius:8px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.18);color:#fff;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px"><i class="fas fa-file-powerpoint"></i> Export PPT</button></div></div>'+
     /* KPI strip */
     '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:18px;position:relative">'+
     [{v:data.length,l:'Total Kapal',ico:'fa-ship',c:'#E8F5E9'},
