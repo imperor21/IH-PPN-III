@@ -1573,3 +1573,25 @@ html,body{max-width:100%;overflow-x:hidden;}
   .chart-body{height:200px;}
   .table-wrap{max-height:54vh;}
 }
+
+/* ── Pusat Perhatian & Pengaturan: animasi panel ── */
+@keyframes notifSlide{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Mode gelap (eksperimental, opt-in via toggle Pengaturan) ── */
+html.theme-dark{
+  --mpage:#0E1726; --mcard:#16223A; --mborder:#243149;
+  --mtext:#E6EDF6; --mtext-sub:#9AA9BD;
+}
+html.theme-dark body{background:#0E1726;color:#E6EDF6;}
+html.theme-dark .main{background:#0E1726;}
+html.theme-dark .page-content{background:#0E1726;}
+html.theme-dark .topbar{background:#16223A;border-color:#243149;}
+html.theme-dark .card,
+html.theme-dark .table-card,
+html.theme-dark .kpi-card,
+html.theme-dark .chart-card{background:#16223A;border-color:#243149;color:#E6EDF6;}
+html.theme-dark .data-table tbody td{color:#D2DCEA;border-color:#243149;}
+html.theme-dark .data-table thead th{background:#1C2A45;color:#9AA9BD;}
+html.theme-dark .page-title,
+html.theme-dark .kpi-value{color:#E6EDF6;}
+html.theme-dark .topbar-icon-btn{background:#1C2A45;border-color:#2C3C58;color:#9AA9BD;}
