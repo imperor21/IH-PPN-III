@@ -392,8 +392,8 @@ Kirim ulang kode OTP
 </div>
 </div>
 <div class="topbar-right">
-<div class="topbar-icon-btn" title="Notifikasi" id="mBellBtn"><i class="fas fa-bell"></i></div>
-<div class="topbar-icon-btn" title="Pengaturan"><i class="fas fa-gear"></i></div>
+<div class="topbar-icon-btn" title="Pusat Perhatian" id="mBellBtn" style="position:relative" onclick="toggleNotifPanel(event)"><i class="fas fa-bell"></i><span id="notifBadge" style="display:none;position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;padding:0 4px;background:#E53935;color:#fff;border-radius:9px;font-size:10px;font-weight:800;line-height:17px;text-align:center;border:2px solid #fff;box-sizing:content-box">0</span></div>
+<div class="topbar-icon-btn" title="Pengaturan" id="mGearBtn" onclick="toggleSettingsPanel(event)"><i class="fas fa-gear"></i></div>
 <button class="btn-refresh" id="btnRefresh">
 <i class="fas fa-rotate-right"></i> Refresh
 </button>
