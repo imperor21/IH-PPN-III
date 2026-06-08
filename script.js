@@ -6459,6 +6459,7 @@ function exportP3KPPT(){
 ═══════════════════════════════════════════════════════════════ */
 var _notifPanelOpen=false, _settingsPanelOpen=false;
 var _prefs={ autoRefresh:true, theme:"light" };
+var _notifDismissed={}; /* key item yang sudah dibaca (selama sesi) */
 
 /* ── Kumpulkan item perhatian dari data global ── */
 function collectAttentionItems(){
@@ -6468,11 +6469,11 @@ function collectAttentionItems(){
     var mcu=(typeof filteredMCU!=="undefined"&&filteredMCU.length)?filteredMCU:(typeof rawMCU!=="undefined"?rawMCU:[]);
     var unfit=mcu.filter(function(r){return String(r["Hasil Umum"]||"").toUpperCase()==="UNFIT";});
     var nihl=mcu.filter(function(r){return (r._audioKlasif||"")==="NIHL";});
-    if(unfit.length)items.push({pri:"TINGGI",icon:"fa-user-doctor",cat:"MCU Pelaut",
+    if(unfit.length)items.push({key:"mcu_unfit",pri:"TINGGI",icon:"fa-user-doctor",cat:"MCU Pelaut",
       text:unfit.length+" pelaut berstatus UNFIT — perlu rujukan medis & keputusan fit-to-work.",
       detail:unfit.slice(0,5).map(function(r){return r["Nama Lengkap"]||r["NIP / ID Pelaut"]||"—";}).join(", "),
       menu:"medsurv"});
-    if(nihl.length)items.push({pri:"SEDANG",icon:"fa-ear-listen",cat:"MCU Pelaut",
+    if(nihl.length)items.push({key:"mcu_nihl",pri:"SEDANG",icon:"fa-ear-listen",cat:"MCU Pelaut",
       text:nihl.length+" pelaut indikasi NIHL — perlu audiometri ulang & kontrol kebisingan.",
       detail:"",menu:"medsurv"});
   }catch(e){}
@@ -6481,11 +6482,11 @@ function collectAttentionItems(){
     var alk=(typeof filteredAlkes!=="undefined"&&filteredAlkes.length)?filteredAlkes:(typeof rawAlkes!=="undefined"?rawAlkes:[]);
     var aedExp=alk.filter(function(r){return r._expiredAED===true;});
     var tdk=alk.filter(function(r){return (r._status||"")==="TIDAK LENGKAP";});
-    if(aedExp.length)items.push({pri:"TINGGI",icon:"fa-heart-pulse",cat:"Alkes Kapal",
+    if(aedExp.length)items.push({key:"alkes_aed",pri:"TINGGI",icon:"fa-heart-pulse",cat:"Alkes Kapal",
       text:aedExp.length+" unit AED kedaluwarsa — segera pengadaan/ganti baterai & pad.",
       detail:aedExp.slice(0,5).map(function(r){return r._kapal||r["Nama Kapal"]||"—";}).join(", "),
       menu:"menu5"});
-    if(tdk.length)items.push({pri:"SEDANG",icon:"fa-briefcase-medical",cat:"Alkes Kapal",
+    if(tdk.length)items.push({key:"alkes_tdk",pri:"SEDANG",icon:"fa-briefcase-medical",cat:"Alkes Kapal",
       text:tdk.length+" kapal alkes TIDAK LENGKAP — perlu pemenuhan alat wajib.",
       detail:tdk.slice(0,5).map(function(r){return r._kapal||r["Nama Kapal"]||"—";}).join(", "),
       menu:"menu5"});
@@ -6495,11 +6496,13 @@ function collectAttentionItems(){
     var dat=(typeof filteredDAT!=="undefined"&&filteredDAT.length)?filteredDAT:(typeof rawDAT!=="undefined"?rawDAT:[]);
     var posKapal=dat.filter(function(r){return parseInt(r["Jumlah Crew Positif"]||0)>0;});
     var totPos=posKapal.reduce(function(s,r){return s+parseInt(r["Jumlah Crew Positif"]||0);},0);
-    if(totPos>0)items.push({pri:"TINGGI",icon:"fa-vial-circle-check",cat:"DAT",
+    if(totPos>0)items.push({key:"dat_pos",pri:"TINGGI",icon:"fa-vial-circle-check",cat:"DAT",
       text:totPos+" crew positif DAT pada "+posKapal.length+" kapal — uji konfirmasi & fit-to-sail.",
       detail:posKapal.slice(0,5).map(function(r){return r["Nama Kapal"]||"—";}).join(", "),
       menu:"dat"});
   }catch(e){}
+  /* buang item yang sudah dibaca pada sesi ini */
+  items=items.filter(function(it){return !_notifDismissed[it.key];});
   /* urutkan: TINGGI dulu */
   var ord={TINGGI:0,SEDANG:1,RUTIN:2};
   items.sort(function(a,b){return (ord[a.pri]||9)-(ord[b.pri]||9);});
@@ -6515,6 +6518,60 @@ function updateNotifBadge(){
   else badge.style.display="none";
 }
 
+/* ── Tandai 1 item sudah dibaca, lalu segarkan panel & badge ── */
+function notifDismiss(key,ev){
+  if(ev)ev.stopPropagation();
+  _notifDismissed[key]=true;
+  updateNotifBadge();
+  _renderNotifBody();
+}
+
+/* ── Tandai semua sudah dibaca ── */
+function notifDismissAll(ev){
+  if(ev)ev.stopPropagation();
+  collectAttentionItems().forEach(function(it){_notifDismissed[it.key]=true;});
+  updateNotifBadge();
+  _renderNotifBody();
+}
+
+/* ── Render ulang isi panel (dipakai saat dismiss tanpa menutup panel) ── */
+function _renderNotifBody(){
+  var panel=document.getElementById("notifPanel");
+  if(!panel)return;
+  var items=collectAttentionItems();
+  var head=panel.querySelector("[data-notif-count]");
+  if(head)head.textContent=items.length+" item";
+  var bodyWrap=panel.querySelector("[data-notif-body]");
+  if(bodyWrap)bodyWrap.innerHTML=_notifBodyHtml(items);
+  var foot=panel.querySelector("[data-notif-foot]");
+  if(foot)foot.style.display=items.length?"block":"none";
+}
+
+/* ── HTML isi daftar notif ── */
+function _notifBodyHtml(items){
+  var PRI={TINGGI:{c:"#E53935",bg:"#FEE2E2",l:"TINGGI"},SEDANG:{c:"#E65100",bg:"#FEF3C7",l:"SEDANG"},RUTIN:{c:"#00897B",bg:"#E0F2F1",l:"RUTIN"}};
+  if(!items.length){
+    return '<div style="padding:36px 20px;text-align:center;color:#6B7280">'+
+      '<i class="fas fa-circle-check" style="font-size:34px;color:#43A047;margin-bottom:12px"></i>'+
+      '<div style="font-size:13px;font-weight:700;color:#0F2A4A">Tidak ada yang perlu perhatian</div>'+
+      '<div style="font-size:11px;margin-top:4px">Semua indikator dalam batas normal.</div></div>';
+  }
+  return items.map(function(it){
+    var p=PRI[it.pri]||PRI.RUTIN;
+    return '<div style="display:flex;gap:11px;padding:12px 15px;border-bottom:1px solid #F0F2F5;transition:background .15s" onmouseover="this.style.background=\'#F7F9FB\'" onmouseout="this.style.background=\'transparent\'">'+
+      '<div onclick="notifGoto(\''+it.menu+'\',\''+it.key+'\')" style="display:flex;gap:11px;flex:1;min-width:0;cursor:pointer">'+
+      '<div style="flex-shrink:0;width:34px;height:34px;border-radius:9px;background:'+p.bg+';display:flex;align-items:center;justify-content:center"><i class="fas '+it.icon+'" style="color:'+p.c+';font-size:14px"></i></div>'+
+      '<div style="flex:1;min-width:0">'+
+      '<div style="display:flex;align-items:center;gap:7px;margin-bottom:3px"><span style="font-size:9px;font-weight:800;color:'+p.c+';background:'+p.bg+';padding:1px 7px;border-radius:20px;letter-spacing:.4px">'+p.l+'</span>'+
+      '<span style="font-size:10px;color:#9AA5B1;font-weight:600">'+esc(it.cat)+'</span></div>'+
+      '<div style="font-size:12px;color:#0F2A4A;font-weight:600;line-height:1.4">'+esc(it.text)+'</div>'+
+      (it.detail?'<div style="font-size:10.5px;color:#6B7280;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(it.detail)+'</div>':'')+
+      '</div></div>'+
+      '<button onclick="notifDismiss(\''+it.key+'\',event)" title="Tandai sudah dibaca" style="flex-shrink:0;width:24px;height:24px;border:none;background:transparent;color:#B0BAC6;cursor:pointer;border-radius:6px;font-size:13px" onmouseover="this.style.background=\'#EEF1F5\';this.style.color=\'#6B7280\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'#B0BAC6\'"><i class="fas fa-xmark"></i></button>'+
+      '</div>';
+  }).join('');
+}
+
 /* ── Panel Pusat Perhatian ── */
 function toggleNotifPanel(ev){
   if(ev)ev.stopPropagation();
@@ -6522,33 +6579,15 @@ function toggleNotifPanel(ev){
   var existing=document.getElementById("notifPanel");
   if(existing){existing.remove();_notifPanelOpen=false;return;}
   var items=collectAttentionItems();
-  var PRI={TINGGI:{c:"#E53935",bg:"#FEE2E2",l:"TINGGI"},SEDANG:{c:"#E65100",bg:"#FEF3C7",l:"SEDANG"},RUTIN:{c:"#00897B",bg:"#E0F2F1",l:"RUTIN"}};
-  var body;
-  if(!items.length){
-    body='<div style="padding:36px 20px;text-align:center;color:#6B7280">'+
-      '<i class="fas fa-circle-check" style="font-size:34px;color:#43A047;margin-bottom:12px"></i>'+
-      '<div style="font-size:13px;font-weight:700;color:#0F2A4A">Tidak ada yang perlu perhatian</div>'+
-      '<div style="font-size:11px;margin-top:4px">Semua indikator dalam batas normal.</div></div>';
-  }else{
-    body=items.map(function(it){
-      var p=PRI[it.pri]||PRI.RUTIN;
-      return '<div onclick="notifGoto(\''+it.menu+'\')" style="display:flex;gap:11px;padding:12px 15px;border-bottom:1px solid #F0F2F5;cursor:pointer;transition:background .15s" onmouseover="this.style.background=\'#F7F9FB\'" onmouseout="this.style.background=\'transparent\'">'+
-        '<div style="flex-shrink:0;width:34px;height:34px;border-radius:9px;background:'+p.bg+';display:flex;align-items:center;justify-content:center"><i class="fas '+it.icon+'" style="color:'+p.c+';font-size:14px"></i></div>'+
-        '<div style="flex:1;min-width:0">'+
-        '<div style="display:flex;align-items:center;gap:7px;margin-bottom:3px"><span style="font-size:9px;font-weight:800;color:'+p.c+';background:'+p.bg+';padding:1px 7px;border-radius:20px;letter-spacing:.4px">'+p.l+'</span>'+
-        '<span style="font-size:10px;color:#9AA5B1;font-weight:600">'+esc(it.cat)+'</span></div>'+
-        '<div style="font-size:12px;color:#0F2A4A;font-weight:600;line-height:1.4">'+esc(it.text)+'</div>'+
-        (it.detail?'<div style="font-size:10.5px;color:#6B7280;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(it.detail)+'</div>':'')+
-        '</div></div>';
-    }).join('');
-  }
   var panel=document.createElement("div");
   panel.id="notifPanel";
   panel.style.cssText="position:absolute;top:52px;right:0;width:340px;max-width:calc(100vw - 24px);background:#fff;border:1px solid #E5E7EB;border-radius:14px;box-shadow:0 12px 40px rgba(15,42,74,.18);z-index:1000;overflow:hidden;animation:notifSlide .18s ease";
   panel.innerHTML='<div style="padding:13px 16px;background:#0F2A4A;color:#fff;display:flex;align-items:center;justify-content:space-between">'+
     '<div style="font-size:13px;font-weight:800"><i class="fas fa-bell" style="margin-right:8px;color:#80DEEA"></i>Pusat Perhatian</div>'+
-    '<span style="font-size:11px;color:rgba(255,255,255,.7)">'+items.length+' item</span></div>'+
-    '<div style="max-height:60vh;overflow-y:auto">'+body+'</div>';
+    '<span data-notif-count style="font-size:11px;color:rgba(255,255,255,.7)">'+items.length+' item</span></div>'+
+    '<div data-notif-body style="max-height:55vh;overflow-y:auto">'+_notifBodyHtml(items)+'</div>'+
+    '<div data-notif-foot style="display:'+(items.length?"block":"none")+';padding:10px 15px;background:#F7F9FB;border-top:1px solid #EEF1F5;text-align:center">'+
+    '<button onclick="notifDismissAll(event)" style="border:none;background:transparent;color:#006BB8;font-size:11.5px;font-weight:700;cursor:pointer"><i class="fas fa-check-double" style="margin-right:6px"></i>Tandai semua sudah dibaca</button></div>';
   /* posisikan relatif ke topbar-right */
   var anchor=document.getElementById("mBellBtn");
   var wrap=anchor&&anchor.parentNode?anchor.parentNode:document.body;
@@ -6563,9 +6602,11 @@ function _closeNotifOnOutside(e){
     p.remove();_notifPanelOpen=false;document.removeEventListener("click",_closeNotifOnOutside);
   }
 }
-function notifGoto(menu){
+function notifGoto(menu,key){
+  if(key)_notifDismissed[key]=true; /* item yang diklik dianggap dibaca */
   var p=document.getElementById("notifPanel");if(p)p.remove();
   _notifPanelOpen=false;
+  updateNotifBadge();
   if(typeof switchPage==="function"){try{switchPage(menu);}catch(e){}}
   var nav=document.querySelector('.nav-item[data-menu="'+menu+'"]');
   if(nav)nav.click();
@@ -6599,7 +6640,7 @@ function toggleSettingsPanel(ev){
   panel.style.cssText="position:absolute;top:52px;right:0;width:320px;max-width:calc(100vw - 24px);background:#fff;border:1px solid #E5E7EB;border-radius:14px;box-shadow:0 12px 40px rgba(15,42,74,.18);z-index:1000;overflow:hidden;animation:notifSlide .18s ease";
   panel.innerHTML='<div style="padding:13px 16px;background:#0F2A4A;color:#fff;font-size:13px;font-weight:800"><i class="fas fa-gear" style="margin-right:8px;color:#80DEEA"></i>Pengaturan</div>'+
     row("Auto-refresh data","Muat ulang data otomatis tiap 5 menit",toggle("setAutoRefresh",_prefs.autoRefresh))+
-    row("Mode gelap","Tampilan gelap untuk mata (eksperimental)",toggle("setDarkMode",_prefs.theme==="dark"))+
+    row("Mode gelap","Tampilan gelap menyeluruh termasuk menu",toggle("setDarkMode",_prefs.theme==="dark"))+
     row("Fleet default","Fleet yang tampil saat dashboard dibuka",
       '<select id="setDefaultFleet" onchange="settingsSetFleet(this.value)" style="font-size:11.5px;padding:6px 9px;border-radius:8px;border:1px solid #D1D9E2;color:#0F2A4A;max-width:130px">'+fleetOpts+'</select>')+
     '<div style="padding:11px 16px;background:#F7F9FB"><button onclick="settingsRefreshNow()" style="width:100%;padding:9px;background:#006BB8;color:#fff;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer"><i class="fas fa-rotate-right" style="margin-right:7px"></i>Muat Ulang Data Sekarang</button>'+
