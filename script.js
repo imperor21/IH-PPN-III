@@ -410,6 +410,8 @@ document.addEventListener("DOMContentLoaded",()=>{
     loadData();
     let _autoRefreshing=false;
     let _warnShown=false;
+    window._autoRefreshEnabled=true;
+    window._setAutoRefreshEnabled=function(on){window._autoRefreshEnabled=!!on;};
     setInterval(()=>{
       if(isDemo())return; /* Demo mode: skip auto-refresh */
       if(!isSessionValid()){
@@ -426,6 +428,7 @@ document.addEventListener("DOMContentLoaded",()=>{
         _warnShown=true;
         showToast("Sesi Anda akan berakhir dalam "+Math.ceil(sisaMs/60000)+" menit. Simpan pekerjaan Anda.","warning");
       }
+      if(!window._autoRefreshEnabled)return; /* dihormati toggle Pengaturan */
       if(_autoRefreshing)return;
       _autoRefreshing=true;
       loadData().finally(()=>{_autoRefreshing=false;});
@@ -798,6 +801,7 @@ async function loadData(){
     const now=new Date();
     const lastEl=document.getElementById("lastUpdated");
     if(lastEl)lastEl.textContent="Update: "+now.toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"});
+    if(typeof refreshNotifAfterLoad==="function")refreshNotifAfterLoad();
   }catch(err){
     console.error("API Error:",err);
     showError("Gagal memuat data: "+err.message);
@@ -6446,3 +6450,197 @@ function _renderP3KMasalah(){
 function exportP3KPPT(){
   showToast("Export PPT P3K & AED akan segera hadir.","info");
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   PUSAT PERHATIAN (🔔) & PENGATURAN (⚙️) — v5.3
+   Tombol topbar difungsikan. Mengumpulkan item kritis dari data
+   yang sudah ada (MCU UNFIT, AED/alkes, DAT positif) ke satu panel.
+   Tidak ada localStorage (preferensi disimpan di memori sesi).
+═══════════════════════════════════════════════════════════════ */
+var _notifPanelOpen=false, _settingsPanelOpen=false;
+var _prefs={ autoRefresh:true, theme:"light" };
+
+/* ── Kumpulkan item perhatian dari data global ── */
+function collectAttentionItems(){
+  var items=[];
+  /* MCU — UNFIT & risiko kritis */
+  try{
+    var mcu=(typeof filteredMCU!=="undefined"&&filteredMCU.length)?filteredMCU:(typeof rawMCU!=="undefined"?rawMCU:[]);
+    var unfit=mcu.filter(function(r){return String(r["Hasil Umum"]||"").toUpperCase()==="UNFIT";});
+    var nihl=mcu.filter(function(r){return (r._audioKlasif||"")==="NIHL";});
+    if(unfit.length)items.push({pri:"TINGGI",icon:"fa-user-doctor",cat:"MCU Pelaut",
+      text:unfit.length+" pelaut berstatus UNFIT — perlu rujukan medis & keputusan fit-to-work.",
+      detail:unfit.slice(0,5).map(function(r){return r["Nama Lengkap"]||r["NIP / ID Pelaut"]||"—";}).join(", "),
+      menu:"medsurv"});
+    if(nihl.length)items.push({pri:"SEDANG",icon:"fa-ear-listen",cat:"MCU Pelaut",
+      text:nihl.length+" pelaut indikasi NIHL — perlu audiometri ulang & kontrol kebisingan.",
+      detail:"",menu:"medsurv"});
+  }catch(e){}
+  /* Alkes — AED expired & kapal tidak lengkap */
+  try{
+    var alk=(typeof filteredAlkes!=="undefined"&&filteredAlkes.length)?filteredAlkes:(typeof rawAlkes!=="undefined"?rawAlkes:[]);
+    var aedExp=alk.filter(function(r){return r._expiredAED===true;});
+    var tdk=alk.filter(function(r){return (r._status||"")==="TIDAK LENGKAP";});
+    if(aedExp.length)items.push({pri:"TINGGI",icon:"fa-heart-pulse",cat:"Alkes Kapal",
+      text:aedExp.length+" unit AED kedaluwarsa — segera pengadaan/ganti baterai & pad.",
+      detail:aedExp.slice(0,5).map(function(r){return r._kapal||r["Nama Kapal"]||"—";}).join(", "),
+      menu:"menu5"});
+    if(tdk.length)items.push({pri:"SEDANG",icon:"fa-briefcase-medical",cat:"Alkes Kapal",
+      text:tdk.length+" kapal alkes TIDAK LENGKAP — perlu pemenuhan alat wajib.",
+      detail:tdk.slice(0,5).map(function(r){return r._kapal||r["Nama Kapal"]||"—";}).join(", "),
+      menu:"menu5"});
+  }catch(e){}
+  /* DAT — hasil positif */
+  try{
+    var dat=(typeof filteredDAT!=="undefined"&&filteredDAT.length)?filteredDAT:(typeof rawDAT!=="undefined"?rawDAT:[]);
+    var posKapal=dat.filter(function(r){return parseInt(r["Jumlah Crew Positif"]||0)>0;});
+    var totPos=posKapal.reduce(function(s,r){return s+parseInt(r["Jumlah Crew Positif"]||0);},0);
+    if(totPos>0)items.push({pri:"TINGGI",icon:"fa-vial-circle-check",cat:"DAT",
+      text:totPos+" crew positif DAT pada "+posKapal.length+" kapal — uji konfirmasi & fit-to-sail.",
+      detail:posKapal.slice(0,5).map(function(r){return r["Nama Kapal"]||"—";}).join(", "),
+      menu:"dat"});
+  }catch(e){}
+  /* urutkan: TINGGI dulu */
+  var ord={TINGGI:0,SEDANG:1,RUTIN:2};
+  items.sort(function(a,b){return (ord[a.pri]||9)-(ord[b.pri]||9);});
+  return items;
+}
+
+/* ── Update badge angka di lonceng ── */
+function updateNotifBadge(){
+  var badge=document.getElementById("notifBadge");
+  if(!badge)return;
+  var n=collectAttentionItems().filter(function(i){return i.pri==="TINGGI";}).length;
+  if(n>0){badge.style.display="block";badge.textContent=n>9?"9+":String(n);}
+  else badge.style.display="none";
+}
+
+/* ── Panel Pusat Perhatian ── */
+function toggleNotifPanel(ev){
+  if(ev)ev.stopPropagation();
+  closeSettingsPanel();
+  var existing=document.getElementById("notifPanel");
+  if(existing){existing.remove();_notifPanelOpen=false;return;}
+  var items=collectAttentionItems();
+  var PRI={TINGGI:{c:"#E53935",bg:"#FEE2E2",l:"TINGGI"},SEDANG:{c:"#E65100",bg:"#FEF3C7",l:"SEDANG"},RUTIN:{c:"#00897B",bg:"#E0F2F1",l:"RUTIN"}};
+  var body;
+  if(!items.length){
+    body='<div style="padding:36px 20px;text-align:center;color:#6B7280">'+
+      '<i class="fas fa-circle-check" style="font-size:34px;color:#43A047;margin-bottom:12px"></i>'+
+      '<div style="font-size:13px;font-weight:700;color:#0F2A4A">Tidak ada yang perlu perhatian</div>'+
+      '<div style="font-size:11px;margin-top:4px">Semua indikator dalam batas normal.</div></div>';
+  }else{
+    body=items.map(function(it){
+      var p=PRI[it.pri]||PRI.RUTIN;
+      return '<div onclick="notifGoto(\''+it.menu+'\')" style="display:flex;gap:11px;padding:12px 15px;border-bottom:1px solid #F0F2F5;cursor:pointer;transition:background .15s" onmouseover="this.style.background=\'#F7F9FB\'" onmouseout="this.style.background=\'transparent\'">'+
+        '<div style="flex-shrink:0;width:34px;height:34px;border-radius:9px;background:'+p.bg+';display:flex;align-items:center;justify-content:center"><i class="fas '+it.icon+'" style="color:'+p.c+';font-size:14px"></i></div>'+
+        '<div style="flex:1;min-width:0">'+
+        '<div style="display:flex;align-items:center;gap:7px;margin-bottom:3px"><span style="font-size:9px;font-weight:800;color:'+p.c+';background:'+p.bg+';padding:1px 7px;border-radius:20px;letter-spacing:.4px">'+p.l+'</span>'+
+        '<span style="font-size:10px;color:#9AA5B1;font-weight:600">'+esc(it.cat)+'</span></div>'+
+        '<div style="font-size:12px;color:#0F2A4A;font-weight:600;line-height:1.4">'+esc(it.text)+'</div>'+
+        (it.detail?'<div style="font-size:10.5px;color:#6B7280;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(it.detail)+'</div>':'')+
+        '</div></div>';
+    }).join('');
+  }
+  var panel=document.createElement("div");
+  panel.id="notifPanel";
+  panel.style.cssText="position:absolute;top:52px;right:0;width:340px;max-width:calc(100vw - 24px);background:#fff;border:1px solid #E5E7EB;border-radius:14px;box-shadow:0 12px 40px rgba(15,42,74,.18);z-index:1000;overflow:hidden;animation:notifSlide .18s ease";
+  panel.innerHTML='<div style="padding:13px 16px;background:#0F2A4A;color:#fff;display:flex;align-items:center;justify-content:space-between">'+
+    '<div style="font-size:13px;font-weight:800"><i class="fas fa-bell" style="margin-right:8px;color:#80DEEA"></i>Pusat Perhatian</div>'+
+    '<span style="font-size:11px;color:rgba(255,255,255,.7)">'+items.length+' item</span></div>'+
+    '<div style="max-height:60vh;overflow-y:auto">'+body+'</div>';
+  /* posisikan relatif ke topbar-right */
+  var anchor=document.getElementById("mBellBtn");
+  var wrap=anchor&&anchor.parentNode?anchor.parentNode:document.body;
+  wrap.style.position="relative";
+  wrap.appendChild(panel);
+  _notifPanelOpen=true;
+  setTimeout(function(){document.addEventListener("click",_closeNotifOnOutside);},10);
+}
+function _closeNotifOnOutside(e){
+  var p=document.getElementById("notifPanel");
+  if(p&&!p.contains(e.target)&&e.target.id!=="mBellBtn"&&!(e.target.closest&&e.target.closest("#mBellBtn"))){
+    p.remove();_notifPanelOpen=false;document.removeEventListener("click",_closeNotifOnOutside);
+  }
+}
+function notifGoto(menu){
+  var p=document.getElementById("notifPanel");if(p)p.remove();
+  _notifPanelOpen=false;
+  if(typeof switchPage==="function"){try{switchPage(menu);}catch(e){}}
+  var nav=document.querySelector('.nav-item[data-menu="'+menu+'"]');
+  if(nav)nav.click();
+}
+
+/* ── Panel Pengaturan ── */
+function closeSettingsPanel(){var p=document.getElementById("settingsPanel");if(p){p.remove();_settingsPanelOpen=false;}}
+function closeNotifPanel(){var p=document.getElementById("notifPanel");if(p){p.remove();_notifPanelOpen=false;}}
+function toggleSettingsPanel(ev){
+  if(ev)ev.stopPropagation();
+  closeNotifPanel();
+  if(document.getElementById("settingsPanel")){closeSettingsPanel();return;}
+  function row(label,sub,control){
+    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 16px;border-bottom:1px solid #F0F2F5">'+
+      '<div><div style="font-size:12.5px;font-weight:700;color:#0F2A4A">'+label+'</div>'+
+      (sub?'<div style="font-size:10.5px;color:#6B7280;margin-top:2px">'+sub+'</div>':'')+'</div>'+control+'</div>';
+  }
+  function toggle(id,on){
+    return '<button id="'+id+'" onclick="settingsToggle(\''+id+'\')" style="width:42px;height:24px;border-radius:20px;border:none;cursor:pointer;background:'+(on?"#00C2A8":"#CBD5E1")+';position:relative;transition:background .2s;flex-shrink:0">'+
+      '<span style="position:absolute;top:3px;left:'+(on?"21px":"3px")+';width:18px;height:18px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)"></span></button>';
+  }
+  /* daftar fleet untuk default */
+  var fleets=[];try{
+    var src=(typeof rawMCU!=="undefined"?rawMCU:[]).concat(typeof rawAlkes!=="undefined"?rawAlkes:[]);
+    src.forEach(function(r){var f=r["Jenis Fleet"]||r._fleet||r["Fleet"]||"";if(f&&fleets.indexOf(f)===-1)fleets.push(f);});
+  }catch(e){}
+  var fleetOpts='<option value="">Semua Fleet</option>'+fleets.map(function(f){return'<option'+(_prefs.defaultFleet===f?' selected':'')+'>'+esc(f)+'</option>';}).join('');
+
+  var panel=document.createElement("div");
+  panel.id="settingsPanel";
+  panel.style.cssText="position:absolute;top:52px;right:0;width:320px;max-width:calc(100vw - 24px);background:#fff;border:1px solid #E5E7EB;border-radius:14px;box-shadow:0 12px 40px rgba(15,42,74,.18);z-index:1000;overflow:hidden;animation:notifSlide .18s ease";
+  panel.innerHTML='<div style="padding:13px 16px;background:#0F2A4A;color:#fff;font-size:13px;font-weight:800"><i class="fas fa-gear" style="margin-right:8px;color:#80DEEA"></i>Pengaturan</div>'+
+    row("Auto-refresh data","Muat ulang data otomatis tiap 5 menit",toggle("setAutoRefresh",_prefs.autoRefresh))+
+    row("Mode gelap","Tampilan gelap untuk mata (eksperimental)",toggle("setDarkMode",_prefs.theme==="dark"))+
+    row("Fleet default","Fleet yang tampil saat dashboard dibuka",
+      '<select id="setDefaultFleet" onchange="settingsSetFleet(this.value)" style="font-size:11.5px;padding:6px 9px;border-radius:8px;border:1px solid #D1D9E2;color:#0F2A4A;max-width:130px">'+fleetOpts+'</select>')+
+    '<div style="padding:11px 16px;background:#F7F9FB"><button onclick="settingsRefreshNow()" style="width:100%;padding:9px;background:#006BB8;color:#fff;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer"><i class="fas fa-rotate-right" style="margin-right:7px"></i>Muat Ulang Data Sekarang</button>'+
+    '<div style="font-size:10px;color:#9AA5B1;text-align:center;margin-top:9px">Preferensi berlaku selama sesi ini.</div></div>';
+  var anchor=document.getElementById("mGearBtn");
+  var wrap=anchor&&anchor.parentNode?anchor.parentNode:document.body;
+  wrap.style.position="relative";
+  wrap.appendChild(panel);
+  _settingsPanelOpen=true;
+  setTimeout(function(){document.addEventListener("click",_closeSettingsOnOutside);},10);
+}
+function _closeSettingsOnOutside(e){
+  var p=document.getElementById("settingsPanel");
+  if(p&&!p.contains(e.target)&&e.target.id!=="mGearBtn"&&!(e.target.closest&&e.target.closest("#mGearBtn"))){
+    p.remove();_settingsPanelOpen=false;document.removeEventListener("click",_closeSettingsOnOutside);
+  }
+}
+function settingsToggle(id){
+  if(id==="setAutoRefresh"){
+    _prefs.autoRefresh=!_prefs.autoRefresh;
+    if(typeof window._setAutoRefreshEnabled==="function")window._setAutoRefreshEnabled(_prefs.autoRefresh);
+    showToast("Auto-refresh "+(_prefs.autoRefresh?"diaktifkan":"dimatikan")+".","info");
+  }else if(id==="setDarkMode"){
+    _prefs.theme=_prefs.theme==="dark"?"light":"dark";
+    document.documentElement.classList.toggle("theme-dark",_prefs.theme==="dark");
+    showToast("Mode "+(_prefs.theme==="dark"?"gelap":"terang")+" aktif.","info");
+  }
+  /* re-render toggle visual */
+  var on=(id==="setAutoRefresh")?_prefs.autoRefresh:(_prefs.theme==="dark");
+  var btn=document.getElementById(id);
+  if(btn){btn.style.background=on?"#00C2A8":"#CBD5E1";var k=btn.querySelector("span");if(k)k.style.left=on?"21px":"3px";}
+}
+function settingsSetFleet(v){
+  _prefs.defaultFleet=v;
+  showToast(v?("Fleet default: "+v):"Default: Semua Fleet","info");
+}
+function settingsRefreshNow(){
+  closeSettingsPanel();
+  if(typeof isDemo==="function"&&isDemo()){showToast("Mode Demo — data tidak dimuat dari server.","info");return;}
+  if(typeof loadData==="function")loadData();
+}
+
+/* ── Hook: dipanggil setelah loadData selesai untuk refresh badge ── */
+function refreshNotifAfterLoad(){ try{updateNotifBadge();}catch(e){} }
