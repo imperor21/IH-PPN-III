@@ -273,6 +273,63 @@ function _ai(modul,m){
       "ISM Code · Continual Improvement");
   }
 
+  else if(modul==="MCU"){
+    /* m: {total, fit, fitBersyarat, unfit, fitPct, nihl, spiroAbn, spiroBelum, hemoAbn, visusTidakLayak, visusPerhatian, riskTinggi, riskKritis, tahun} */
+    var unfitTot=(m.unfit||0)+(m.riskKritis||0>0?0:0); /* unfit utama dari Hasil Umum */
+    an="Dari "+(m.total||0)+" pelaut yang menjalani MCU"
+      +(m.tahun?" ("+m.tahun+")":"")+": "
+      +(m.fit||0)+" FIT, "+(m.fitBersyarat||0)+" FIT BERSYARAT, "+(m.unfit||0)+" UNFIT "
+      +"(fit rate "+(m.fitPct||"0")+"%). "
+      +((m.nihl||0)>0?"Terdeteksi "+m.nihl+" kasus indikasi NIHL (gangguan pendengaran akibat bising). ":"Tidak ada indikasi NIHL signifikan. ")
+      +((m.riskKritis||0)+(m.riskTinggi||0)>0?"Terdapat "+((m.riskKritis||0)+(m.riskTinggi||0))+" pelaut berisiko tinggi/kritis yang memerlukan perhatian prioritas.":"Profil risiko populasi tergolong terkendali.");
+
+    if((m.unfit||0)>0)add("TINGGI",
+      "Tindak lanjuti "+m.unfit+" pelaut berstatus UNFIT: nonaktifkan dari penugasan berisiko, lakukan rujukan medis & pemeriksaan lanjutan, dan keputusan fit-to-work oleh dokter penerbitan sertifikat medis sebelum penugasan ulang.",
+      "MLC 2006 Reg.1.2 (Medical Certificate) · STCW 2010 Sec.A-I/9");
+    if((m.nihl||0)>0)add((m.nihl||0)>=3?"TINGGI":"SEDANG",
+      "Lakukan audiometri ulang konfirmasi pada "+m.nihl+" pelaut indikasi NIHL, evaluasi paparan kebisingan di posisi kerjanya (engine room/deck), dan perkuat kontrol kebisingan (rekayasa + APD pendengaran) sesuai hirarki pengendalian.",
+      "Permenaker 05/2018 (NAB Bising 85 dBA) · ACGIH TLV · ILO MLC 2006 Title 4");
+    if((m.spiroAbn||0)>0)add("SEDANG",
+      "Tindak lanjuti "+m.spiroAbn+" pelaut dengan pola spirometri abnormal (obstruktif/restriktif): evaluasi paparan debu/asap/uap kimia, rujuk pemeriksaan paru bila perlu, dan tinjau penggunaan respirator yang sesuai.",
+      "ACGIH TLV · Permenaker 05/2018 (Faktor Kimia)");
+    if((m.fitBersyarat||0)>0)add("SEDANG",
+      "Pastikan "+m.fitBersyarat+" pelaut FIT BERSYARAT memenuhi syarat yang ditetapkan (mis. kontrol rutin, pembatasan tugas) dan pantau pemenuhannya hingga jadwal MCU berikutnya.",
+      "MLC 2006 Reg.1.2 · Pedoman ILO/IMO Medical Examination of Seafarers");
+    if((m.visusTidakLayak||0)>0)add("SEDANG",
+      "Evaluasi "+m.visusTidakLayak+" pelaut dengan status visus TIDAK LAYAK terhadap kesesuaian tugas (lookout/navigasi); pertimbangkan koreksi penglihatan & reassignment sesuai standar penglihatan pelaut.",
+      "STCW 2010 Sec.A-I/9 (Standar Penglihatan)");
+    add("RUTIN",
+      "Arsipkan hasil MCU ke Health Record tiap pelaut, jadwalkan MCU periodik sesuai masa berlaku sertifikat medis (maks. 2 tahun), dan integrasikan dengan surveilans kesehatan kerja untuk deteksi dini tren.",
+      "MLC 2006 Reg.1.2 · ISO 45001:2018 cl.9.1");
+  }
+
+  else if(modul==="ALKES"){
+    /* m: {totalKapal, lengkap, parsial, tidakLengkap, expired, aedExpired, avgPct, kapalKurang:[{nama,pct,kurang}]} */
+    an="Dari "+(m.totalKapal||0)+" kapal: "
+      +(m.lengkap||0)+" LENGKAP, "+(m.parsial||0)+" PARSIAL, "+(m.tidakLengkap||0)+" TIDAK LENGKAP"
+      +((m.expired||0)>0?", "+m.expired+" dengan alkes EXPIRED":"")+". "
+      +"Rata-rata kelengkapan alat kesehatan armada "+(m.avgPct||0)+"%. "
+      +((m.aedExpired||0)>0?"Terdapat "+m.aedExpired+" unit AED yang sudah melewati masa kedaluwarsa — berisiko gagal fungsi saat darurat jantung.":"Seluruh AED dalam masa berlaku.");
+
+    if((m.aedExpired||0)>0)add("TINGGI",
+      "Segera ganti/isi ulang "+m.aedExpired+" unit AED yang kedaluwarsa (baterai & pad elektroda) — AED kedaluwarsa dapat gagal saat henti jantung mendadak. Lakukan pengadaan prioritas dan verifikasi kesiapan fungsi.",
+      "MLC 2006 Reg.4.1 (Medical Care On Board) · Guidelines IMO/ILO/WHO Medical Stores");
+    if((m.tidakLengkap||0)>0)add("TINGGI",
+      "Penuhi alat kesehatan wajib pada "+m.tidakLengkap+" kapal berstatus TIDAK LENGKAP — koordinasikan pengadaan agar setiap kapal memiliki kelengkapan medis minimum sesuai standar medical stores kapal.",
+      "MLC 2006 Reg.4.1 · IMMA Guide / WHO IMGS");
+    if((m.parsial||0)>0)add("SEDANG",
+      "Lengkapi kekurangan alat pada "+m.parsial+" kapal berstatus PARSIAL; prioritaskan item life-saving (AED, oksigen, spinal board) sebelum item penunjang.",
+      "MLC 2006 Reg.4.1 · Ship's Medicine Chest Guidelines");
+    if(m.kapalKurang&&m.kapalKurang.length)add("SEDANG",
+      "Fokus pemenuhan pada kapal kelengkapan terendah: "
+        +m.kapalKurang.slice(0,3).map(function(k){return k.nama+" ("+k.pct+"%)";}).join(", ")
+        +" — tetapkan PIC & target tanggal pemenuhan per kapal.",
+      "ISO 45001:2018 cl.8.2 (Kesiapan Tanggap Darurat)");
+    add("RUTIN",
+      "Buat jadwal inspeksi & kalibrasi alkes berkala (cek masa berlaku AED, tabung oksigen, tensimeter) dan catat dalam log pemeliharaan sebagai bukti kesiapan darurat untuk audit PSC/biro klasifikasi.",
+      "ISM Code · MLC 2006 Reg.4.1 · ISO 45001:2018 cl.8.2");
+  }
+
   else if(modul==="SUMMARY"){
     an="Status keseluruhan program IH: coverage HRA "+m.hraCov+"%, kepatuhan DAT "+m.datPct+"% ("+m.datPos+" positif), "+m.pestCount+" kegiatan pest control. "
       +(m.overallOk?"Indikator utama dalam batas normal.":"Beberapa indikator memerlukan tindak lanjut prioritas.");
@@ -942,10 +999,163 @@ async function exportSummaryPPT(){
 }
 
 /* ── Ekspos ke global (untuk onclick di index.html / script.js) ── */
+/* ══════════════════════════════════════════════════════════
+   6) MCU PELAUT — Medical Surveillance
+   Data: filteredMCU / rawMCU (field _riskLevel, _audioKlasif,
+   _spiro, _hemoStatus, _visusStatus, "Hasil Umum")
+══════════════════════════════════════════════════════════ */
+async function exportMCUPPT(){
+  if(!(await _guardAsync()))return;
+  var raw=(typeof filteredMCU!=="undefined"&&filteredMCU.length)?filteredMCU:
+          (typeof rawMCU!=="undefined"?rawMCU:[]);
+  if(!raw.length){_toast("Tidak ada data MCU Pelaut.","warning");return;}
+  _toast("Membuat PPT MCU Pelaut...","info");
+  try{
+    var tgl=_now();
+    var total=raw.length;
+    function huOf(r){return String(r["Hasil Umum"]||"").toUpperCase();}
+    var fit=raw.filter(function(r){return huOf(r)==="FIT";}).length;
+    var fitB=raw.filter(function(r){return huOf(r)==="FIT BERSYARAT";}).length;
+    var unfit=raw.filter(function(r){return huOf(r)==="UNFIT";}).length;
+    var nihl=raw.filter(function(r){return (r._audioKlasif||"")==="NIHL";}).length;
+    var spiroAbn=raw.filter(function(r){var p=r._spiro||"";return p!=="Normal"&&p!=="—"&&p!=="";}).length;
+    var spiroBelum=raw.filter(function(r){return (r._spiro||"")==="—"||(r._spiro||"")==="";}).length;
+    var hemoAbn=raw.filter(function(r){return (r._hemoStatus||"")==="ABNORMAL";}).length;
+    var visusTL=raw.filter(function(r){return (r._visusStatus||"")==="TIDAK LAYAK";}).length;
+    var visusPerhatian=raw.filter(function(r){return (r._visusStatus||"")==="PERHATIAN";}).length;
+    var riskTinggi=raw.filter(function(r){return (r._riskLevel||"").toUpperCase()==="TINGGI";}).length;
+    var riskKritis=raw.filter(function(r){return (r._riskLevel||"").toUpperCase()==="KRITIS";}).length;
+    var fitPct=total>0?((fit/total)*100).toFixed(1):"0.0";
+    var tahun="";var ts={};raw.forEach(function(r){var t=String(r["Tahun MCU"]||"").trim();if(t)ts[t]=(ts[t]||0)+1;});
+    var tk=Object.keys(ts);if(tk.length===1)tahun=tk[0];
+    var stC=parseFloat(fitPct)>=90?C.grn:parseFloat(fitPct)>=75?C.amber:C.red;
+    var ftr=BRAND.org+" — Medical Surveillance (MCU Pelaut) · "+tgl;
+    var TOTP=5, pr=_pres("Laporan MCU Pelaut — IH Dashboard");
+
+    _cover(pr,"MEDICAL\nSURVEILLANCE","Pemantauan kesehatan pelaut (MCU)",
+      "Surveilans kesehatan kerja & kelaikan medis pelaut sesuai MLC 2006.",tgl,[
+      {v:total,l:"Total Pelaut",c:C.aqua},
+      {v:fitPct+"%",l:"Fit Rate",c:stC},
+      {v:unfit,l:"Unfit",c:unfit>0?C.red:C.grn}
+    ],"MCU");
+
+    var s2=pr.addSlide(); _hdr(s2,pr,"Ringkasan Eksekutif","Status kelaikan medis pelaut — "+tgl);
+    _kpi(s2,pr,0.45,1.30,3.95,1.95,fit,"FIT",C.grn,"");
+    _kpi(s2,pr,4.55,1.30,3.95,1.95,fitB,"FIT Bersyarat",fitB>0?C.amber:C.grn,"");
+    _kpi(s2,pr,8.65,1.30,4.23,1.95,unfit,"UNFIT",unfit>0?C.red:C.grn,"");
+    _kpi(s2,pr,0.45,3.45,3.95,1.95,nihl,"Indikasi NIHL",nihl>0?C.red:C.grn,"");
+    _kpi(s2,pr,4.55,3.45,3.95,1.95,spiroAbn,"Spiro Abnormal",spiroAbn>0?C.amber:C.grn,"");
+    _kpi(s2,pr,8.65,3.45,4.23,1.95,(riskTinggi+riskKritis),"Risiko Tinggi/Kritis",(riskTinggi+riskKritis)>0?C.red:C.grn,"");
+    _note(s2,pr,0.45,5.62,12.43,1.20,
+      unfit>0||nihl>0 ? unfit+" pelaut UNFIT & "+nihl+" indikasi NIHL memerlukan tindak lanjut medis prioritas sebelum penugasan."
+                      : "Status kesehatan populasi pelaut dalam kondisi baik. Lanjutkan surveilans periodik.",
+      unfit>0||nihl>0?C.amber:C.grn, unfit>0||nihl>0?C.amberL:C.grnL);
+    _ftr(s2,pr,ftr,2,TOTP);
+
+    var s3=pr.addSlide(); _hdr(s3,pr,"Distribusi Status & Temuan","Sebaran hasil pemeriksaan kesehatan");
+    _donut(s3,pr,0.45,1.30,5.9,5.55,[
+      {label:"FIT",value:fit,color:C.grn},
+      {label:"FIT Bersyarat",value:fitB,color:C.amber},
+      {label:"UNFIT",value:unfit,color:C.red}
+    ],"Status Kelaikan Medis");
+    var temuan=[["NIHL (Pendengaran)",nihl],["Spirometri Abnormal",spiroAbn],["Hematologi Abnormal",hemoAbn],["Visus Tidak Layak",visusTL]];
+    var tc=[C.red,C.amber,C.blue,C.pur];
+    temuan.forEach(function(t,i){_row(s3,pr,6.65,1.40+i*1.30,6.23,1.10,t[1],t[0],tc[i%tc.length]);});
+    _ftr(s3,pr,ftr,3,TOTP);
+
+    /* S4 Rekomendasi (AI) */
+    _slideRek(pr,"MCU",{total:total,fit:fit,fitBersyarat:fitB,unfit:unfit,fitPct:fitPct,
+      nihl:nihl,spiroAbn:spiroAbn,spiroBelum:spiroBelum,hemoAbn:hemoAbn,
+      visusTidakLayak:visusTL,visusPerhatian:visusPerhatian,riskTinggi:riskTinggi,riskKritis:riskKritis,tahun:tahun},
+      ftr,4,TOTP,"Disesuaikan dari status kelaikan medis, NIHL & profil risiko · MLC 2006 / STCW 2010");
+
+    _closing(pr,"Medical Surveillance (MCU Pelaut) · "+tgl);
+    await _download(pr,"Laporan_MCU_Pelaut_"+new Date().toISOString().slice(0,10)+".pptx");
+  }catch(e){_toast("Gagal membuat PPT MCU: "+(e&&e.message||e),"error");console.error(e);}
+}
+
+/* ══════════════════════════════════════════════════════════
+   7) SEBARAN ALKES KAPAL — Medical Equipment Readiness
+   Data: filteredAlkes / rawAlkes (field _status, _kelengkapanPct,
+   _expiredAED, _kapal, _fleet)
+══════════════════════════════════════════════════════════ */
+async function exportAlkesPPT(){
+  if(!(await _guardAsync()))return;
+  var raw=(typeof filteredAlkes!=="undefined"&&filteredAlkes.length)?filteredAlkes:
+          (typeof rawAlkes!=="undefined"?rawAlkes:[]);
+  if(!raw.length){_toast("Tidak ada data Sebaran Alkes.","warning");return;}
+  _toast("Membuat PPT Sebaran Alkes...","info");
+  try{
+    var tgl=_now();
+    var totalKapal=raw.length;
+    var lengkap=raw.filter(function(r){return (r._status||"")==="LENGKAP";}).length;
+    var parsial=raw.filter(function(r){return (r._status||"")==="PARSIAL";}).length;
+    var tidakLengkap=raw.filter(function(r){return (r._status||"")==="TIDAK LENGKAP";}).length;
+    var expired=raw.filter(function(r){return (r._status||"")==="EXPIRED";}).length;
+    var aedExpired=raw.filter(function(r){return r._expiredAED===true;}).length;
+    var sumPct=raw.reduce(function(s,r){return s+(parseFloat(r._kelengkapanPct)||0);},0);
+    var avgPct=totalKapal>0?Math.round(sumPct/totalKapal):0;
+    /* kapal kelengkapan terendah */
+    var kapalKurang=raw.map(function(r){return {nama:r._kapal||r["Nama Kapal"]||"-",pct:parseFloat(r._kelengkapanPct)||0};})
+      .filter(function(k){return k.pct<100;})
+      .sort(function(a,b){return a.pct-b.pct;});
+    var stC=avgPct>=90?C.grn:avgPct>=60?C.amber:C.red;
+    var ftr=BRAND.org+" — Sebaran Alkes Kapal · "+tgl;
+    var TOTP=5, pr=_pres("Laporan Sebaran Alkes — IH Dashboard");
+
+    _cover(pr,"MEDICAL EQUIPMENT\nREADINESS","Kelengkapan alat kesehatan armada",
+      "Pemantauan kesiapan alat kesehatan & tanggap darurat di kapal sesuai MLC 2006 Reg.4.1.",tgl,[
+      {v:totalKapal,l:"Total Kapal",c:C.aqua},
+      {v:avgPct+"%",l:"Rata-rata Kelengkapan",c:stC},
+      {v:aedExpired,l:"AED Expired",c:aedExpired>0?C.red:C.grn}
+    ],"ALKES");
+
+    var s2=pr.addSlide(); _hdr(s2,pr,"Ringkasan Eksekutif","Status kelengkapan alkes armada — "+tgl);
+    _kpi(s2,pr,0.45,1.30,3.95,1.95,lengkap,"Kapal Lengkap",C.grn,"");
+    _kpi(s2,pr,4.55,1.30,3.95,1.95,parsial,"Parsial",parsial>0?C.amber:C.grn,"");
+    _kpi(s2,pr,8.65,1.30,4.23,1.95,tidakLengkap,"Tidak Lengkap",tidakLengkap>0?C.red:C.grn,"");
+    _kpi(s2,pr,0.45,3.45,3.95,1.95,avgPct+"%","Rata-rata Kelengkapan",stC,"");
+    _kpi(s2,pr,4.55,3.45,3.95,1.95,aedExpired,"AED Kedaluwarsa",aedExpired>0?C.red:C.grn,"");
+    _kpi(s2,pr,8.65,3.45,4.23,1.95,totalKapal,"Total Armada",C.teal,"");
+    _note(s2,pr,0.45,5.62,12.43,1.20,
+      aedExpired>0||tidakLengkap>0 ? aedExpired+" AED kedaluwarsa & "+tidakLengkap+" kapal tidak lengkap — perlu pengadaan prioritas untuk kesiapan tanggap darurat."
+                                   : "Kelengkapan alkes armada dalam kondisi baik. Pertahankan jadwal inspeksi & kalibrasi berkala.",
+      aedExpired>0||tidakLengkap>0?C.red:C.grn, aedExpired>0||tidakLengkap>0?C.redL:C.grnL);
+    _ftr(s2,pr,ftr,2,TOTP);
+
+    var s3=pr.addSlide(); _hdr(s3,pr,"Distribusi & Kapal Prioritas","Status kelengkapan & kapal yang perlu pemenuhan");
+    _donut(s3,pr,0.45,1.30,5.9,5.55,[
+      {label:"Lengkap",value:lengkap,color:C.grn},
+      {label:"Parsial",value:parsial,color:C.amber},
+      {label:"Tidak Lengkap",value:tidakLengkap,color:C.red},
+      {label:"Expired",value:expired,color:C.pur}
+    ],"Status Kelengkapan Alkes");
+    if(kapalKurang.length){
+      kapalKurang.slice(0,4).forEach(function(k,i){
+        var kc=k.pct<50?C.red:k.pct<80?C.amber:C.blue;
+        _row(s3,pr,6.65,1.40+i*1.30,6.23,1.10,k.pct+"%",k.nama,kc);
+      });
+    }else{
+      _note(s3,pr,6.65,1.40,6.23,1.0,"Seluruh kapal lengkap 100%.",C.grn,C.grnL);
+    }
+    _ftr(s3,pr,ftr,3,TOTP);
+
+    /* S4 Rekomendasi (AI) */
+    _slideRek(pr,"ALKES",{totalKapal:totalKapal,lengkap:lengkap,parsial:parsial,
+      tidakLengkap:tidakLengkap,expired:expired,aedExpired:aedExpired,avgPct:avgPct,kapalKurang:kapalKurang},
+      ftr,4,TOTP,"Disesuaikan dari status kelengkapan & AED kedaluwarsa · MLC 2006 Reg.4.1 / ISM Code");
+
+    _closing(pr,"Sebaran Alkes Kapal · "+tgl);
+    await _download(pr,"Laporan_Sebaran_Alkes_"+new Date().toISOString().slice(0,10)+".pptx");
+  }catch(e){_toast("Gagal membuat PPT Alkes: "+(e&&e.message||e),"error");console.error(e);}
+}
+
 if(typeof window!=="undefined"){
   window.exportDATPPT=exportDATPPT;
   window.exportHRAPPT=exportHRAPPT;
   window.exportPestPPT=exportPestPPT;
   window.exportCloseout25PPT=exportCloseout25PPT;
   window.exportSummaryPPT=exportSummaryPPT;
+  window.exportMCUPPT=exportMCUPPT;
+  window.exportAlkesPPT=exportAlkesPPT;
 }
