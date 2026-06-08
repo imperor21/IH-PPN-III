@@ -4937,7 +4937,7 @@ async function exportSummaryPDF(){
 
 
 /* ═══════════════════════════════════════════════════════════════
-   MEMO DAT — Annual External Drugs & Alcohol Test
+   MEMO DAT — Unannounced Drugs and Alcohol Test (Periodical)
    Output: .docx via window.docx (browser)
    Tipe 1: Manager Fleet  |  Tipe 2: Klinik/Vendor Pelaksana
 ═══════════════════════════════════════════════════════════════ */
@@ -4971,29 +4971,35 @@ function showMemoModal(type){
   }
 
   if(type === "fleet"){
-    title.textContent = "📄 Memo DAT — Manager Fleet Product";
+    title.textContent = "📄 Nota Dinas DAT — Manager Fleet";
     fields.innerHTML =
-      field("mf_tgl","Tanggal Surat","text",tglDef,"Jakarta, 10 Mei 2026")+
-      field("mf_tujuan","Ditujukan Kepada","text","Manager Fleet Product I","Manager Fleet Product I")+
-      field("mf_kapal","Nama Kapal","text",kapalDef,"MT. Pasaman")+
-      field("mf_crew","Jumlah Crew","number",crewDef,"12")+
-      field("mf_lokasi","Lokasi Pelaksanaan","text","","Port Tanjung Priok")+
-      field("mf_tglpel","Tanggal Pelaksanaan","text","","13 Mei 2026")+
-      field("mf_vendor","Nama Klinik/Vendor Pelaksana","text","","Klinik IHC Yos Sudarso")+
-      field("mf_ttd","Nama Penandatangan","text","Diyon Indarto","Nama Manager Health")+
-      field("mf_jabatan","Jabatan Penandatangan","text","Manager Health","Manager Health");
+      field("mf_tgl","Tanggal Surat","text",tglDef,"Jakarta, 07 Juni 2026")+
+      field("mf_nomor","Nomor Surat","text","","088/PIS0400-PN/2026-S0")+
+      field("mf_tujuan","Kepada","text","Sr Manager Fleet Crude","Sr Manager Fleet Crude")+
+      field("mf_dari","Dari","text","Pjs VP HSSE III","Pjs VP HSSE III")+
+      field("mf_kapal","Nama Kapal","text",kapalDef,"MT Serui")+
+      field("mf_crew","Jumlah Crew","number",crewDef,"13")+
+      field("mf_lokasi","Lokasi Pelaksanaan","text","","Port Balikpapan")+
+      field("mf_tglpel","Tanggal Pelaksanaan","text","","06 Juni 2026")+
+      field("mf_vendor","Nama Pelaksana (RSP/Vendor)","text","","RSP Balikpapan")+
+      field("mf_jabatan","Jabatan Penandatangan","text","Pjs VP HSSE III","Pjs VP HSSE III")+
+      field("mf_ttd","Nama Penandatangan","text","Diyon Indarto","Diyon Indarto")+
+      field("mf_jabttd","Jabatan di Kotak Tanda Tangan","text","Manager Health","Manager Health");
   } else {
-    title.textContent = "📄 Memo DAT — Klinik / Vendor Pelaksana";
+    title.textContent = "📄 Surat DAT — Rumah Sakit / Vendor Pelaksana";
     fields.innerHTML =
-      field("mf_tgl","Tanggal Surat","text",tglDef,"Jakarta, 12 Mei 2026")+
-      field("mf_klinik","Nama Klinik/Vendor","text","","Klinik Pertamina IHC Yos Sudarso")+
-      field("mf_instansi","Nama Instansi Klinik","text","","PT Pertamina Bina Medika")+
-      field("mf_kapal","Nama Kapal","text",kapalDef,"MT. Pasaman")+
-      field("mf_crew","Jumlah Crew","number",crewDef,"12")+
-      field("mf_lokasi","Lokasi Pelaksanaan","text","","Port Tanjung Priok")+
-      field("mf_tglpel","Tanggal Pelaksanaan","text","","13 Mei 2026")+
-      field("mf_ttd","Nama Penandatangan","text","Diyon Indarto","Nama Manager Health")+
-      field("mf_jabatan","Jabatan Penandatangan","text","Manager Health","Manager Health");
+      field("mf_tgl","Tanggal Surat","text",tglDef,"Jakarta, 07 Juni 2026")+
+      field("mf_nomor","Nomor Surat","text","","091/PIS0400-PN/2026-S0")+
+      field("mf_klinik","Tujuan (Jabatan/Nama RS)","text","Director RS Pertamina Balikpapan","Director RS Pertamina Balikpapan")+
+      field("mf_instansi","Nama Instansi","text","PT Pertamina Bina Medika","PT Pertamina Bina Medika")+
+      field("mf_pelaksana","Nama Pelaksana (RSP/Vendor)","text","RSP Balikpapan","RSP Balikpapan")+
+      field("mf_kapal","Nama Kapal","text",kapalDef,"MT Serui")+
+      field("mf_crew","Jumlah Crew","number",crewDef,"13")+
+      field("mf_lokasi","Lokasi Pelaksanaan","text","","Port Balikpapan")+
+      field("mf_tglpel","Tanggal Pelaksanaan","text","","06 Juni 2026")+
+      field("mf_jabatan","Jabatan Penandatangan","text","Pjs VP HSSE III","Pjs VP HSSE III")+
+      field("mf_ttd","Nama Penandatangan","text","Diyon Indarto","Diyon Indarto")+
+      field("mf_jabttd","Jabatan di Kotak Tanda Tangan","text","Manager Health","Manager Health");
   }
   modal.style.display = "flex";
 }
@@ -5179,7 +5185,7 @@ function _mHeaderTable(perihal){
     rows:[
       new D.TableRow({children:[
         new D.TableCell({children:[_mp([_mt("Lampiran",{s:22})],{a:60,align:D.AlignmentType.LEFT})],borders:nb,width:{size:1600,type:D.WidthType.DXA}}),
-        new D.TableCell({children:[_mp([_mt(":  -",{s:22})],{a:60,align:D.AlignmentType.LEFT})],borders:nb,width:{size:220,type:D.WidthType.DXA}}),
+        new D.TableCell({children:[_mp([_mt(":",{s:22})],{a:60,align:D.AlignmentType.LEFT})],borders:nb,width:{size:220,type:D.WidthType.DXA}}),
         new D.TableCell({children:[_mblank(0)],borders:nb,width:{size:7540,type:D.WidthType.DXA}})
       ]}),
       new D.TableRow({children:[
@@ -5222,58 +5228,104 @@ function _mSave(doc, filename){
   }
 }
 
+/* Blok Kepada/Dari/Lampiran/Perihal untuk NOTA DINAS (4 baris) */
+function _mNotaHeaderTable(rows){
+  var D=_D(); var nb=_mNoBord();
+  return new D.Table({
+    width:{size:9360,type:D.WidthType.DXA},
+    columnWidths:[1700,220,7440],
+    borders:nb,
+    rows:rows.map(function(r){
+      return new D.TableRow({children:[
+        new D.TableCell({children:[_mp([_mt(r[0],{s:22})],{a:40,align:D.AlignmentType.LEFT})],borders:nb,width:{size:1700,type:D.WidthType.DXA}}),
+        new D.TableCell({children:[_mp([_mt(":",{s:22})],{a:40,align:D.AlignmentType.LEFT})],borders:nb,width:{size:220,type:D.WidthType.DXA}}),
+        new D.TableCell({children:[_mp([_mt(r[1]||"",{s:22,bold:!!r[2]})],{a:40,align:D.AlignmentType.LEFT})],borders:nb,width:{size:7440,type:D.WidthType.DXA}})
+      ]});
+    })
+  });
+}
+
+/* Kotak speciment tanda tangan polos (tanpa logo): jabatan kecil + NAMA besar */
+function _mSpecimentBox(jabatanKecil,namaBesar){
+  var D=_D();
+  var b={style:D.BorderStyle.SINGLE,size:6,color:"000000"};
+  var bord={top:b,bottom:b,left:b,right:b};
+  return new D.Table({
+    width:{size:3600,type:D.WidthType.DXA},
+    columnWidths:[3600],
+    borders:bord,
+    rows:[new D.TableRow({children:[
+      new D.TableCell({
+        borders:bord,
+        width:{size:3600,type:D.WidthType.DXA},
+        margins:{top:120,bottom:120,left:120,right:120},
+        children:[
+          _mp([_mt(jabatanKecil||"Manager Health",{s:18})],{a:20,align:D.AlignmentType.CENTER}),
+          _mp([_mt((namaBesar||"").toUpperCase(),{s:24,bold:true})],{a:0,align:D.AlignmentType.CENTER})
+        ]
+      })
+    ]})]
+  });
+}
+
 /* ════════════════════════════════════════════════════
-   MEMO 1 — Manager Fleet Product
+   MEMO 1 — NOTA DINAS untuk Manager Fleet
 ════════════════════════════════════════════════════ */
 async function _buildMemoFleet(){
   var D       = _D();
   var tgl     = _mv("mf_tgl")     || "Jakarta, ___________";
-  var tujuan  = _mv("mf_tujuan")  || "Manager Fleet Product I";
+  var nomor   = _mv("mf_nomor")   || "___/PIS0400-PN/2026-S0";
+  var tujuan  = _mv("mf_tujuan")  || "Sr Manager Fleet Crude";
+  var dari    = _mv("mf_dari")    || "Pjs VP HSSE III";
   var kapal   = _mv("mf_kapal")   || "_______________";
   var crew    = _mv("mf_crew")    || "___";
   var lokasi  = _mv("mf_lokasi")  || "_______________";
   var tglpel  = _mv("mf_tglpel")  || "_______________";
   var vendor  = _mv("mf_vendor")  || "_______________";
+  var jabatan = _mv("mf_jabatan") || "Pjs VP HSSE III";
   var ttd     = _mv("mf_ttd")     || "_______________";
-  var jabatan = _mv("mf_jabatan") || "Manager Health";
+  var jabttd  = _mv("mf_jabttd")  || "Manager Health";
 
   var children = [
-    /* Baris tanggal & nomor surat */
+    /* Judul NOTA DINAS */
+    _mp([_mt("NOTA DINAS",{s:32,bold:true})],{a:40,align:D.AlignmentType.LEFT}),
+    /* Disclaimer tanda tangan digital */
+    _mp([_mt(
+      "(Nota Dinas ini dinyatakan sah dengan menggunakan tanda tangan digital Pertamina milik pejabat ybs "+
+      "dan QR Code berisi informasi detail dokumen dicetak dari sistem Korespondensi Elektronik Pertamina)",
+    {s:16,it:true,c:"666666"})],{a:120,align:D.AlignmentType.LEFT}),
+    /* Tanggal & nomor */
     _mp([_mt(tgl,{s:22})],{a:40,align:D.AlignmentType.LEFT}),
-    _mp([_mt("No.      /PIS0440/2023-S8C00000",{s:22})],{a:0,align:D.AlignmentType.LEFT}),
+    _mp([_mt("No. "+nomor,{s:22})],{a:0,align:D.AlignmentType.LEFT}),
     _mblank(1),
-    /* Lampiran & Perihal */
-    _mHeaderTable("Annual External Drugs & Alcohol Test"),
-    _mblank(1),
-    /* Kepada */
-    _mp([_mt("Yang terhormat",{s:22})],{a:40,align:D.AlignmentType.LEFT}),
-    _mp([_mt(tujuan,{s:22,bold:true})],{a:0,align:D.AlignmentType.LEFT}),
+    /* Kepada / Dari / Lampiran / Perihal */
+    _mNotaHeaderTable([
+      ["Kepada", tujuan, false],
+      ["Dari", dari, false],
+      ["Lampiran", "", false],
+      ["Perihal", "Unannounced Drugs and Alcohol Test (Periodical)", true]
+    ]),
     _mblank(1),
     /* Pembuka */
-    _mp([_mt("Dengan Hormat,",{s:22})],{a:100,align:D.AlignmentType.JUSTIFIED}),
-    /* Paragraf 1 — komitmen pengendalian D&A */
+    _mp([_mt("Dengan hormat,",{s:22})],{a:100,align:D.AlignmentType.JUSTIFIED}),
+    /* Paragraf 1 — komitmen */
     _mp([_mt(
-      "Dalam rangka menjamin keselamatan operasi pelayaran serta lingkungan kerja "+
-      "yang sehat dan bebas dari pengaruh narkotika, psikotropika, dan alkohol, "+
-      "perusahaan menerapkan kebijakan pengendalian drug & alcohol yang mencakup "+
-      "langkah preventif, suportif, program pengujian (testing programme), serta "+
-      "tindakan disipliner secara berkelanjutan.",
+      "Dalam rangka memastikan lingkungan kerja pelayaran yang aman, sehat, dan bebas dari "+
+      "pengaruh obat-obatan terlarang serta alkohol, perusahaan berkomitmen untuk mencegah "+
+      "pengoperasian kapal oleh individu yang berada di bawah pengaruh zat terlarang.",
     {s:22})],{a:100,align:D.AlignmentType.JUSTIFIED}),
-    /* Paragraf 2 — dasar acuan OCIMF 2024 + TMSA/SIRE 2.0 */
+    /* Paragraf 2 — OCIMF / SIRE */
     _mp([
-      _mt("Kebijakan tersebut selaras dengan pedoman ",{s:22}),
-      _mt("Oil Companies International Marine Forum (OCIMF) — Guidelines for the Control of Drugs and Alcohol in the Maritime Industry (2024)",{s:22,it:true}),
-      _mt(", serta mendukung pemenuhan elemen kesehatan pada ",{s:22}),
-      _mt("Tanker Management and Self Assessment (TMSA)",{s:22,it:true}),
-      _mt(" dan inspeksi ",{s:22}),
-      _mt("Ship Inspection Report Programme (SIRE 2.0)",{s:22,it:true}),
-      _mt(". Sebagai bagian dari program pengujian berkala dimaksud, Fungsi Health–HSSE "+
-          "akan melaksanakan ",{s:22}),
-      _mt("Annual External Drug and Alcohol Test",{s:22,bold:true}),
-      _mt(" terhadap awak kapal berikut:",{s:22})
+      _mt("Sejalan dengan persyaratan dan rekomendasi dari ",{s:22}),
+      _mt("Oil Companies International Marine Forum (OCIMF)",{s:22,it:true}),
+      _mt(", khususnya dalam mendukung kepatuhan terhadap standar inspeksi ",{s:22}),
+      _mt("Ship Inspection Report Programme (SIRE)",{s:22,it:true}),
+      _mt(", HSSE Fungsi Health berencana melaksanakan ",{s:22}),
+      _mt("Unannounced Drugs and Alcohol Test (Periodical)",{s:22,bold:true,it:true}),
+      _mt(" terhadap awak kapal, berikut:",{s:22})
     ],{a:100,align:D.AlignmentType.JUSTIFIED}),
     _mblank(0),
-    /* Tabel detail kegiatan */
+    /* Tabel detail */
     _mDetailTable([
       ["Kapal",      kapal],
       ["Jumlah Crew",crew+" orang"],
@@ -5282,50 +5334,49 @@ async function _buildMemoFleet(){
       ["Pelaksanaan",""]
     ]),
     _mblank(0),
-    /* Paragraf penutup */
+    /* Pelaksana */
     _mp([
-      _mt("Kegiatan ini akan dilaksanakan oleh ",{s:22}),
-      _mt(vendor,{s:22,bold:true}),
-      _mt(" selaku pelaksana di lapangan.",{s:22})
+      _mt("Kegiatan ini akan dilaksanakan oleh pihak ",{s:22}),
+      _mt(vendor+" selaku pelaksana.",{s:22,bold:true})
     ],{a:100,align:D.AlignmentType.JUSTIFIED}),
+    /* Penutup */
     _mp([_mt(
-      "Demikian kami sampaikan. Atas perhatian dan kerja sama yang "+
-      "diberikan, kami ucapkan terima kasih.",
+      "Demikian kami sampaikan, atas perhatian dan kerjasamanya diucapkan terima kasih.",
     {s:22})],{a:100,align:D.AlignmentType.JUSTIFIED}),
     _mblank(1),
     /* Tanda tangan */
     _mp([_mt(jabatan+",",{s:22})],{a:60,align:D.AlignmentType.LEFT}),
-    _mblank(4),
-    _mp([_mt(ttd,{s:22,bold:true})],{a:60,align:D.AlignmentType.LEFT}),
     _mblank(1),
-    /* Tembusan */
-    _mp([_mt("Tembusan:",{s:22})],{a:40,align:D.AlignmentType.LEFT}),
-    _mp([_mt("VP HSSE PT Pertamina International Shipping",{s:22})],
-      {a:0,align:D.AlignmentType.LEFT})
+    _mSpecimentBox(jabttd,ttd),
+    _mblank(0),
+    _mp([_mt(ttd,{s:22,bold:true})],{a:60,align:D.AlignmentType.LEFT})
   ];
 
   var doc = _memoDoc(children);
-  await _mSave(doc,"Memo_DAT_"+kapal.replace(/[^a-zA-Z0-9]/g,"_")+"_Fleet.docx");
+  await _mSave(doc,"Nota_Dinas_DAT_"+kapal.replace(/[^a-zA-Z0-9]/g,"_")+"_Fleet.docx");
 }
 
 /* ════════════════════════════════════════════════════
    MEMO 2 — Klinik / Vendor Pelaksana
 ════════════════════════════════════════════════════ */
 async function _buildMemoKlinik(){
-  var D        = _D();
-  var tgl      = _mv("mf_tgl")      || "Jakarta, ___________";
-  var klinik   = _mv("mf_klinik")   || "_______________";
-  var instansi = _mv("mf_instansi") || "";
-  var kapal    = _mv("mf_kapal")    || "_______________";
-  var crew     = _mv("mf_crew")     || "___";
-  var lokasi   = _mv("mf_lokasi")   || "_______________";
-  var tglpel   = _mv("mf_tglpel")   || "_______________";
-  var ttd      = _mv("mf_ttd")      || "_______________";
-  var jabatan  = _mv("mf_jabatan")  || "Manager Health";
+  var D         = _D();
+  var tgl       = _mv("mf_tgl")       || "Jakarta, ___________";
+  var nomor     = _mv("mf_nomor")     || "___/PIS0400-PN/2026-S0";
+  var klinik    = _mv("mf_klinik")    || "Director RS Pertamina Balikpapan";
+  var instansi  = _mv("mf_instansi")  || "PT Pertamina Bina Medika";
+  var pelaksana = _mv("mf_pelaksana") || "RSP Balikpapan";
+  var kapal     = _mv("mf_kapal")     || "_______________";
+  var crew      = _mv("mf_crew")      || "___";
+  var lokasi    = _mv("mf_lokasi")    || "_______________";
+  var tglpel    = _mv("mf_tglpel")    || "_______________";
+  var jabatan   = _mv("mf_jabatan")   || "Pjs VP HSSE III";
+  var ttd       = _mv("mf_ttd")       || "_______________";
+  var jabttd    = _mv("mf_jabttd")    || "Manager Health";
 
   var kepada = [
-    _mp([_mt("Yang terhormat",{s:22})],{a:40,align:D.AlignmentType.LEFT}),
-    _mp([_mt("Direktur "+klinik,{s:22})],{a:0,align:D.AlignmentType.LEFT})
+    _mp([_mt("Yang terhormat",{s:22})],{a:0,align:D.AlignmentType.LEFT}),
+    _mp([_mt(klinik,{s:22})],{a:0,align:D.AlignmentType.LEFT})
   ];
   if(instansi){
     kepada.push(_mp([_mt(instansi,{s:22})],{a:0,align:D.AlignmentType.LEFT}));
@@ -5333,24 +5384,19 @@ async function _buildMemoKlinik(){
 
   var children = [
     _mp([_mt(tgl,{s:22})],{a:40,align:D.AlignmentType.LEFT}),
-    _mp([_mt("No.      /PIS0440/2023-S8C00000",{s:22})],{a:0,align:D.AlignmentType.LEFT}),
+    _mp([_mt("No. "+nomor,{s:22})],{a:0,align:D.AlignmentType.LEFT}),
     _mblank(1),
-    _mHeaderTable("Annual External Drugs and Alcohol Test"),
+    _mHeaderTable("Unannounced Drugs and Alcohol Test (Periodical)"),
     _mblank(1)
   ].concat(kepada).concat([
     _mblank(1),
-    _mp([_mt("Dengan Hormat,",{s:22})],{a:100,align:D.AlignmentType.JUSTIFIED}),
-    /* Paragraf 1 */
+    /* Paragraf 1 — permohonan */
     _mp([
-      _mt("Sehubungan dengan pelaksanaan ",{s:22}),
-      _mt("Annual External Drugs and Alcohol Test",{s:22,bold:true,it:true}),
-      _mt(" pada armada kapal milik PT Pertamina International Shipping — sebagai "+
-          "bagian dari program pengujian berkala mengacu pada pedoman ",{s:22}),
-      _mt("OCIMF Guidelines for the Control of Drugs and Alcohol in the Maritime Industry (2024)",{s:22,it:true}),
-      _mt(" — dengan ini kami mohon bantuan ",{s:22}),
-      _mt(klinik,{s:22,bold:true}),
-      _mt(" sebagai pelaksana di lapangan. "+
-          "Adapun detail kegiatan adalah sebagai berikut:",{s:22})
+      _mt("Sehubungan dengan adanya kegiatan eksternal ",{s:22}),
+      _mt("Unannounced Drugs and Alcohol Test (Periodical)",{s:22,bold:true,it:true}),
+      _mt(" pada kapal milik PT. Pertamina Patra Niaga, maka kami mohon bantuan ",{s:22}),
+      _mt(pelaksana,{s:22,bold:true}),
+      _mt(" sebagai pelaksana di lapangan. Adapun berikut agenda kegiatan tersebut:",{s:22})
     ],{a:100,align:D.AlignmentType.JUSTIFIED}),
     _mblank(0),
     _mDetailTable([
@@ -5363,48 +5409,51 @@ async function _buildMemoKlinik(){
     _mblank(0),
     /* Biaya */
     _mp([
-      _mt("Seluruh biaya yang timbul sehubungan dengan pelaksanaan kegiatan ini "+
-          "menjadi beban ",{s:22}),
-      _mt("PT Pertamina International Shipping c.q. Health-HSSE",{s:22,bold:true}),
-      _mt(". Apabila terdapat perubahan data, jumlah crew yang diperiksa dapat "+
-          "disesuaikan.",{s:22})
+      _mt("Biaya yang timbul sehubungan dengan hal dimaksud menjadi beban ",{s:22}),
+      _mt("PT Pertamina Patra Niaga - Health III HSSE",{s:22}),
+      _mt(". Apabila ada perubahan data pelaksanaan ",{s:22}),
+      _mt("Unannounced Drugs and Alcohol Test (Periodical)",{s:22,bold:true,it:true}),
+      _mt(" dapat disesuaikan dengan jumlah crew yang diperiksa.",{s:22})
     ],{a:100,align:D.AlignmentType.JUSTIFIED}),
     /* Pengiriman dokumen */
     _mp([
-      _mt("Hasil pemeriksaan beserta dokumen administrasi agar disampaikan kepada ",{s:22}),
-      _mt("Manager Health HSSE",{s:22,it:true}),
-      _mt(" PT Pertamina International Shipping, Gedung Patra Jasa ",{s:22}),
-      _mt("Office Tower",{s:22,it:true}),
-      _mt(" Lantai 3, Jl. Gatot Subroto Kav. 32–34, Jakarta Selatan 12950, "+
-          "dengan melampirkan dokumen berikut:",{s:22})
+      _mt("Agar disampaikan atau dikirimkan kepada Manager Health III HSSE dr. Diyon Indarto. "+
+          "PT Pertamina Patra Niaga, Gedung Patra Jasa Office Tower Lantai 3 fungsi HSSE "+
+          "Jl. Gatot Subroto Kav. 32-34, Kuningan Timur, Setiabudi, Jakarta Selatan, 12950 "+
+          "dengan melampirkan dokumen pendukung, sbb:",{s:22})
     ],{a:80,align:D.AlignmentType.JUSTIFIED}),
     /* List dokumen */
-    _mp([_mt("1.  Surat pengantar permintaan pembayaran;",{s:22})],
+    _mp([_mt("1.  Surat pengantar permintaan pembayaran.",{s:22})],
       {a:50,align:D.AlignmentType.LEFT,ind:400}),
-    _mp([_mt("2.  ",{s:22}),_mt("Invoice",{s:22,it:true}),_mt(" atau Debet Nota;",{s:22})],
+    _mp([_mt("2.  ",{s:22}),_mt("Invoice",{s:22,it:true}),_mt(" atau debet Nota.",{s:22})],
       {a:50,align:D.AlignmentType.LEFT,ind:400}),
-    _mp([_mt("3.  Kwitansi bermaterai cukup;",{s:22})],
+    _mp([_mt("3.  Kwitansi bermaterai cukup.",{s:22})],
       {a:50,align:D.AlignmentType.LEFT,ind:400}),
-    _mp([_mt("4.  Billing/Rincian pemeriksaan ",{s:22}),
-         _mt("Drug & Alcohol Test",{s:22,it:true}),_mt(".",{s:22})],
+    _mp([_mt("4.  Billing atau rincian pemeriksaan ",{s:22}),
+         _mt("drug & alcohol test.",{s:22,it:true})],
       {a:80,align:D.AlignmentType.LEFT,ind:400}),
     /* Penutup */
     _mp([_mt(
-      "Demikian kami sampaikan. Atas perhatian dan kerja sama yang "+
-      "diberikan, kami ucapkan terima kasih.",
+      "Demikian kami sampaikan, atas perhatian dan kerjasamanya diucapkan terima kasih.",
     {s:22})],{a:100,align:D.AlignmentType.JUSTIFIED}),
     _mblank(1),
-    _mp([_mt(jabatan+",",{s:22})],{a:60,align:D.AlignmentType.LEFT}),
-    _mblank(4),
-    _mp([_mt(ttd,{s:22,bold:true})],{a:60,align:D.AlignmentType.LEFT}),
+    /* Tanda tangan */
+    _mp([_mt(jabatan,{s:22})],{a:60,align:D.AlignmentType.LEFT}),
     _mblank(1),
-    _mp([_mt("Tembusan:",{s:22})],{a:40,align:D.AlignmentType.LEFT}),
-    _mp([_mt("VP HSSE PT Pertamina International Shipping",{s:22})],
-      {a:0,align:D.AlignmentType.LEFT})
+    _mSpecimentBox(jabttd,ttd),
+    _mblank(0),
+    _mp([_mt(ttd,{s:22,bold:true})],{a:60,align:D.AlignmentType.LEFT}),
+    _mblank(2),
+    /* Footer alamat kantor (teks, rata kanan) */
+    _mp([_mt("PT Pertamina Patra Niaga",{s:16,c:"444444"})],{a:0,align:D.AlignmentType.RIGHT}),
+    _mp([_mt("Patra Jasa Office Tower",{s:16,c:"444444"})],{a:0,align:D.AlignmentType.RIGHT}),
+    _mp([_mt("Jl. Jendral Gatot Soebroto Kav. 32-34 Jakarta 12950",{s:16,c:"444444"})],{a:0,align:D.AlignmentType.RIGHT}),
+    _mp([_mt("T +62 21 381 5111   F +62 21 381 6111",{s:16,c:"444444"})],{a:0,align:D.AlignmentType.RIGHT}),
+    _mp([_mt("www.pertamina.com",{s:16,c:"444444"})],{a:0,align:D.AlignmentType.RIGHT})
   ]);
 
   var doc = _memoDoc(children);
-  await _mSave(doc,"Memo_DAT_"+kapal.replace(/[^a-zA-Z0-9]/g,"_")+"_Klinik.docx");
+  await _mSave(doc,"Surat_DAT_"+kapal.replace(/[^a-zA-Z0-9]/g,"_")+"_Vendor.docx");
 }
 
 
