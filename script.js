@@ -5035,7 +5035,7 @@ async function exportAlkesPDF(){
     /* Header reusable */
     function pageHead(judul){
       return '<div style="border-bottom:3px solid #003B73;padding-bottom:10px;margin-bottom:18px">'+
-        '<div style="font-size:11px;letter-spacing:1px;color:#003B73;font-weight:700">PT PERTAMINA PATRA NIAGA — HSSE FUNGSI HEALTH</div>'+
+        '<div style="font-size:11px;letter-spacing:1px;color:#003B73;font-weight:700">PT PERTAMINA PATRA NIAGA — HEALTH III</div>'+
         '<div style="font-size:19px;font-weight:800;color:#0F2A4A;margin-top:3px">'+judul+'</div>'+
         '<div style="font-size:10.5px;color:#555;margin-top:3px">Laporan Ketersediaan Alat Kesehatan (Alkes) Kapal · Diperbarui: '+tglStr+' pukul '+jamStr+' WIB</div>'+
         '</div>';
