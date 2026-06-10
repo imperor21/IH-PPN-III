@@ -5200,7 +5200,7 @@ async function exportAlkesPDF(){
     });
     pr+='<div style="margin-top:18px;padding:12px 14px;background:#F0F4F8;border-radius:7px;font-size:10px;color:#555;line-height:1.6">'+
       '<b>Catatan untuk Second Officer:</b> Pastikan seluruh alat penyelamatan jiwa (AED, Tabung Oksigen, Long Spinal Board, Basket Stretcher) dalam kondisi siap pakai dan tidak kedaluwarsa sebelum kapal berlayar. Laporkan segera kekurangan alkes kepada Fungsi Health HSSE untuk tindak lanjut pengadaan.</div>';
-    pr+='<div style="margin-top:22px;font-size:10.5px;color:#333">Hormat kami,<br><br><b>HSSE Fungsi Health</b><br>PT Pertamina Patra Niaga</div>';
+    pr+='<div style="margin-top:22px;font-size:10.5px;color:#333">Hormat kami,<br><br><b>Fungsi Health III</b><br>PT Pertamina Patra Niaga</div>';
     pr+=pageFoot(2+kapalHtmlPages.length);
 
     /* Gabung semua halaman */
