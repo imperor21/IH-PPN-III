@@ -5104,38 +5104,89 @@ async function exportAlkesPDF(){
     p1+=pageFoot(1);
 
     /* ===== HALAMAN 2: Tabel semua kapal ===== */
-    var rowsPerPage=22;
-    var sorted=data.slice().sort(function(a,b){return (parseFloat(a._kelengkapanPct)||0)-(parseFloat(b._kelengkapanPct)||0);});
-    var kapalPages=[];
-    for(var s=0;s<sorted.length;s+=rowsPerPage)kapalPages.push(sorted.slice(s,s+rowsPerPage));
-    if(!kapalPages.length)kapalPages.push([]);
+    var rowsPerPage=20;
+    /* Deteksi grup dari awalan nama kapal */
+    function _grupKapal(nama){
+      var n=String(nama||"").trim().toUpperCase();
+      if(/^NC\b/.test(n)||n.indexOf("NC ")===0||n.indexOf("NC-")===0||/^NC/.test(n))return "NC";
+      if(/^PTK\b/.test(n)||n.indexOf("PTK ")===0||n.indexOf("PTK-")===0||/^PTK/.test(n))return "PTK";
+      return "LAINNYA";
+    }
+    function _sortByPct(arr){return arr.slice().sort(function(a,b){return (parseFloat(a._kelengkapanPct)||0)-(parseFloat(b._kelengkapanPct)||0);});}
+    var grupNC=[],grupPTK=[],grupLain=[];
+    data.forEach(function(r){
+      var g=_grupKapal(r._kapal||r["Nama Kapal"]||"");
+      if(g==="NC")grupNC.push(r);else if(g==="PTK")grupPTK.push(r);else grupLain.push(r);
+    });
+    var grupList=[
+      {judul:"Kapal NC",data:_sortByPct(grupNC)},
+      {judul:"Kapal PTK",data:_sortByPct(grupPTK)},
+      {judul:"Kapal Lainnya",data:_sortByPct(grupLain)}
+    ].filter(function(g){return g.data.length>0;});
 
-    var kapalHtmlPages=kapalPages.map(function(chunk,pi){
-      var h=pageHead("Daftar Ketersediaan Alkes per Kapal"+(kapalPages.length>1?" ("+(pi+1)+"/"+kapalPages.length+")":""));
-      h+='<table style="width:100%;border-collapse:collapse;font-size:10px"><thead><tr style="background:#003B73;color:#fff">'+
+    /* Bangun "blok" konten: tiap grup punya sub-judul + baris-barisnya.
+       Lalu dipecah ke halaman berdasarkan kapasitas baris per halaman. */
+    function tblHead(){
+      return '<table style="width:100%;border-collapse:collapse;font-size:10px"><thead><tr style="background:#003B73;color:#fff">'+
         '<th style="text-align:left;padding:6px 8px;width:26px">No</th>'+
         '<th style="text-align:left;padding:6px 8px">Nama Kapal</th>'+
         '<th style="text-align:left;padding:6px 8px">Fleet</th>'+
         '<th style="text-align:center;padding:6px 8px">Kelengkapan</th>'+
         '<th style="text-align:center;padding:6px 8px">Status</th>'+
         '<th style="text-align:center;padding:6px 8px">AED</th></tr></thead><tbody>';
-      chunk.forEach(function(r,idx){
-        var st=r._status||"-";
-        var stc=st==="LENGKAP"?"#2E7D32":st==="PARSIAL"?"#E65100":"#C62828";
-        var pct=parseFloat(r._kelengkapanPct)||0;
-        var aedTxt=r._expiredAED?"EXPIRED":"OK";var aedC=r._expiredAED?"#C62828":"#2E7D32";
-        h+='<tr style="background:'+(idx%2?"#F7FAFC":"#fff")+'">'+
-          '<td style="padding:5px 8px;border-bottom:1px solid #EEE">'+(pi*rowsPerPage+idx+1)+'</td>'+
-          '<td style="padding:5px 8px;border-bottom:1px solid #EEE;font-weight:600">'+esc2(r._kapal||r["Nama Kapal"]||"-")+'</td>'+
-          '<td style="padding:5px 8px;border-bottom:1px solid #EEE">'+esc2(r._fleet||r["Fleet"]||"-")+'</td>'+
-          '<td style="padding:5px 8px;border-bottom:1px solid #EEE;text-align:center;font-weight:700;color:'+stc+'">'+pct+'%</td>'+
-          '<td style="padding:5px 8px;border-bottom:1px solid #EEE;text-align:center;color:'+stc+';font-weight:700">'+esc2(st)+'</td>'+
-          '<td style="padding:5px 8px;border-bottom:1px solid #EEE;text-align:center;color:'+aedC+';font-weight:700">'+aedTxt+'</td></tr>';
+    }
+    function rowHtml(r,no,idx){
+      var st=r._status||"-";
+      var stc=st==="LENGKAP"?"#2E7D32":st==="PARSIAL"?"#E65100":"#C62828";
+      var pct=parseFloat(r._kelengkapanPct)||0;
+      var aedTxt=r._expiredAED?"EXPIRED":"OK";var aedC=r._expiredAED?"#C62828":"#2E7D32";
+      return '<tr style="background:'+(idx%2?"#F7FAFC":"#fff")+'">'+
+        '<td style="padding:5px 8px;border-bottom:1px solid #EEE">'+no+'</td>'+
+        '<td style="padding:5px 8px;border-bottom:1px solid #EEE;font-weight:600">'+esc2(r._kapal||r["Nama Kapal"]||"-")+'</td>'+
+        '<td style="padding:5px 8px;border-bottom:1px solid #EEE">'+esc2(r._fleet||r["Fleet"]||"-")+'</td>'+
+        '<td style="padding:5px 8px;border-bottom:1px solid #EEE;text-align:center;font-weight:700;color:'+stc+'">'+pct+'%</td>'+
+        '<td style="padding:5px 8px;border-bottom:1px solid #EEE;text-align:center;color:'+stc+';font-weight:700">'+esc2(st)+'</td>'+
+        '<td style="padding:5px 8px;border-bottom:1px solid #EEE;text-align:center;color:'+aedC+';font-weight:700">'+aedTxt+'</td></tr>';
+    }
+    function grupSubHeader(judul,jml){
+      return '<div style="background:#E8EEF5;border-left:5px solid #003B73;padding:7px 11px;margin:14px 0 8px;font-size:12px;font-weight:800;color:#0F2A4A">'+
+        esc2(judul)+' <span style="font-weight:600;color:#5A6B82;font-size:10.5px">('+jml+' kapal)</span></div>';
+    }
+
+    /* Susun jadi "unit konten" lalu paginate sederhana per ~20 baris kumulatif */
+    var kapalHtmlPages=[];
+    var curBody="";        /* isi halaman berjalan */
+    var curRows=0;         /* hitung baris pada halaman berjalan */
+    var pageIdx=0;
+    var totalGrups=grupList.length;
+    function flushPage(){
+      var title="Daftar Ketersediaan Alkes per Kapal"+(pageIdx>0?" (lanjutan)":"");
+      kapalHtmlPages.push(pageHead(title)+curBody);
+      curBody=""; curRows=0; pageIdx++;
+    }
+    grupList.forEach(function(g){
+      /* sub-header butuh ruang; kalau halaman hampir penuh, pindah halaman dulu */
+      if(curRows>0 && curRows>rowsPerPage-4){ flushPage(); }
+      curBody+=grupSubHeader(g.judul,g.data.length);
+      curBody+=tblHead();
+      var openTable=true;
+      g.data.forEach(function(r,i){
+        if(curRows>=rowsPerPage){
+          /* tutup tabel, pindah halaman, buka tabel lagi dengan header sama */
+          curBody+='</tbody></table>';
+          flushPage();
+          curBody+=grupSubHeader(g.judul+" (lanjutan)",g.data.length);
+          curBody+=tblHead();
+        }
+        curBody+=rowHtml(r,i+1,i);
+        curRows++;
       });
-      h+='</tbody></table>';
-      h+=pageFoot(2+pi);
-      return h;
+      curBody+='</tbody></table>';
     });
+    if(curBody)flushPage();
+    if(!kapalHtmlPages.length)kapalHtmlPages.push(pageHead("Daftar Ketersediaan Alkes per Kapal")+'<div style="font-size:11px;color:#666">Tidak ada data kapal.</div>');
+    /* tambahkan footer nomor halaman */
+    kapalHtmlPages=kapalHtmlPages.map(function(h,i){return h+pageFoot(2+i);});
 
     /* ===== HALAMAN TERAKHIR: Rekomendasi ===== */
     var pr=pageHead("Rekomendasi & Tindak Lanjut");
@@ -5150,7 +5201,7 @@ async function exportAlkesPDF(){
     pr+='<div style="margin-top:18px;padding:12px 14px;background:#F0F4F8;border-radius:7px;font-size:10px;color:#555;line-height:1.6">'+
       '<b>Catatan untuk Nakhoda/Kapten:</b> Pastikan seluruh alat penyelamatan jiwa (AED, Tabung Oksigen, Long Spinal Board, Basket Stretcher) dalam kondisi siap pakai dan tidak kedaluwarsa sebelum kapal berlayar. Laporkan segera kekurangan alkes kepada Fungsi Health HSSE untuk tindak lanjut pengadaan.</div>';
     pr+='<div style="margin-top:22px;font-size:10.5px;color:#333">Hormat kami,<br><br><b>HSSE Fungsi Health</b><br>PT Pertamina Patra Niaga</div>';
-    pr+=pageFoot(2+kapalPages.length);
+    pr+=pageFoot(2+kapalHtmlPages.length);
 
     /* Gabung semua halaman */
     var allPages=[p1].concat(kapalHtmlPages).concat([pr]);
