@@ -382,7 +382,7 @@ function _recPro(s,pr,x,y,w,h,idx,pri,text,reg){
   s.addText(text,{x:x+2.05,y:y+0.10,w:w-2.25,h:h-0.42,
     fontSize:10.5,color:C.txt,fontFace:"Segoe UI",wrap:true,valign:"top"});
   /* sitasi regulasi */
-  s.addText([{text:"⚖ ",options:{color:P.c}},{text:String(reg||""),options:{color:C.mut,italic:true}}],
+  s.addText([{text:"Regulasi:  ",options:{color:P.c,bold:true}},{text:String(reg||""),options:{color:C.mut,italic:true}}],
     {x:x+2.05,y:y+h-0.34,w:w-2.25,h:0.28,fontSize:8.5,fontFace:"Segoe UI",valign:"middle"});
 }
 
@@ -554,12 +554,12 @@ async function exportDATPPT(){
 
     /* S2 Ringkasan */
     var s2=pr.addSlide(); _hdr(s2,pr,"Ringkasan Eksekutif","Ikhtisar hasil DAT armada — "+periode);
-    _kpi(s2,pr,0.45,1.30,3.95,1.95,kapalDone,"Kapal Diperiksa",C.blue,"🚢");
-    _kpi(s2,pr,4.55,1.30,3.95,1.95,belum,"Belum DAT",C.amber,"⏳");
-    _kpi(s2,pr,8.65,1.30,4.23,1.95,crew.toLocaleString("id-ID"),"Total Crew",C.teal,"👥");
-    _kpi(s2,pr,0.45,3.45,3.95,1.95,pos,"Crew Positif",pos>0?C.red:C.grn,"⚠️");
-    _kpi(s2,pr,4.55,3.45,3.95,1.95,cov+"%","Coverage",C.grn,"📊");
-    _kpi(s2,pr,8.65,3.45,4.23,1.95,_rp(biaya),"Est. Total Biaya",C.pur,"💰");
+    _kpi(s2,pr,0.45,1.30,3.95,1.95,kapalDone,"Kapal Diperiksa",C.blue,"");
+    _kpi(s2,pr,4.55,1.30,3.95,1.95,belum,"Belum DAT",C.amber,"");
+    _kpi(s2,pr,8.65,1.30,4.23,1.95,crew.toLocaleString("id-ID"),"Total Crew",C.teal,"");
+    _kpi(s2,pr,0.45,3.45,3.95,1.95,pos,"Crew Positif",pos>0?C.red:C.grn,"");
+    _kpi(s2,pr,4.55,3.45,3.95,1.95,cov+"%","Coverage",C.grn,"");
+    _kpi(s2,pr,8.65,3.45,4.23,1.95,_rp(biaya),"Est. Total Biaya",C.pur,"");
     _note(s2,pr,0.45,5.62,12.43,1.20,
       pos>0 ? "Terdapat "+pos+" crew dengan hasil positif. Tindak lanjuti sesuai MLC 2006 Reg.4.3 (Medical Care) sebelum keberangkatan kapal."
             : "Zero positive rate — kepatuhan penuh terhadap MLC 2006 Reg.4.3. Pertahankan jadwal pemeriksaan berkala.",
@@ -651,12 +651,12 @@ async function exportHRAPPT(){
     ],"HRA");
 
     var s2=pr.addSlide(); _hdr(s2,pr,"Ringkasan Eksekutif","Ikhtisar pelaksanaan HRA armada — "+tgl);
-    _kpi(s2,pr,0.45,1.30,3.95,1.95,done,"Kapal Telah HRA",C.blue,"🔍");
-    _kpi(s2,pr,4.55,1.30,3.95,1.95,belum,"Belum HRA",belum>0?C.red:C.grn,"⏳");
-    _kpi(s2,pr,8.65,1.30,4.23,1.95,cov+"%","Coverage HRA",stC,"📋");
-    _kpi(s2,pr,0.45,3.45,3.95,1.95,TOT,"Total Armada",C.teal,"🚢");
-    _kpi(s2,pr,4.55,3.45,3.95,1.95,_rp(budget),"Est. Anggaran",C.pur,"💰");
-    _kpi(s2,pr,8.65,3.45,4.23,1.95,hazTop.length?hazTop[0][0]:"-","Hazard Teratas",C.amber,"⚠️");
+    _kpi(s2,pr,0.45,1.30,3.95,1.95,done,"Kapal Telah HRA",C.blue,"");
+    _kpi(s2,pr,4.55,1.30,3.95,1.95,belum,"Belum HRA",belum>0?C.red:C.grn,"");
+    _kpi(s2,pr,8.65,1.30,4.23,1.95,cov+"%","Coverage HRA",stC,"");
+    _kpi(s2,pr,0.45,3.45,3.95,1.95,TOT,"Total Armada",C.teal,"");
+    _kpi(s2,pr,4.55,3.45,3.95,1.95,_rp(budget),"Est. Anggaran",C.pur,"");
+    _kpi(s2,pr,8.65,3.45,4.23,1.95,hazTop.length?hazTop[0][0]:"-","Hazard Teratas",C.amber,"");
     _note(s2,pr,0.45,5.62,12.43,1.20,
       parseFloat(cov)<80 ? belum+" unit armada belum HRA. Diperlukan percepatan jadwal agar coverage mencapai target >80%."
                          : "Coverage HRA dalam kondisi baik. Pertahankan siklus HRA berkala dan pembaruan register bahaya.",
@@ -727,12 +727,12 @@ async function exportPestPPT(){
     ],"PEST");
 
     var s2=pr.addSlide(); _hdr(s2,pr,"Ringkasan Eksekutif","Ikhtisar kegiatan Pest Control — "+tgl);
-    _kpi(s2,pr,0.45,1.30,3.95,1.95,totalKeg+"x","Total Kegiatan",C.pur,"🐀");
-    _kpi(s2,pr,4.55,1.30,3.95,1.95,totalLok,"Lokasi Aktif",C.blue,"🏢");
-    _kpi(s2,pr,8.65,1.30,4.23,1.95,_rp(totalBiaya),"Est. Total Biaya",C.teal,"💰");
-    _kpi(s2,pr,0.45,3.45,3.95,1.95,hamaDom,"Hama Dominan",C.red,"🦟");
-    _kpi(s2,pr,4.55,3.45,3.95,1.95,(totalKeg/12).toFixed(1)+"x","Rata-rata / Bulan",C.grn,"📅");
-    _kpi(s2,pr,8.65,3.45,4.23,1.95,hamaTop.length,"Jenis Hama",C.amber,"🔎");
+    _kpi(s2,pr,0.45,1.30,3.95,1.95,totalKeg+"x","Total Kegiatan",C.pur,"");
+    _kpi(s2,pr,4.55,1.30,3.95,1.95,totalLok,"Lokasi Aktif",C.blue,"");
+    _kpi(s2,pr,8.65,1.30,4.23,1.95,_rp(totalBiaya),"Est. Total Biaya",C.teal,"");
+    _kpi(s2,pr,0.45,3.45,3.95,1.95,hamaDom,"Hama Dominan",C.red,"");
+    _kpi(s2,pr,4.55,3.45,3.95,1.95,(totalKeg/12).toFixed(1)+"x","Rata-rata / Bulan",C.grn,"");
+    _kpi(s2,pr,8.65,3.45,4.23,1.95,hamaTop.length,"Jenis Hama",C.amber,"");
     _note(s2,pr,0.45,5.62,12.43,1.20,
       "Program pengendalian berjalan sesuai jadwal. Lanjutkan monitoring rutin dan tindak lanjut temuan untuk menjaga sanitasi lingkungan kerja.",
       C.grn,C.grnL);
@@ -968,10 +968,10 @@ async function exportSummaryPPT(){
 
     var overallOk=parseFloat(hraCov)>=60&&parseFloat(datPct)>=95;
     var s2=pr.addSlide(); _hdr(s2,pr,"Overview Eksekutif","Ringkasan kinerja Industrial Hygiene — "+tgl);
-    _kpi(s2,pr,0.45,1.30,3.05,1.85,hraDone+"/"+TK,"Coverage HRA",parseFloat(hraCov)>=80?C.grn:C.amber,"📋");
-    _kpi(s2,pr,3.62,1.30,3.05,1.85,datPct+"%","DAT Compliance",parseFloat(datPct)>=99?C.grn:C.amber,"✅");
-    _kpi(s2,pr,6.79,1.30,3.05,1.85,pestCount+"x","Pest Control",C.teal,"🐛");
-    _kpi(s2,pr,9.96,1.30,2.92,1.85,_rp(budget),"Est. Budget HRA",C.pur,"💰");
+    _kpi(s2,pr,0.45,1.30,3.05,1.85,hraDone+"/"+TK,"Coverage HRA",parseFloat(hraCov)>=80?C.grn:C.amber,"");
+    _kpi(s2,pr,3.62,1.30,3.05,1.85,datPct+"%","DAT Compliance",parseFloat(datPct)>=99?C.grn:C.amber,"");
+    _kpi(s2,pr,6.79,1.30,3.05,1.85,pestCount+"x","Pest Control",C.teal,"");
+    _kpi(s2,pr,9.96,1.30,2.92,1.85,_rp(budget),"Est. Budget HRA",C.pur,"");
     _note(s2,pr,0.45,3.35,12.43,0.78,
       (overallOk?"STATUS KESELURUHAN: BAIK — semua indikator utama dalam batas normal."
                 :"STATUS KESELURUHAN: PERHATIAN — beberapa indikator perlu tindak lanjut."),
