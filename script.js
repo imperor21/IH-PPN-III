@@ -3,7 +3,7 @@
 /* ✅ Pedoman PDF & Foto Dokumentasi → Google Drive (multi-device)    */
 /* ✅ IndexedDB dihapus — data terpusat di GAS/Drive                  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbyY6NB-PflWBlL6_sUgNZ2-2tSaJ7EqXrr9tKLjxDUvNPYSisdBI25eCKlgYki3toDF/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzWbXOOt42CDMA5RIn_ALsgacY_iNILDz6nuEsjAT2vxRv0XW5mxlAWbSg2KSJIlmBeMg/exec";
 
 async function gasPost(payload) {
   const controller = new AbortController();
@@ -391,6 +391,7 @@ let rawFisika=[],rawKimia=[],rawBiologi=[],rawErgonomi=[],rawPsikososial=[];
 let rawCloseout25=[];
 let rawAlkes=[],filteredAlkes=[];
 let rawMCU=[],filteredMCU=[],mcuSummary={};
+let rawSertifikat=[],filteredSertifikat=[];
 let filteredFisika=[],filteredKimia=[],filteredBiologi=[],filteredErgonomi=[],filteredPsikososial=[];
 let hraBarChart,hraDonutChart,datBarChart,datDonutChart,pestBarChart,pestDonutChart,pestTemuanChart,pestBiayaChart;
 let fisikaBarChart,fisikaDonutChart,kimiaBarChart,kimiaDonutChart,biologiBarChart,biologiDonutChart;
@@ -464,6 +465,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   document.querySelectorAll('.nav-item[data-menu="closeout25"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(renderCO25Page,80));});
   document.querySelectorAll('.nav-item[data-menu="menu5"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(renderAlkesPage,80));});
   document.querySelectorAll('.nav-item[data-menu="medsurv"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(renderMCUPage,80));});
+  document.querySelectorAll('.nav-item[data-menu="sertifikat"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(renderSertifikatPage,80));});
   document.querySelectorAll('.nav-item[data-menu="accesslog"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(loadAccessLog,80));});
   /* Mobile logout FAB — tampil hanya di mobile */
   function updateMobileLogout(){
@@ -826,6 +828,8 @@ async function loadData(){
   fetchBiomonitoring();
   /* Fetch MCU Pelaut data dari GAS */
   fetchMCUData();
+  /* Fetch Sertifikat Pelaut data dari GAS (sheet Placeholder 6) */
+  fetchSertifikatData();
 }
 function showLoading(v){document.getElementById("loadingOverlay").style.display=v?"flex":"none";}
 function showError(msg){document.getElementById("errorBanner").style.display="flex";document.getElementById("errorMsg").textContent=msg;}
@@ -5035,7 +5039,7 @@ async function exportAlkesPDF(){
     /* Header reusable */
     function pageHead(judul){
       return '<div style="border-bottom:3px solid #003B73;padding-bottom:10px;margin-bottom:18px">'+
-        '<div style="font-size:11px;letter-spacing:1px;color:#003B73;font-weight:700">PT PERTAMINA PATRA NIAGA — HEALTH III</div>'+
+        '<div style="font-size:11px;letter-spacing:1px;color:#003B73;font-weight:700">PT PERTAMINA PATRA NIAGA — HSSE FUNGSI HEALTH</div>'+
         '<div style="font-size:19px;font-weight:800;color:#0F2A4A;margin-top:3px">'+judul+'</div>'+
         '<div style="font-size:10.5px;color:#555;margin-top:3px">Laporan Ketersediaan Alat Kesehatan (Alkes) Kapal · Diperbarui: '+tglStr+' pukul '+jamStr+' WIB</div>'+
         '</div>';
@@ -5199,8 +5203,8 @@ async function exportAlkesPDF(){
         '</div>';
     });
     pr+='<div style="margin-top:18px;padding:12px 14px;background:#F0F4F8;border-radius:7px;font-size:10px;color:#555;line-height:1.6">'+
-      '<b>Catatan untuk Second Officer:</b> Pastikan seluruh alat penyelamatan jiwa (AED, Tabung Oksigen, Long Spinal Board, Basket Stretcher) dalam kondisi siap pakai dan tidak kedaluwarsa sebelum kapal berlayar. Laporkan segera kekurangan alkes kepada Fungsi Health HSSE untuk tindak lanjut pengadaan.</div>';
-    pr+='<div style="margin-top:22px;font-size:10.5px;color:#333">Hormat kami,<br><br><b>Fungsi Health III</b><br>PT Pertamina Patra Niaga</div>';
+      '<b>Catatan untuk Nakhoda/Kapten:</b> Pastikan seluruh alat penyelamatan jiwa (AED, Tabung Oksigen, Long Spinal Board, Basket Stretcher) dalam kondisi siap pakai dan tidak kedaluwarsa sebelum kapal berlayar. Laporkan segera kekurangan alkes kepada Fungsi Health HSSE untuk tindak lanjut pengadaan.</div>';
+    pr+='<div style="margin-top:22px;font-size:10.5px;color:#333">Hormat kami,<br><br><b>HSSE Fungsi Health</b><br>PT Pertamina Patra Niaga</div>';
     pr+=pageFoot(2+kapalHtmlPages.length);
 
     /* Gabung semua halaman */
@@ -7022,3 +7026,191 @@ function settingsRefreshNow(){
 
 /* ── Hook: dipanggil setelah loadData selesai untuk refresh badge ── */
 function refreshNotifAfterLoad(){ try{updateNotifBadge();}catch(e){} }
+
+/* ═══════════════════════════════════════════════════════════════
+   SERTIFIKAT PELAUT — membaca sheet "Placeholder 6" (menu6)
+   Kolom: NIP / ID Pelaut, Nama Lengkap, Jabatan, Nama Kapal, Fleet,
+   Jenis Sertifikat, No. Sertifikat, Penerbit, Tanggal Terbit,
+   Tanggal Kadaluarsa, Status, Keterangan
+   Status dihitung otomatis dari Tanggal Kadaluarsa.
+═══════════════════════════════════════════════════════════════ */
+var _sertExpiringDays=90; /* ambang "Akan Habis" = 90 hari sebelum kadaluarsa */
+
+function _parseTglID(s){
+  /* dukung dd/MM/yyyy dan dd-MM-yyyy */
+  var m=String(s||"").trim().match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if(!m)return null;
+  var d=new Date(parseInt(m[3]),parseInt(m[2])-1,parseInt(m[1]));
+  return isNaN(d.getTime())?null:d;
+}
+function _sertStatus(tglKadaluarsa){
+  var exp=_parseTglID(tglKadaluarsa);
+  if(!exp)return{label:"—",color:"#9AA5B1",sisa:null};
+  var now=new Date(); now.setHours(0,0,0,0);
+  var sisaHari=Math.round((exp-now)/(24*60*60*1000));
+  if(sisaHari<0)return{label:"EXPIRED",color:"#C62828",sisa:sisaHari};
+  if(sisaHari<=_sertExpiringDays)return{label:"AKAN HABIS",color:"#E65100",sisa:sisaHari};
+  return{label:"AKTIF",color:"#2E7D32",sisa:sisaHari};
+}
+
+/* Olah data mentah menu6 → tambahkan status terhitung */
+function _processSertifikat(rows){
+  return (rows||[]).map(function(r){
+    var o={};
+    /* normalisasi key yang mungkin beda penulisan */
+    o.nip       = r["NIP / ID Pelaut"]||r["NIP"]||r["ID Pelaut"]||"";
+    o.nama      = r["Nama Lengkap"]||r["Nama"]||"";
+    o.jabatan   = r["Jabatan"]||"";
+    o.kapal     = r["Nama Kapal"]||r["Kapal"]||"";
+    o.fleet     = r["Fleet"]||r["Jenis Fleet"]||"";
+    o.jenis     = r["Jenis Sertifikat"]||r["Sertifikat"]||"";
+    o.nomor     = r["No. Sertifikat"]||r["Nomor Sertifikat"]||r["No Sertifikat"]||"";
+    o.penerbit  = r["Penerbit"]||"";
+    o.terbit    = r["Tanggal Terbit"]||"";
+    o.kadaluarsa= r["Tanggal Kadaluarsa"]||r["Tanggal Kedaluwarsa"]||r["Masa Berlaku"]||"";
+    o.ket       = r["Keterangan"]||"";
+    var st=_sertStatus(o.kadaluarsa);
+    o._status=st.label; o._statusColor=st.color; o._sisaHari=st.sisa;
+    return o;
+  }).filter(function(o){ return o.nip||o.nama||o.jenis; }); /* buang baris kosong */
+}
+
+/* Ambil data dari server (sheet menu6 = Placeholder 6) */
+async function fetchSertifikatData(){
+  try{
+    var data=await gasPost({action:'getData',token:getToken(),sheet:'menu6'});
+    if(!data||data.status==='unauthorized')return;
+    if(data.status!=='ok')return;
+    rawSertifikat=_processSertifikat(data.menu6||[]);
+    filteredSertifikat=[...rawSertifikat];
+    var pg=document.getElementById('page-sertifikat');
+    if(pg&&pg.classList.contains('active'))renderSertifikatPage();
+  }catch(e){console.warn('fetchSertifikatData:',e);}
+}
+
+function applySertifikatFilters(){
+  var fj=document.getElementById('sert-filter-jabatan'),
+      fjn=document.getElementById('sert-filter-jenis'),
+      fs=document.getElementById('sert-filter-status'),
+      fk=document.getElementById('sert-search');
+  var vJab=fj?fj.value:"", vJns=fjn?fjn.value:"", vSt=fs?fs.value:"", vKw=(fk?fk.value:"").toLowerCase().trim();
+  filteredSertifikat=rawSertifikat.filter(function(r){
+    if(vJab&&r.jabatan!==vJab)return false;
+    if(vJns&&r.jenis!==vJns)return false;
+    if(vSt&&r._status!==vSt)return false;
+    if(vKw){
+      var hay=(r.nama+" "+r.nip+" "+r.kapal+" "+r.nomor).toLowerCase();
+      if(hay.indexOf(vKw)===-1)return false;
+    }
+    return true;
+  });
+  renderSertifikatPage();
+}
+function clearSertifikatFilters(){
+  ["sert-filter-jabatan","sert-filter-jenis","sert-filter-status","sert-search"].forEach(function(id){var el=document.getElementById(id);if(el)el.value="";});
+  filteredSertifikat=[...rawSertifikat];
+  renderSertifikatPage();
+}
+
+function renderSertifikatPage(){
+  var pg=document.getElementById('page-sertifikat');
+  if(!pg)return;
+
+  /* Belum ada data → tampilkan empty state + tombol muat */
+  if(!rawSertifikat.length){
+    pg.innerHTML=
+      '<div style="padding:32px 0">'+
+      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">'+
+      '<i class="fas fa-certificate" style="font-size:22px;color:#00ACC1"></i>'+
+      '<h2 style="font-size:18px;font-weight:700;color:var(--text);margin:0">Sertifikat Pelaut</h2></div>'+
+      '<p style="font-size:13px;color:var(--text-muted);margin:0 0 28px 34px">Pemantauan masa berlaku sertifikat pelaut \u00b7 Pertamina Patra Niaga</p>'+
+      '<div style="text-align:center;padding:52px 20px;background:var(--card);border-radius:16px;border:1px solid var(--border)">'+
+      '<div style="width:68px;height:68px;border-radius:50%;background:linear-gradient(135deg,#00ACC1,#006064);display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px">'+
+      '<i class="fas fa-database" style="font-size:26px;color:#fff"></i></div>'+
+      '<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px">Data Sertifikat Belum Tersedia</div>'+
+      '<div style="font-size:12px;color:var(--text-muted);max-width:400px;margin:0 auto;line-height:1.6">'+
+      'Pastikan sheet <strong>Placeholder 6</strong> sudah berisi data sertifikat (header di baris 1), lalu klik tombol di bawah.</div>'+
+      '<button onclick="fetchSertifikatData()" style="margin-top:18px;padding:9px 22px;background:#00ACC1;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">'+
+      '<i class="fas fa-rotate-right" style="margin-right:6px"></i>Muat Data Sertifikat</button></div></div>';
+    return;
+  }
+
+  var data=filteredSertifikat;
+  /* KPI */
+  var total=rawSertifikat.length;
+  var aktif=rawSertifikat.filter(function(r){return r._status==="AKTIF";}).length;
+  var akan=rawSertifikat.filter(function(r){return r._status==="AKAN HABIS";}).length;
+  var exp=rawSertifikat.filter(function(r){return r._status==="EXPIRED";}).length;
+
+  /* opsi filter */
+  var jabatanOpt=[...new Set(rawSertifikat.map(function(r){return r.jabatan;}).filter(Boolean))];
+  var jenisOpt=[...new Set(rawSertifikat.map(function(r){return r.jenis;}).filter(Boolean))];
+
+  function kpi(val,lbl,col){
+    return '<div style="flex:1;min-width:120px;background:var(--card);border:1px solid var(--border);border-top:4px solid '+col+';border-radius:12px;padding:16px 14px">'+
+      '<div style="font-size:28px;font-weight:800;color:'+col+';line-height:1">'+val+'</div>'+
+      '<div style="font-size:11px;color:var(--text-muted);margin-top:6px;text-transform:uppercase;letter-spacing:.4px">'+lbl+'</div></div>';
+  }
+  function selOpt(arr,sel){return '<option value="">Semua</option>'+arr.map(function(o){return '<option'+(o===sel?' selected':'')+'>'+esc(o)+'</option>';}).join('');}
+
+  var head=
+    '<div class="page-header-row" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:6px">'+
+    '<div style="display:flex;align-items:center;gap:12px">'+
+    '<i class="fas fa-certificate" style="font-size:22px;color:#00ACC1"></i>'+
+    '<div><h2 style="font-size:18px;font-weight:700;color:var(--text);margin:0">Sertifikat Pelaut</h2>'+
+    '<p style="font-size:12px;color:var(--text-muted);margin:2px 0 0">Pemantauan masa berlaku sertifikat \u00b7 '+total+' sertifikat</p></div></div>'+
+    '<button onclick="fetchSertifikatData()" style="font-size:11px;padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-weight:700;cursor:pointer"><i class="fas fa-rotate-right" style="margin-right:6px"></i>Refresh</button>'+
+    '</div>';
+
+  var kpis='<div style="display:flex;gap:12px;flex-wrap:wrap;margin:16px 0">'+
+    kpi(total,"Total Sertifikat","#1565C0")+
+    kpi(aktif,"Aktif","#2E7D32")+
+    kpi(akan,"Akan Habis (≤90 hari)",akan>0?"#E65100":"#2E7D32")+
+    kpi(exp,"Expired",exp>0?"#C62828":"#2E7D32")+
+    '</div>';
+
+  var filterBar='<div class="filter-bar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px">'+
+    '<input id="sert-search" class="search-input" placeholder="Cari nama / NIP / kapal / no. sertifikat..." oninput="applySertifikatFilters()" value="'+esc((document.getElementById("sert-search")||{}).value||"")+'" style="flex:1;min-width:200px;padding:9px 13px;border:1px solid var(--border);border-radius:9px;background:var(--card);color:var(--text);font-size:13px">'+
+    '<select id="sert-filter-jabatan" class="filter-select" onchange="applySertifikatFilters()" style="padding:9px 11px;border:1px solid var(--border);border-radius:9px;background:var(--card);color:var(--text);font-size:12px">'+selOpt(jabatanOpt,(document.getElementById("sert-filter-jabatan")||{}).value)+'</select>'+
+    '<select id="sert-filter-jenis" class="filter-select" onchange="applySertifikatFilters()" style="padding:9px 11px;border:1px solid var(--border);border-radius:9px;background:var(--card);color:var(--text);font-size:12px">'+selOpt(jenisOpt,(document.getElementById("sert-filter-jenis")||{}).value)+'</select>'+
+    '<select id="sert-filter-status" class="filter-select" onchange="applySertifikatFilters()" style="padding:9px 11px;border:1px solid var(--border);border-radius:9px;background:var(--card);color:var(--text);font-size:12px">'+
+    '<option value="">Semua Status</option><option>AKTIF</option><option>AKAN HABIS</option><option>EXPIRED</option></select>'+
+    '<button onclick="clearSertifikatFilters()" style="padding:9px 13px;border:1px solid var(--border);border-radius:9px;background:var(--card);color:var(--text-muted);font-size:12px;cursor:pointer">Reset</button>'+
+    '</div>';
+
+  /* Tabel — urutkan: EXPIRED & AKAN HABIS dulu (sisa hari terkecil) */
+  var sorted=data.slice().sort(function(a,b){
+    var pa=a._sisaHari==null?999999:a._sisaHari, pb=b._sisaHari==null?999999:b._sisaHari;
+    return pa-pb;
+  });
+  var rowsHtml=sorted.map(function(r,i){
+    var sisaTxt=r._sisaHari==null?"—":(r._sisaHari<0?Math.abs(r._sisaHari)+" hari lalu":r._sisaHari+" hari lagi");
+    return '<tr style="background:'+(i%2?"rgba(0,0,0,.02)":"transparent")+'">'+
+      '<td style="padding:9px 11px;border-bottom:1px solid var(--border)">'+(i+1)+'</td>'+
+      '<td style="padding:9px 11px;border-bottom:1px solid var(--border);font-weight:600;color:var(--text)">'+esc(r.nama||"-")+'<div style="font-size:10px;color:var(--text-muted);font-weight:400">'+esc(r.nip||"")+'</div></td>'+
+      '<td style="padding:9px 11px;border-bottom:1px solid var(--border)">'+esc(r.jabatan||"-")+'</td>'+
+      '<td style="padding:9px 11px;border-bottom:1px solid var(--border)">'+esc(r.kapal||"-")+'<div style="font-size:10px;color:var(--text-muted)">'+esc(r.fleet||"")+'</div></td>'+
+      '<td style="padding:9px 11px;border-bottom:1px solid var(--border)">'+esc(r.jenis||"-")+'<div style="font-size:10px;color:var(--text-muted)">'+esc(r.nomor||"")+'</div></td>'+
+      '<td style="padding:9px 11px;border-bottom:1px solid var(--border);white-space:nowrap">'+esc(r.kadaluarsa||"-")+'</td>'+
+      '<td style="padding:9px 11px;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap">'+
+        '<span style="display:inline-block;font-size:10px;font-weight:800;color:#fff;background:'+r._statusColor+';padding:3px 9px;border-radius:20px;letter-spacing:.3px">'+esc(r._status)+'</span>'+
+        '<div style="font-size:9.5px;color:var(--text-muted);margin-top:3px">'+sisaTxt+'</div></td>'+
+      '</tr>';
+  }).join('');
+  if(!rowsHtml)rowsHtml='<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--text-muted)">Tidak ada sertifikat sesuai filter.</td></tr>';
+
+  var tableCard='<div class="table-card" style="background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden">'+
+    '<div class="table-wrap" style="overflow-x:auto;max-height:62vh;overflow-y:auto">'+
+    '<table class="data-table" style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:760px">'+
+    '<thead><tr style="background:var(--blue,#003B73);color:#fff">'+
+    '<th style="padding:10px 11px;text-align:left;width:30px">No</th>'+
+    '<th style="padding:10px 11px;text-align:left">Nama / NIP</th>'+
+    '<th style="padding:10px 11px;text-align:left">Jabatan</th>'+
+    '<th style="padding:10px 11px;text-align:left">Kapal / Fleet</th>'+
+    '<th style="padding:10px 11px;text-align:left">Sertifikat / No.</th>'+
+    '<th style="padding:10px 11px;text-align:left">Kadaluarsa</th>'+
+    '<th style="padding:10px 11px;text-align:center">Status</th>'+
+    '</tr></thead><tbody>'+rowsHtml+'</tbody></table></div></div>';
+
+  pg.innerHTML='<div style="padding:24px 0">'+head+kpis+filterBar+tableCard+'</div>';
+}
