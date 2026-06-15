@@ -5231,6 +5231,157 @@ async function exportAlkesPDF(){
   if(btn){btn.disabled=false;btn.innerHTML=oldHtml;}
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   LAPORAN PDF — CLOSEOUT HRA & IH (reminder OPEN + apresiasi)
+   Acuan: Permenaker No. 05 Tahun 2018 & Audit SUPREME Pertamina.
+   Data: filteredCO25 / rawCloseout25 (kapal, jenis, fleet, statusMon,
+   laporan, closeout = CLOSE/OPEN)
+═══════════════════════════════════════════════════════════════ */
+async function exportCloseout25PDF(){
+  var btn=document.querySelector("[onclick*='exportCloseout25PDF']");
+  var oldHtml=btn?btn.innerHTML:"";
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Membuat PDF...';}
+  try{
+    if(typeof window.jspdf==="undefined"||typeof html2canvas==="undefined"){
+      showToast("Library PDF belum termuat. Coba lagi sesaat.","warning");
+      if(btn){btn.disabled=false;btn.innerHTML=oldHtml;}return;
+    }
+    var data=(typeof filteredCO25!=="undefined"&&filteredCO25.length)?filteredCO25:
+             (typeof rawCloseout25!=="undefined"?rawCloseout25:[]);
+    if(!data.length){showToast("Tidak ada data Closeout.","warning");if(btn){btn.disabled=false;btn.innerHTML=oldHtml;}return;}
+
+    var total=data.length;
+    var openRows=data.filter(function(r){return String(r.closeout||"").trim().toUpperCase()==="OPEN";});
+    var closeRows=data.filter(function(r){return String(r.closeout||"").trim().toUpperCase()==="CLOSE";});
+    var pct=total?Math.round(closeRows.length/total*100):0;
+    /* daftar fleet yang sudah closeout (untuk apresiasi) */
+    var fleetClose={};
+    closeRows.forEach(function(r){var f=r.fleet||"-";fleetClose[f]=(fleetClose[f]||0)+1;});
+    var fleetCloseArr=Object.keys(fleetClose).map(function(f){return{fleet:f,n:fleetClose[f]};}).sort(function(a,b){return b.n-a.n;});
+
+    var now=new Date();
+    var tglStr=now.toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"});
+    var jamStr=now.toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"});
+
+    function esc2(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+    var host=document.createElement("div");
+    host.style.cssText="position:fixed;left:-9999px;top:0;width:794px;background:#fff;font-family:Arial,Helvetica,sans-serif;color:#1a1a1a";
+
+    function pageHead(judul){
+      return '<div style="border-bottom:3px solid #003B73;padding-bottom:10px;margin-bottom:18px">'+
+        '<div style="font-size:11px;letter-spacing:1px;color:#003B73;font-weight:700">PT PERTAMINA PATRA NIAGA — HSSE FUNGSI HEALTH</div>'+
+        '<div style="font-size:19px;font-weight:800;color:#0F2A4A;margin-top:3px">'+judul+'</div>'+
+        '<div style="font-size:10.5px;color:#555;margin-top:3px">Laporan Closeout HRA &amp; IH \u00b7 Diperbarui: '+tglStr+' pukul '+jamStr+' WIB</div></div>';
+    }
+    function pageFoot(no){
+      return '<div style="position:absolute;bottom:24px;left:42px;right:42px;border-top:1px solid #ccc;padding-top:7px;font-size:8.5px;color:#888;display:flex;justify-content:space-between">'+
+        '<span>Dokumen internal HSSE Fungsi Health \u00b7 Mengacu Permenaker No. 05/2018 &amp; Audit SUPREME Pertamina.</span><span>Halaman '+no+'</span></div>';
+    }
+    function pageWrap(inner){return '<div style="width:794px;min-height:1123px;padding:42px;box-sizing:border-box;position:relative;background:#fff">'+inner+'</div>';}
+    function kpiBox(val,lbl,col){
+      return '<div style="flex:1;border:1px solid #E2E8F0;border-top:4px solid '+col+';border-radius:8px;padding:13px 10px;text-align:center;background:#fff">'+
+        '<div style="font-size:27px;font-weight:800;color:'+col+'">'+val+'</div>'+
+        '<div style="font-size:9.5px;color:#555;margin-top:3px;text-transform:uppercase;letter-spacing:.4px">'+lbl+'</div></div>';
+    }
+    var stC=pct>=90?"#2E7D32":pct>=60?"#E65100":"#C62828";
+
+    /* ===== HALAMAN 1: Ringkasan + Reminder OPEN ===== */
+    var p1=pageHead("Ringkasan & Reminder Status Open");
+    p1+='<div style="display:flex;gap:10px;margin-bottom:16px">'+
+      kpiBox(total,"Total Temuan","#1565C0")+
+      kpiBox(closeRows.length,"Sudah Closeout","#2E7D32")+
+      kpiBox(openRows.length,"Masih Open",openRows.length>0?"#C62828":"#2E7D32")+
+      kpiBox(pct+"%","Tingkat Closeout",stC)+
+    '</div>';
+
+    p1+='<div style="font-size:11px;color:#444;line-height:1.6;margin-bottom:14px;background:#F0F4F8;padding:11px 14px;border-radius:7px">'+
+      'Laporan ini disusun sebagai pemantauan tindak lanjut (closeout) temuan Health Risk Assessment (HRA) dan Industrial Hygiene Monitoring (IHM) pada armada kapal, '+
+      'sesuai amanat <b>Permenaker No. 05 Tahun 2018</b> tentang Keselamatan dan Kesehatan Kerja Lingkungan Kerja, serta mendukung kesiapan <b>Audit SUPREME</b> di lingkungan Pertamina.</div>';
+
+    if(openRows.length>0){
+      p1+='<div style="font-size:14px;font-weight:800;color:#C62828;margin:6px 0 9px;border-left:4px solid #C62828;padding-left:9px"><span style="font-size:13px">\u26A0</span> Reminder — Temuan Masih OPEN ('+openRows.length+' kapal)</div>';
+      p1+='<div style="font-size:10.5px;color:#555;margin-bottom:8px">Mohon perhatian Fleet Management & crew kapal berikut untuk segera menyelesaikan tindak lanjut temuan:</div>';
+      p1+='<table style="width:100%;border-collapse:collapse;font-size:10.5px"><thead><tr style="background:#C62828;color:#fff">'+
+        '<th style="text-align:left;padding:7px 9px;width:26px">No</th>'+
+        '<th style="text-align:left;padding:7px 9px">Nama Kapal</th>'+
+        '<th style="text-align:left;padding:7px 9px">Jenis</th>'+
+        '<th style="text-align:left;padding:7px 9px">Fleet</th>'+
+        '<th style="text-align:left;padding:7px 9px">Status Laporan</th></tr></thead><tbody>';
+      openRows.forEach(function(r,i){
+        p1+='<tr style="background:'+(i%2?"#FDF2F2":"#fff")+'">'+
+          '<td style="padding:6px 9px;border-bottom:1px solid #F0D5D5">'+(i+1)+'</td>'+
+          '<td style="padding:6px 9px;border-bottom:1px solid #F0D5D5;font-weight:700">'+esc2(r.kapal||"-")+'</td>'+
+          '<td style="padding:6px 9px;border-bottom:1px solid #F0D5D5">'+esc2(r.jenis||"-")+'</td>'+
+          '<td style="padding:6px 9px;border-bottom:1px solid #F0D5D5">'+esc2(r.fleet||"-")+'</td>'+
+          '<td style="padding:6px 9px;border-bottom:1px solid #F0D5D5">'+esc2(r.laporan||"-")+'</td></tr>';
+      });
+      p1+='</tbody></table>';
+    } else {
+      p1+='<div style="text-align:center;padding:30px 20px;background:#E8F5E9;border:1px solid #A5D6A7;border-radius:10px;margin-top:8px">'+
+        '<div style="font-size:34px;color:#2E7D32;margin-bottom:8px">\u2713</div>'+
+        '<div style="font-size:14px;font-weight:800;color:#1B5E20">Seluruh Temuan Telah Closeout</div>'+
+        '<div style="font-size:11px;color:#388E3C;margin-top:5px">Tidak ada temuan berstatus OPEN. Pertahankan kinerja ini.</div></div>';
+    }
+    p1+=pageFoot(1);
+
+    /* ===== HALAMAN 2: Apresiasi + Regulasi ===== */
+    var p2=pageHead("Apresiasi & Dasar Regulasi");
+    p2+='<div style="font-size:14px;font-weight:800;color:#2E7D32;margin:2px 0 10px;border-left:4px solid #2E7D32;padding-left:9px">Ucapan Terima Kasih</div>';
+    p2+='<div style="font-size:11.5px;color:#222;line-height:1.8;margin-bottom:14px;text-align:justify">'+
+      'Fungsi HSSE Health menyampaikan <b>apresiasi dan terima kasih yang setinggi-tingginya</b> kepada jajaran '+
+      '<b>Fleet Management</b> beserta seluruh <b>crew kapal</b> yang telah melaksanakan tindak lanjut (closeout) temuan HRA &amp; IHM dengan baik dan tepat waktu. '+
+      'Sebanyak <b>'+closeRows.length+' dari '+total+' temuan ('+pct+'%)</b> telah berhasil diselesaikan. '+
+      'Komitmen dan kerja sama Bapak/Ibu sangat berarti dalam mewujudkan lingkungan kerja pelayaran yang aman, sehat, dan selamat.</div>';
+
+    if(fleetCloseArr.length){
+      p2+='<div style="font-size:11px;color:#555;margin-bottom:7px">Closeout terlaksana per Fleet:</div>';
+      p2+='<table style="width:100%;border-collapse:collapse;font-size:10.5px;margin-bottom:18px"><thead><tr style="background:#2E7D32;color:#fff">'+
+        '<th style="text-align:left;padding:7px 9px">Fleet</th>'+
+        '<th style="text-align:center;padding:7px 9px">Temuan Closeout</th></tr></thead><tbody>';
+      fleetCloseArr.forEach(function(f,i){
+        p2+='<tr style="background:'+(i%2?"#F1F8E9":"#fff")+'">'+
+          '<td style="padding:6px 9px;border-bottom:1px solid #DCEDC8;font-weight:600">'+esc2(f.fleet)+'</td>'+
+          '<td style="padding:6px 9px;border-bottom:1px solid #DCEDC8;text-align:center;font-weight:700;color:#2E7D32">'+f.n+'</td></tr>';
+      });
+      p2+='</tbody></table>';
+    }
+
+    p2+='<div style="font-size:14px;font-weight:800;color:#0F2A4A;margin:8px 0 10px;border-left:4px solid #003B73;padding-left:9px">Dasar Regulasi & Acuan</div>';
+    var regs=[
+      {t:"Permenaker No. 05 Tahun 2018",d:"Tentang Keselamatan dan Kesehatan Kerja Lingkungan Kerja — mewajibkan pengendalian faktor fisika, kimia, biologi, ergonomi, dan psikologi di tempat kerja, termasuk tindak lanjut hasil pengukuran/pemantauan lingkungan kerja."},
+      {t:"Audit SUPREME Pertamina",d:"Sustainability & Operability through HSSE Premium Excellence — closeout temuan HRA & IHM yang terdokumentasi merupakan salah satu elemen penilaian kepatuhan HSSE di lingkungan Pertamina."},
+      {t:"ISM Code & MLC 2006",d:"Mendukung pemenuhan aspek kesehatan kerja pelaut dan continual improvement dalam sistem manajemen keselamatan kapal."}
+    ];
+    regs.forEach(function(r){
+      p2+='<div style="border:1px solid #E2E8F0;border-left:5px solid #003B73;border-radius:7px;padding:11px 13px;margin-bottom:10px;background:#F7F9FC">'+
+        '<div style="font-size:12px;font-weight:800;color:#0F2A4A;margin-bottom:4px">'+esc2(r.t)+'</div>'+
+        '<div style="font-size:10.5px;color:#444;line-height:1.6">'+esc2(r.d)+'</div></div>';
+    });
+
+    p2+='<div style="margin-top:20px;font-size:10.5px;color:#333;line-height:1.6">Hormat kami,<br><br><b>HSSE Fungsi Health</b><br>PT Pertamina Patra Niaga</div>';
+    p2+=pageFoot(2);
+
+    host.innerHTML=[p1,p2].map(function(h){return pageWrap(h);}).join('');
+    document.body.appendChild(host);
+
+    var {jsPDF}=window.jspdf;
+    var pdf=new jsPDF({orientation:"portrait",unit:"pt",format:"a4"});
+    var pw=pdf.internal.pageSize.getWidth(),ph=pdf.internal.pageSize.getHeight();
+    var pageEls=host.children;
+    showToast("Memproses "+pageEls.length+" halaman laporan...","info");
+    for(var i=0;i<pageEls.length;i++){
+      if(btn)btn.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Hal '+(i+1)+"/"+pageEls.length+"...";
+      var canvas=await html2canvas(pageEls[i],{scale:2,useCORS:true,logging:false,backgroundColor:"#ffffff",width:794,height:1123,windowWidth:794});
+      if(i>0)pdf.addPage();
+      pdf.addImage(canvas.toDataURL("image/jpeg",0.92),"JPEG",0,0,pw,ph);
+    }
+    document.body.removeChild(host);
+    pdf.save("Laporan_Closeout_HRA_IH_"+now.toISOString().slice(0,10)+".pdf");
+    showToast("PDF laporan Closeout berhasil dibuat!","success");
+  }catch(e){console.error(e);showToast("Gagal export PDF Closeout: "+(e&&e.message||e),"error");}
+  if(btn){btn.disabled=false;btn.innerHTML=oldHtml;}
+}
+
 
 
 var _memoType = "";
