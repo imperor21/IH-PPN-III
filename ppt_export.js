@@ -84,7 +84,7 @@ async function _guardAsync(){
 function _hdr(s,pr,title,sub){
   s.background={color:C.bg};
   s.addShape(pr.ShapeType.ellipse,{x:11.9,y:-1.6,w:3.2,h:3.2,fill:{color:C.tint},line:{type:"none"}});
-  s.addText([{text:"● ",options:{color:C.aqua}},{text:BRAND.org,options:{color:C.slate}}],
+  s.addText([{text:BRAND.org,options:{color:C.slate}}],
     {x:0.55,y:0.18,w:9.8,h:0.24,fontSize:8.5,bold:true,charSpacing:1.3,fontFace:"Segoe UI",valign:"middle"});
   var fs=title.length>52?17:title.length>38?20:24;
   s.addText(String(title),{x:0.50,y:0.42,w:10.6,h:0.52,
@@ -460,7 +460,7 @@ function _cover(pr,judul1,judul2,sub,periode,kpis,mark){
   s.addShape(pr.ShapeType.ellipse,{x:11.0,y:5.2,w:3.2,h:3.2,fill:{color:"143356"},line:{type:"none"}});
   /* pill eyebrow */
   s.addShape(pr.ShapeType.roundRect,{x:0.9,y:0.72,w:6.7,h:0.46,fill:{color:"244E7E"},line:{type:"none"},rectRadius:0.23});
-  s.addText([{text:"● ",options:{color:C.sky}},{text:BRAND.eyebrow+"   ·   "+String(periode).toUpperCase(),options:{color:"DCEAF7"}}],
+  s.addText([{text:BRAND.eyebrow+"   ·   "+String(periode).toUpperCase(),options:{color:"DCEAF7"}}],
     {x:0.9,y:0.72,w:6.7,h:0.46,fontSize:9.5,bold:true,align:"center",valign:"middle",charSpacing:1.2,fontFace:"Segoe UI"});
   /* judul besar */
   s.addText(judul1,{x:0.86,y:1.55,w:11.6,h:1.95,
@@ -498,7 +498,7 @@ function _closing(pr,sub){
   s.addShape(pr.ShapeType.ellipse,{x:9.4,y:-2.6,w:6.8,h:6.8,fill:{color:"163A63"},line:{type:"none"}});
   s.addShape(pr.ShapeType.ellipse,{x:-2.2,y:4.4,w:5.6,h:5.6,fill:{color:"1E4878"},line:{type:"none"}});
   s.addShape(pr.ShapeType.roundRect,{x:5.16,y:2.05,w:3.0,h:0.44,fill:{color:"244E7E"},line:{type:"none"},rectRadius:0.22});
-  s.addText("● "+BRAND.eyebrow,{x:5.16,y:2.05,w:3.0,h:0.44,fontSize:8.5,bold:true,color:C.sky,align:"center",valign:"middle",charSpacing:1,fontFace:"Segoe UI"});
+  s.addText(BRAND.eyebrow,{x:5.16,y:2.05,w:3.0,h:0.44,fontSize:8.5,bold:true,color:C.sky,align:"center",valign:"middle",charSpacing:1,fontFace:"Segoe UI"});
   s.addText("TERIMA KASIH",{x:1.0,y:2.70,w:11.33,h:1.15,
     fontSize:48,bold:true,color:C.wht,align:"center",fontFace:"Segoe UI",charSpacing:0.5});
   s.addShape(pr.ShapeType.rect,{x:5.96,y:3.96,w:1.4,h:0.04,fill:{color:C.aqua},line:{type:"none"}});
