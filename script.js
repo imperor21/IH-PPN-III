@@ -3,7 +3,7 @@
 /* ✅ Pedoman PDF & Foto Dokumentasi → Google Drive (multi-device)    */
 /* ✅ IndexedDB dihapus — data terpusat di GAS/Drive                  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbxdqkG6KLgJxBMSEC0KN1kHWSNfD46TchbJZTjUAdddj15YLK7ac3q67wpsW2IF4Arv3g/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzWbXOOt42CDMA5RIn_ALsgacY_iNILDz6nuEsjAT2vxRv0XW5mxlAWbSg2KSJIlmBeMg/exec";
 
 async function gasPost(payload) {
   const controller = new AbortController();
@@ -466,6 +466,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   document.querySelectorAll('.nav-item[data-menu="menu5"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(renderAlkesPage,80));});
   document.querySelectorAll('.nav-item[data-menu="medsurv"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(renderMCUPage,80));});
   document.querySelectorAll('.nav-item[data-menu="sertifikat"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(renderSertifikatPage,80));});
+  document.querySelectorAll('.nav-item[data-menu="costanalytics"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(renderCostAnalyticsPage,80));});
   document.querySelectorAll('.nav-item[data-menu="accesslog"]').forEach(item=>{item.addEventListener("click",()=>setTimeout(loadAccessLog,80));});
   /* Mobile logout FAB — tampil hanya di mobile */
   function updateMobileLogout(){
@@ -7364,4 +7365,63 @@ function renderSertifikatPage(){
     '</tr></thead><tbody>'+rowsHtml+'</tbody></table></div></div>';
 
   pg.innerHTML='<div style="padding:24px 0">'+head+kpis+filterBar+tableCard+'</div>';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   COST ANALYTICS — (SOON) placeholder
+   Data master: sheet "Cost Analytics" (akan diolah saat fitur dirilis).
+   Saat ini menampilkan gambaran fitur yang akan datang.
+═══════════════════════════════════════════════════════════════ */
+function renderCostAnalyticsPage(){
+  var pg=document.getElementById('page-costanalytics');
+  if(!pg)return;
+  pg.innerHTML=
+    '<div style="padding:24px 0">'+
+    /* header */
+    '<div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">'+
+      '<i class="fas fa-chart-line" style="font-size:22px;color:#F59E0B"></i>'+
+      '<h2 style="font-size:19px;font-weight:800;color:var(--text);margin:0">Cost Analytics</h2>'+
+      '<span style="background:#F59E0B;color:#fff;font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;letter-spacing:.5px">SOON</span>'+
+    '</div>'+
+    '<p style="font-size:12.5px;color:var(--text-muted);margin:0 0 22px 34px">Analisis & optimalisasi biaya pelaksanaan program HSSE Health</p>'+
+
+    /* hero coming soon */
+    '<div style="text-align:center;padding:42px 24px;background:linear-gradient(135deg,#FFF8EC,#FFFFFF);border:1px solid #F5E2BC;border-radius:18px;margin-bottom:22px">'+
+      '<div style="width:74px;height:74px;border-radius:50%;background:linear-gradient(135deg,#F59E0B,#D97706);display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;box-shadow:0 8px 22px rgba(245,158,11,.3)">'+
+        '<i class="fas fa-chart-line" style="font-size:30px;color:#fff"></i></div>'+
+      '<div style="font-size:18px;font-weight:800;color:#0F2A4A;margin-bottom:8px">Segera Hadir</div>'+
+      '<div style="font-size:12.5px;color:#6B7280;max-width:520px;margin:0 auto;line-height:1.7">'+
+        'Modul <b>Cost Analytics</b> akan menganalisis biaya pelaksanaan lima program HSSE Health '+
+        '(HRA Kapal, IHM Kapal, DAT, Pengadaan Alkes, dan Pest &amp; Rodent Control) untuk membantu '+
+        'optimalisasi anggaran tahun berikutnya — tanpa mengurangi cakupan yang wajib secara regulasi.</div>'+
+    '</div>'+
+
+    /* preview fitur */
+    '<div style="font-size:14px;font-weight:800;color:var(--text);margin:4px 0 12px;border-left:4px solid #F59E0B;padding-left:10px">Yang Akan Tersedia</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+
+      _caCard("fa-coins","#1565C0","Total Biaya per Program","Rekap biaya realisasi tiap program per tahun, dengan rincian per kapal/lokasi & vendor.")+
+      _caCard("fa-chart-column","#2E7D32","Tren & Perbandingan","Tren biaya antar bulan/tahun dan perbandingan antar program untuk melihat pos terbesar.")+
+      _caCard("fa-handshake","#7B2FBE","Perbandingan Vendor","Banding tarif antar vendor/pelaksana sebagai dasar negosiasi yang lebih kompetitif.")+
+      _caCard("fa-location-dot","#E65100","Peluang Konsolidasi","Deteksi kegiatan di lokasi & waktu berdekatan yang bisa digabung untuk menekan biaya mobilisasi.")+
+      _caCard("fa-arrow-trend-up","#00897B","Proyeksi Anggaran","Estimasi kebutuhan anggaran tahun depan berbasis tren biaya & jumlah kegiatan.")+
+      _caCard("fa-lightbulb","#C62828","Rekomendasi Efisiensi","Saran optimalisasi berbasis data — fokus menghilangkan pemborosan, bukan memangkas layanan wajib.")+
+    '</div>'+
+
+    /* catatan data + prinsip */
+    '<div style="margin-top:20px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px">'+
+      '<div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px"><i class="fas fa-database" style="color:#F59E0B;margin-right:7px"></i>Sumber Data</div>'+
+      '<div style="font-size:11.5px;color:var(--text-muted);line-height:1.6">Modul ini akan membaca data dari sheet master <b>Cost Analytics</b>. Setiap baris mewakili satu kegiatan/pengadaan, lengkap dengan program, lokasi, vendor, dan biaya realisasi.</div>'+
+    '</div>'+
+
+    '<div style="margin-top:12px;background:#EAF4FB;border:1px solid #BFE0F2;border-radius:12px;padding:14px 16px">'+
+      '<div style="font-size:11.5px;color:#0F3A5E;line-height:1.7"><b>Prinsip:</b> optimalisasi biaya difokuskan pada efisiensi pelaksanaan (konsolidasi jadwal/lokasi, perbandingan vendor, alokasi berbasis kebutuhan) — <b>bukan</b> mengurangi cakupan, frekuensi, atau kualitas yang diwajibkan regulasi demi keselamatan & kesehatan kerja.</div>'+
+    '</div>'+
+    '</div>';
+}
+function _caCard(icon,color,title,desc){
+  return '<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;opacity:.92">'+
+    '<div style="display:flex;align-items:center;gap:9px;margin-bottom:6px">'+
+      '<div style="width:32px;height:32px;border-radius:9px;background:'+color+'1A;display:flex;align-items:center;justify-content:center"><i class="fas '+icon+'" style="color:'+color+';font-size:14px"></i></div>'+
+      '<div style="font-size:12.5px;font-weight:700;color:var(--text)">'+title+'</div></div>'+
+    '<div style="font-size:11px;color:var(--text-muted);line-height:1.55">'+desc+'</div></div>';
 }
