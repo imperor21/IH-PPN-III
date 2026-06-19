@@ -3,7 +3,7 @@
 /* ✅ Pedoman PDF & Foto Dokumentasi → Google Drive (multi-device)    */
 /* ✅ IndexedDB dihapus — data terpusat di GAS/Drive                  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbxYeoQ5YTh0QJahADE3fc6VChzm15f5K6LlXTgUfOS1poVKxhOHxCwXx2TzWv8nkuw7fg/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzWbXOOt42CDMA5RIn_ALsgacY_iNILDz6nuEsjAT2vxRv0XW5mxlAWbSg2KSJIlmBeMg/exec";
 
 async function gasPost(payload) {
   const controller = new AbortController();
@@ -392,6 +392,7 @@ let rawCloseout25=[];
 let rawAlkes=[],filteredAlkes=[];
 let rawMCU=[],filteredMCU=[],mcuSummary={};
 let rawSertifikat=[],filteredSertifikat=[];
+let rawCost=[],filteredCost=[];
 let filteredFisika=[],filteredKimia=[],filteredBiologi=[],filteredErgonomi=[],filteredPsikososial=[];
 let hraBarChart,hraDonutChart,datBarChart,datDonutChart,pestBarChart,pestDonutChart,pestTemuanChart,pestBiayaChart;
 let fisikaBarChart,fisikaDonutChart,kimiaBarChart,kimiaDonutChart,biologiBarChart,biologiDonutChart;
@@ -831,6 +832,8 @@ async function loadData(){
   fetchMCUData();
   /* Fetch Sertifikat Pelaut data dari GAS (sheet Placeholder 6) */
   fetchSertifikatData();
+  /* Fetch Cost Analytics data dari GAS (sheet Cost Analytics) */
+  fetchCostData();
 }
 function showLoading(v){document.getElementById("loadingOverlay").style.display=v?"flex":"none";}
 function showError(msg){document.getElementById("errorBanner").style.display="flex";document.getElementById("errorMsg").textContent=msg;}
@@ -7368,60 +7371,234 @@ function renderSertifikatPage(){
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   COST ANALYTICS — (SOON) placeholder
-   Data master: sheet "Cost Analytics" (akan diolah saat fitur dirilis).
-   Saat ini menampilkan gambaran fitur yang akan datang.
+   COST ANALYTICS — analisis biaya program HSSE Health
+   Data master: sheet "Cost Analytics" (dibaca via gasPost sheet:"cost")
+   Kolom: Tanggal, Program, Nama Kapal / Lokasi, Fleet, Lokasi,
+   Vendor / Pelaksana, Deskripsi Kegiatan, Jumlah Unit, Satuan,
+   Biaya Realisasi (Rp), Keterangan
+   Prinsip: efisiensi = hilangkan pemborosan, bukan pangkas yang wajib.
 ═══════════════════════════════════════════════════════════════ */
+function _costNum(v){
+  /* ubah "Rp 6.500.000" / "6500000" / 6500000 → angka */
+  if(typeof v==="number")return v;
+  var s=String(v||"").replace(/[^0-9,.-]/g,"");
+  /* buang pemisah ribuan titik, ganti koma desimal jadi titik */
+  s=s.replace(/\.(?=\d{3}(\D|$))/g,"").replace(",",".");
+  var n=parseFloat(s);return isNaN(n)?0:n;
+}
+function _rpFmt(n){
+  n=Math.round(n||0);
+  return "Rp "+n.toLocaleString("id-ID");
+}
+function _rpShort(n){
+  n=n||0;
+  if(n>=1e9)return "Rp "+(n/1e9).toFixed(1).replace(".",",")+" M";
+  if(n>=1e6)return "Rp "+(n/1e6).toFixed(1).replace(".",",")+" Jt";
+  if(n>=1e3)return "Rp "+(n/1e3).toFixed(0)+" Rb";
+  return "Rp "+n;
+}
+function _costTahun(tgl){
+  var m=String(tgl||"").match(/(\d{4})/);return m?m[1]:"—";
+}
+function _costBulan(tgl){
+  var m=String(tgl||"").match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-]/);return m?parseInt(m[2]):0;
+}
+
+function _processCost(rows){
+  return (rows||[]).map(function(r){
+    var o={};
+    o.tanggal = r["Tanggal"]||"";
+    o.program = r["Program"]||"";
+    o.objek   = r["Nama Kapal / Lokasi"]||r["Nama Kapal"]||r["Lokasi Objek"]||"";
+    o.fleet   = r["Fleet"]||"";
+    o.lokasi  = r["Lokasi"]||"";
+    o.vendor  = r["Vendor / Pelaksana"]||r["Vendor"]||"";
+    o.desk    = r["Deskripsi Kegiatan"]||r["Deskripsi"]||"";
+    o.unit    = r["Jumlah Unit"]||"";
+    o.satuan  = r["Satuan"]||"";
+    o.biaya   = _costNum(r["Biaya Realisasi (Rp)"]||r["Biaya Realisasi"]||r["Biaya"]||0);
+    o.ket     = r["Keterangan"]||"";
+    o.tahun   = _costTahun(o.tanggal);
+    o.bulan   = _costBulan(o.tanggal);
+    return o;
+  }).filter(function(o){return o.program||o.biaya>0;});
+}
+
+async function fetchCostData(){
+  try{
+    var data=await gasPost({action:'getData',token:getToken(),sheet:'cost'});
+    if(!data||data.status==='unauthorized'||data.status!=='ok')return;
+    rawCost=_processCost(data.cost||[]);
+    filteredCost=[...rawCost];
+    var pg=document.getElementById('page-costanalytics');
+    if(pg&&pg.classList.contains('active'))renderCostAnalyticsPage();
+  }catch(e){console.warn('fetchCostData:',e);}
+}
+
+function applyCostFilters(){
+  var fy=document.getElementById('cost-filter-tahun'),
+      fp=document.getElementById('cost-filter-program');
+  var vY=fy?fy.value:"", vP=fp?fp.value:"";
+  filteredCost=rawCost.filter(function(r){
+    if(vY&&r.tahun!==vY)return false;
+    if(vP&&r.program!==vP)return false;
+    return true;
+  });
+  renderCostAnalyticsPage();
+}
+function clearCostFilters(){
+  ["cost-filter-tahun","cost-filter-program"].forEach(function(id){var el=document.getElementById(id);if(el)el.value="";});
+  filteredCost=[...rawCost];
+  renderCostAnalyticsPage();
+}
+
 function renderCostAnalyticsPage(){
   var pg=document.getElementById('page-costanalytics');
   if(!pg)return;
-  pg.innerHTML=
-    '<div style="padding:24px 0">'+
-    /* header */
-    '<div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">'+
-      '<i class="fas fa-chart-line" style="font-size:22px;color:#F59E0B"></i>'+
-      '<h2 style="font-size:19px;font-weight:800;color:var(--text);margin:0">Cost Analytics</h2>'+
-      '<span style="background:#F59E0B;color:#fff;font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;letter-spacing:.5px">SOON</span>'+
-    '</div>'+
-    '<p style="font-size:12.5px;color:var(--text-muted);margin:0 0 22px 34px">Analisis & optimalisasi biaya pelaksanaan program HSSE Health</p>'+
 
-    /* hero coming soon */
-    '<div style="text-align:center;padding:42px 24px;background:linear-gradient(135deg,#FFF8EC,#FFFFFF);border:1px solid #F5E2BC;border-radius:18px;margin-bottom:22px">'+
-      '<div style="width:74px;height:74px;border-radius:50%;background:linear-gradient(135deg,#F59E0B,#D97706);display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;box-shadow:0 8px 22px rgba(245,158,11,.3)">'+
-        '<i class="fas fa-chart-line" style="font-size:30px;color:#fff"></i></div>'+
-      '<div style="font-size:18px;font-weight:800;color:#0F2A4A;margin-bottom:8px">Segera Hadir</div>'+
-      '<div style="font-size:12.5px;color:#6B7280;max-width:520px;margin:0 auto;line-height:1.7">'+
-        'Modul <b>Cost Analytics</b> akan menganalisis biaya pelaksanaan lima program HSSE Health '+
-        '(HRA Kapal, IHM Kapal, DAT, Pengadaan Alkes, dan Pest &amp; Rodent Control) untuk membantu '+
-        'optimalisasi anggaran tahun berikutnya — tanpa mengurangi cakupan yang wajib secara regulasi.</div>'+
-    '</div>'+
+  /* Belum ada data → empty state + tombol muat */
+  if(!rawCost.length){
+    pg.innerHTML=
+      '<div style="padding:24px 0">'+
+      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">'+
+        '<i class="fas fa-chart-line" style="font-size:22px;color:#F59E0B"></i>'+
+        '<h2 style="font-size:19px;font-weight:800;color:var(--text);margin:0">Cost Analytics</h2></div>'+
+      '<p style="font-size:12.5px;color:var(--text-muted);margin:0 0 26px 34px">Analisis & optimalisasi biaya pelaksanaan program HSSE Health</p>'+
+      '<div style="text-align:center;padding:52px 20px;background:var(--card);border-radius:16px;border:1px solid var(--border)">'+
+      '<div style="width:68px;height:68px;border-radius:50%;background:linear-gradient(135deg,#F59E0B,#D97706);display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px">'+
+      '<i class="fas fa-database" style="font-size:26px;color:#fff"></i></div>'+
+      '<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px">Data Biaya Belum Tersedia</div>'+
+      '<div style="font-size:12px;color:var(--text-muted);max-width:420px;margin:0 auto;line-height:1.6">'+
+      'Pastikan sheet <strong>Cost Analytics</strong> sudah berisi data biaya (header di baris 1), lalu klik tombol di bawah.</div>'+
+      '<button onclick="fetchCostData()" style="margin-top:18px;padding:9px 22px;background:#F59E0B;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">'+
+      '<i class="fas fa-rotate-right" style="margin-right:6px"></i>Muat Data Biaya</button></div></div>';
+    return;
+  }
 
-    /* preview fitur */
-    '<div style="font-size:14px;font-weight:800;color:var(--text);margin:4px 0 12px;border-left:4px solid #F59E0B;padding-left:10px">Yang Akan Tersedia</div>'+
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+
-      _caCard("fa-coins","#1565C0","Total Biaya per Program","Rekap biaya realisasi tiap program per tahun, dengan rincian per kapal/lokasi & vendor.")+
-      _caCard("fa-chart-column","#2E7D32","Tren & Perbandingan","Tren biaya antar bulan/tahun dan perbandingan antar program untuk melihat pos terbesar.")+
-      _caCard("fa-handshake","#7B2FBE","Perbandingan Vendor","Banding tarif antar vendor/pelaksana sebagai dasar negosiasi yang lebih kompetitif.")+
-      _caCard("fa-location-dot","#E65100","Peluang Konsolidasi","Deteksi kegiatan di lokasi & waktu berdekatan yang bisa digabung untuk menekan biaya mobilisasi.")+
-      _caCard("fa-arrow-trend-up","#00897B","Proyeksi Anggaran","Estimasi kebutuhan anggaran tahun depan berbasis tren biaya & jumlah kegiatan.")+
-      _caCard("fa-lightbulb","#C62828","Rekomendasi Efisiensi","Saran optimalisasi berbasis data — fokus menghilangkan pemborosan, bukan memangkas layanan wajib.")+
-    '</div>'+
+  var data=filteredCost;
+  var PColors={"DAT":"#1565C0","HRA Kapal":"#2E7D32","IHM Kapal":"#00897B","Pengadaan Alkes":"#7B2FBE","Pest & Rodent Control":"#E65100"};
+  function pColor(p){return PColors[p]||"#64748B";}
 
-    /* catatan data + prinsip */
-    '<div style="margin-top:20px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px">'+
-      '<div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px"><i class="fas fa-database" style="color:#F59E0B;margin-right:7px"></i>Sumber Data</div>'+
-      '<div style="font-size:11.5px;color:var(--text-muted);line-height:1.6">Modul ini akan membaca data dari sheet master <b>Cost Analytics</b>. Setiap baris mewakili satu kegiatan/pengadaan, lengkap dengan program, lokasi, vendor, dan biaya realisasi.</div>'+
-    '</div>'+
+  /* agregasi */
+  var totalBiaya=0, perProgram={}, perBulan={}, perVendor={}, perTahun={};
+  data.forEach(function(r){
+    totalBiaya+=r.biaya;
+    perProgram[r.program]=(perProgram[r.program]||0)+r.biaya;
+    perTahun[r.tahun]=(perTahun[r.tahun]||0)+r.biaya;
+    var bk=r.bulan||0; perBulan[bk]=(perBulan[bk]||0)+r.biaya;
+    if(r.vendor){if(!perVendor[r.vendor])perVendor[r.vendor]={total:0,n:0};perVendor[r.vendor].total+=r.biaya;perVendor[r.vendor].n++;}
+  });
+  var jmlKegiatan=data.length;
+  var rataKegiatan=jmlKegiatan?totalBiaya/jmlKegiatan:0;
+  var programArr=Object.keys(perProgram).map(function(p){return{program:p,total:perProgram[p]};}).sort(function(a,b){return b.total-a.total;});
+  var vendorArr=Object.keys(perVendor).map(function(v){return{vendor:v,total:perVendor[v].total,n:perVendor[v].n,rata:perVendor[v].total/perVendor[v].n};}).sort(function(a,b){return b.total-a.total;});
 
-    '<div style="margin-top:12px;background:#EAF4FB;border:1px solid #BFE0F2;border-radius:12px;padding:14px 16px">'+
-      '<div style="font-size:11.5px;color:#0F3A5E;line-height:1.7"><b>Prinsip:</b> optimalisasi biaya difokuskan pada efisiensi pelaksanaan (konsolidasi jadwal/lokasi, perbandingan vendor, alokasi berbasis kebutuhan) — <b>bukan</b> mengurangi cakupan, frekuensi, atau kualitas yang diwajibkan regulasi demi keselamatan & kesehatan kerja.</div>'+
-    '</div>'+
+  /* opsi filter */
+  var tahunOpt=[...new Set(rawCost.map(function(r){return r.tahun;}).filter(function(x){return x&&x!=="—";}))].sort();
+  var programOpt=[...new Set(rawCost.map(function(r){return r.program;}).filter(Boolean))];
+
+  /* proyeksi sederhana: rata-rata 2 tahun terakhir (kalau ada >=2 tahun) atau total tahun ini */
+  var tahunKeys=Object.keys(perTahun).filter(function(t){return t!=="—";}).sort();
+  var proyeksi=null, proyeksiNote="";
+  if(tahunKeys.length>=2){
+    var t1=perTahun[tahunKeys[tahunKeys.length-1]], t0=perTahun[tahunKeys[tahunKeys.length-2]];
+    var growth=t0>0?(t1-t0)/t0:0;
+    proyeksi=t1*(1+growth);
+    proyeksiNote="Berdasarkan tren "+tahunKeys[tahunKeys.length-2]+"→"+tahunKeys[tahunKeys.length-1]+" ("+(growth>=0?"+":"")+(growth*100).toFixed(0)+"%)";
+  } else if(tahunKeys.length===1){
+    proyeksi=perTahun[tahunKeys[0]];
+    proyeksiNote="Estimasi = realisasi "+tahunKeys[0]+" (data baru 1 tahun, proyeksi terbatas)";
+  }
+
+  function kpi(val,lbl,col,sub){
+    return '<div style="flex:1;min-width:140px;background:var(--card);border:1px solid var(--border);border-top:4px solid '+col+';border-radius:12px;padding:15px 14px">'+
+      '<div style="font-size:21px;font-weight:800;color:'+col+';line-height:1.1">'+val+'</div>'+
+      '<div style="font-size:10.5px;color:var(--text-muted);margin-top:5px;text-transform:uppercase;letter-spacing:.4px">'+lbl+'</div>'+
+      (sub?'<div style="font-size:10px;color:var(--text-muted);margin-top:3px">'+sub+'</div>':'')+'</div>';
+  }
+  function selOpt(arr,sel){return arr.map(function(o){return '<option'+(o===sel?' selected':'')+'>'+esc(o)+'</option>';}).join('');}
+
+  /* header + filter */
+  var html='<div style="padding:24px 0">'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px">'+
+    '<div style="display:flex;align-items:center;gap:12px">'+
+    '<i class="fas fa-chart-line" style="font-size:22px;color:#F59E0B"></i>'+
+    '<div><h2 style="font-size:19px;font-weight:800;color:var(--text);margin:0">Cost Analytics</h2>'+
+    '<p style="font-size:12px;color:var(--text-muted);margin:2px 0 0">Analisis & optimalisasi biaya program HSSE Health</p></div></div>'+
+    '<button onclick="fetchCostData()" style="font-size:11px;padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-weight:700;cursor:pointer"><i class="fas fa-rotate-right" style="margin-right:6px"></i>Refresh</button>'+
     '</div>';
-}
-function _caCard(icon,color,title,desc){
-  return '<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;opacity:.92">'+
-    '<div style="display:flex;align-items:center;gap:9px;margin-bottom:6px">'+
-      '<div style="width:32px;height:32px;border-radius:9px;background:'+color+'1A;display:flex;align-items:center;justify-content:center"><i class="fas '+icon+'" style="color:'+color+';font-size:14px"></i></div>'+
-      '<div style="font-size:12.5px;font-weight:700;color:var(--text)">'+title+'</div></div>'+
-    '<div style="font-size:11px;color:var(--text-muted);line-height:1.55">'+desc+'</div></div>';
+
+  html+='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:14px 0">'+
+    '<select id="cost-filter-tahun" onchange="applyCostFilters()" style="padding:9px 11px;border:1px solid var(--border);border-radius:9px;background:var(--card);color:var(--text);font-size:12px"><option value="">Semua Tahun</option>'+selOpt(tahunOpt,(document.getElementById("cost-filter-tahun")||{}).value)+'</select>'+
+    '<select id="cost-filter-program" onchange="applyCostFilters()" style="padding:9px 11px;border:1px solid var(--border);border-radius:9px;background:var(--card);color:var(--text);font-size:12px"><option value="">Semua Program</option>'+selOpt(programOpt,(document.getElementById("cost-filter-program")||{}).value)+'</select>'+
+    '<button onclick="clearCostFilters()" style="padding:9px 13px;border:1px solid var(--border);border-radius:9px;background:var(--card);color:var(--text-muted);font-size:12px;cursor:pointer">Reset</button>'+
+    '</div>';
+
+  /* KPI */
+  html+='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px">'+
+    kpi(_rpShort(totalBiaya),"Total Biaya Realisasi","#1565C0")+
+    kpi(jmlKegiatan,"Jumlah Kegiatan","#2E7D32")+
+    kpi(_rpShort(rataKegiatan),"Rata-rata per Kegiatan","#00897B")+
+    kpi(proyeksi!=null?_rpShort(proyeksi):"—","Proyeksi Tahun Depan","#E65100",proyeksiNote)+
+    '</div>';
+
+  /* Biaya per Program — bar horizontal */
+  var maxP=programArr.length?programArr[0].total:1;
+  html+='<div style="font-size:14px;font-weight:800;color:var(--text);margin:4px 0 10px;border-left:4px solid #F59E0B;padding-left:10px">Biaya per Program</div>';
+  html+='<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:18px">';
+  programArr.forEach(function(p){
+    var pct=maxP?(p.total/maxP*100):0;
+    var pctTotal=totalBiaya?(p.total/totalBiaya*100):0;
+    html+='<div style="margin-bottom:13px">'+
+      '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">'+
+      '<span style="font-weight:700;color:var(--text)">'+esc(p.program)+'</span>'+
+      '<span style="color:var(--text-muted)">'+_rpFmt(p.total)+' <span style="color:#94A3B8">('+pctTotal.toFixed(0)+'%)</span></span></div>'+
+      '<div style="height:10px;background:var(--border);border-radius:6px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+pColor(p.program)+';border-radius:6px"></div></div>'+
+      '</div>';
+  });
+  html+='</div>';
+
+  /* Tren per bulan (kalau ada data bulan) */
+  var bulanLbl=["","Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
+  var adaBulan=Object.keys(perBulan).some(function(b){return parseInt(b)>0;});
+  if(adaBulan){
+    var maxB=Math.max.apply(null,Object.keys(perBulan).map(function(b){return perBulan[b];}));
+    html+='<div style="font-size:14px;font-weight:800;color:var(--text);margin:4px 0 10px;border-left:4px solid #2E7D32;padding-left:10px">Tren Biaya per Bulan</div>';
+    html+='<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:18px">';
+    html+='<div style="display:flex;align-items:flex-end;gap:6px;height:150px">';
+    for(var b=1;b<=12;b++){
+      var val=perBulan[b]||0; var h=maxB?(val/maxB*130):0;
+      html+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">'+
+        (val>0?'<div style="font-size:8px;color:var(--text-muted);margin-bottom:3px">'+_rpShort(val).replace("Rp ","")+'</div>':'')+
+        '<div style="width:100%;height:'+h+'px;background:linear-gradient(180deg,#2E7D32,#66BB6A);border-radius:4px 4px 0 0;min-height:'+(val>0?4:0)+'px"></div>'+
+        '<div style="font-size:9px;color:var(--text-muted);margin-top:5px">'+bulanLbl[b]+'</div></div>';
+    }
+    html+='</div></div>';
+  }
+
+  /* Perbandingan Vendor */
+  if(vendorArr.length){
+    html+='<div style="font-size:14px;font-weight:800;color:var(--text);margin:4px 0 10px;border-left:4px solid #7B2FBE;padding-left:10px">Perbandingan Vendor / Pelaksana</div>';
+    html+='<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:18px"><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:560px">'+
+      '<thead><tr style="background:var(--blue,#003B73);color:#fff">'+
+      '<th style="text-align:left;padding:9px 12px">Vendor / Pelaksana</th>'+
+      '<th style="text-align:center;padding:9px 12px">Kegiatan</th>'+
+      '<th style="text-align:right;padding:9px 12px">Total Biaya</th>'+
+      '<th style="text-align:right;padding:9px 12px">Rata-rata/Kegiatan</th></tr></thead><tbody>';
+    vendorArr.forEach(function(v,i){
+      html+='<tr style="background:'+(i%2?"rgba(0,0,0,.02)":"transparent")+'">'+
+        '<td style="padding:8px 12px;border-bottom:1px solid var(--border);font-weight:600;color:var(--text)">'+esc(v.vendor)+'</td>'+
+        '<td style="padding:8px 12px;border-bottom:1px solid var(--border);text-align:center">'+v.n+'</td>'+
+        '<td style="padding:8px 12px;border-bottom:1px solid var(--border);text-align:right">'+_rpFmt(v.total)+'</td>'+
+        '<td style="padding:8px 12px;border-bottom:1px solid var(--border);text-align:right;font-weight:700;color:#7B2FBE">'+_rpFmt(v.rata)+'</td></tr>';
+    });
+    html+='</tbody></table></div></div>';
+  }
+
+  /* Catatan prinsip efisiensi */
+  html+='<div style="background:#EAF4FB;border:1px solid #BFE0F2;border-radius:12px;padding:14px 16px;margin-bottom:8px">'+
+    '<div style="font-size:11.5px;color:#0F3A5E;line-height:1.7"><b>Prinsip optimalisasi:</b> efisiensi difokuskan pada konsolidasi jadwal/lokasi, perbandingan vendor, dan alokasi berbasis kebutuhan — <b>bukan</b> mengurangi cakupan, frekuensi, atau kualitas yang diwajibkan regulasi demi keselamatan & kesehatan kerja. Verifikasi aturan pengadaan dengan fungsi Procurement/Legal.</div></div>';
+
+  html+='</div>';
+  pg.innerHTML=html;
 }
