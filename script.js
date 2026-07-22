@@ -384,7 +384,14 @@ function guardAdmin(msg){
 }
 
 
-const TOTAL_KAPAL=85;
+let TOTAL_KAPAL=69; /* default fallback — otomatis di-update dari jumlah kapal unik di sheet "Sebaran Alkes Kapal" saat data dimuat (lihat updateTotalKapalFromMaster()) */
+function updateTotalKapalFromMaster(list){
+  try{
+    var names=(list||[]).map(function(r){return String(r["Nama Kapal"]||r["NAMA KAPAL"]||r._kapal||"").trim().toUpperCase();}).filter(Boolean);
+    var uniq=Array.from(new Set(names));
+    if(uniq.length>0)TOTAL_KAPAL=uniq.length; /* bertambah otomatis kalau ada baris kapal baru ditambahkan manual di spreadsheet */
+  }catch(e){}
+}
 const BULAN_ORDER=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 let rawHRA=[],rawDAT=[],rawPest=[],filteredHRA=[],filteredDAT=[],filteredPest=[];
 let rawFisika=[],rawKimia=[],rawBiologi=[],rawErgonomi=[],rawPsikososial=[];
@@ -769,6 +776,7 @@ async function loadData(){
       return Object.assign({},r,{_status:status,_kelengkapanPct:pct,_expiredAED:isExpired,_alkesAda:adaCount,_alkesTotal:total});
     });
     filteredAlkes=[...rawAlkes];
+    updateTotalKapalFromMaster(rawAlkes);
     /* MCU Pelaut — ambil dari getData (SHEET_CONFIG mcu=MCU PELAUT) */
     if(data.mcu&&data.mcu.length>0){
       rawMCU=data.mcu;
@@ -4278,7 +4286,7 @@ function getSummaryData(){
   /* HRA */
   var hraD=fd(rawHRA,"");
   var hraDone=new Set(hraD.filter(function(r){return(r["Status"]||"").toLowerCase()==="done";}).map(function(r){return r["Nama Kapal"];})).size;
-  var hraTot=typeof TOTAL_KAPAL!=="undefined"?TOTAL_KAPAL:85;
+  var hraTot=typeof TOTAL_KAPAL!=="undefined"?TOTAL_KAPAL:69;
   var hraCov=((hraDone/hraTot)*100).toFixed(1);
   var hraBudget=hraD.reduce(function(s,r){return s+parseFloat(r["Est Budget"]||0);},0);
 
@@ -5289,46 +5297,76 @@ async function exportCloseout25PDF(){
     }
     var stC=pct>=90?"#2E7D32":pct>=60?"#E65100":"#C62828";
 
-    /* ===== HALAMAN 1: Ringkasan + Reminder OPEN ===== */
-    var p1=pageHead("Ringkasan & Reminder Status Open");
-    p1+='<div style="display:flex;gap:10px;margin-bottom:16px">'+
-      kpiBox(total,"Total Temuan","#1565C0")+
-      kpiBox(closeRows.length,"Sudah Closeout","#2E7D32")+
-      kpiBox(openRows.length,"Masih Open",openRows.length>0?"#C62828":"#2E7D32")+
-      kpiBox(pct+"%","Tingkat Closeout",stC)+
-    '</div>';
-
-    p1+='<div style="font-size:11px;color:#444;line-height:1.6;margin-bottom:14px;background:#F0F4F8;padding:11px 14px;border-radius:7px">'+
-      'Laporan ini disusun sebagai pemantauan tindak lanjut (closeout) temuan Health Risk Assessment (HRA) dan Industrial Hygiene Monitoring (IHM) pada armada kapal, '+
-      'sesuai amanat <b>Permenaker No. 05 Tahun 2018</b> tentang Keselamatan dan Kesehatan Kerja Lingkungan Kerja, serta mendukung kesiapan <b>Audit SUPREME</b> di lingkungan Pertamina.</div>';
-
-    if(openRows.length>0){
-      p1+='<div style="font-size:14px;font-weight:800;color:#C62828;margin:6px 0 9px;border-left:4px solid #C62828;padding-left:9px"><span style="font-size:13px">\u26A0</span> Reminder — Temuan Masih OPEN ('+openRows.length+' kapal)</div>';
-      p1+='<div style="font-size:10.5px;color:#555;margin-bottom:8px">Mohon perhatian Fleet Management & crew kapal berikut untuk segera menyelesaikan tindak lanjut temuan:</div>';
-      p1+='<table style="width:100%;border-collapse:collapse;font-size:10.5px"><thead><tr style="background:#C62828;color:#fff">'+
+    /* ===== HALAMAN 1..N: Ringkasan + Reminder OPEN (dipecah otomatis agar tabel tidak terpotong) ===== */
+    var reminderPages=[]; /* setiap elemen = HTML isi 1 halaman (tanpa footer, footer ditambahkan setelah semua halaman diketahui) */
+    function tableHeadHtml(){
+      return '<table style="width:100%;border-collapse:collapse;font-size:10.5px"><thead><tr style="background:#C62828;color:#fff">'+
         '<th style="text-align:left;padding:7px 9px;width:26px">No</th>'+
         '<th style="text-align:left;padding:7px 9px">Nama Kapal</th>'+
         '<th style="text-align:left;padding:7px 9px">Jenis</th>'+
         '<th style="text-align:left;padding:7px 9px">Fleet</th>'+
         '<th style="text-align:left;padding:7px 9px">Status Laporan</th></tr></thead><tbody>';
-      openRows.forEach(function(r,i){
-        p1+='<tr style="background:'+(i%2?"#FDF2F2":"#fff")+'">'+
-          '<td style="padding:6px 9px;border-bottom:1px solid #F0D5D5">'+(i+1)+'</td>'+
-          '<td style="padding:6px 9px;border-bottom:1px solid #F0D5D5;font-weight:700">'+esc2(r.kapal||"-")+'</td>'+
-          '<td style="padding:6px 9px;border-bottom:1px solid #F0D5D5">'+esc2(r.jenis||"-")+'</td>'+
-          '<td style="padding:6px 9px;border-bottom:1px solid #F0D5D5">'+esc2(r.fleet||"-")+'</td>'+
-          '<td style="padding:6px 9px;border-bottom:1px solid #F0D5D5">'+esc2(r.laporan||"-")+'</td></tr>';
+    }
+    function tableRowHtml(r,no){
+      return '<tr style="background:'+(no%2?"#fff":"#FDF2F2")+'">'+
+        '<td style="padding:6px 9px;border-bottom:1px solid #F0D5D5">'+no+'</td>'+
+        '<td style="padding:6px 9px;border-bottom:1px solid #F0D5D5;font-weight:700">'+esc2(r.kapal||"-")+'</td>'+
+        '<td style="padding:6px 9px;border-bottom:1px solid #F0D5D5">'+esc2(r.jenis||"-")+'</td>'+
+        '<td style="padding:6px 9px;border-bottom:1px solid #F0D5D5">'+esc2(r.fleet||"-")+'</td>'+
+        '<td style="padding:6px 9px;border-bottom:1px solid #F0D5D5">'+esc2(r.laporan||"-")+'</td></tr>';
+    }
+
+    if(openRows.length>0){
+      /* Kapasitas baris per halaman: halaman pertama lebih sempit karena ada KPI + intro */
+      var ROWS_FIRST_PAGE=24, ROWS_NEXT_PAGE=34;
+      var chunks=[],idx=0,firstChunk=true;
+      while(idx<openRows.length){
+        var take=firstChunk?ROWS_FIRST_PAGE:ROWS_NEXT_PAGE;
+        chunks.push(openRows.slice(idx,idx+take));
+        idx+=take;firstChunk=false;
+      }
+      chunks.forEach(function(chunk,ci){
+        var isFirst=ci===0,isLast=ci===chunks.length-1;
+        var page=pageHead(isFirst?"Ringkasan & Reminder Status Open":"Reminder Status Open (Lanjutan)");
+        if(isFirst){
+          page+='<div style="display:flex;gap:10px;margin-bottom:16px">'+
+            kpiBox(total,"Total Temuan","#1565C0")+
+            kpiBox(closeRows.length,"Sudah Closeout","#2E7D32")+
+            kpiBox(openRows.length,"Masih Open","#C62828")+
+            kpiBox(pct+"%","Tingkat Closeout",stC)+
+          '</div>';
+          page+='<div style="font-size:11px;color:#444;line-height:1.6;margin-bottom:14px;background:#F0F4F8;padding:11px 14px;border-radius:7px">'+
+            'Laporan ini disusun sebagai pemantauan tindak lanjut (closeout) temuan Health Risk Assessment (HRA) dan Industrial Hygiene Monitoring (IHM) pada armada kapal, '+
+            'sesuai amanat <b>Permenaker No. 05 Tahun 2018</b> tentang Keselamatan dan Kesehatan Kerja Lingkungan Kerja, serta mendukung kesiapan <b>Audit SUPREME</b> di lingkungan Pertamina.</div>';
+        }
+        var titleSuffix=chunks.length>1?" — Bagian "+(ci+1)+"/"+chunks.length:"";
+        page+='<div style="font-size:14px;font-weight:800;color:#C62828;margin:6px 0 9px;border-left:4px solid #C62828;padding-left:9px"><span style="font-size:13px">\u26A0</span> Reminder — Temuan Masih OPEN ('+openRows.length+' kapal)'+titleSuffix+'</div>';
+        if(isFirst)page+='<div style="font-size:10.5px;color:#555;margin-bottom:8px">Mohon perhatian Fleet Management & crew kapal berikut untuk segera menyelesaikan tindak lanjut temuan:</div>';
+        page+=tableHeadHtml();
+        var baseNo=ci===0?0:ROWS_FIRST_PAGE+(ci-1)*ROWS_NEXT_PAGE;
+        chunk.forEach(function(r,ri){page+=tableRowHtml(r,baseNo+ri+1);});
+        page+='</tbody></table>';
+        reminderPages.push(page);
       });
-      p1+='</tbody></table>';
     } else {
-      p1+='<div style="text-align:center;padding:30px 20px;background:#E8F5E9;border:1px solid #A5D6A7;border-radius:10px;margin-top:8px">'+
+      var page=pageHead("Ringkasan & Reminder Status Open");
+      page+='<div style="display:flex;gap:10px;margin-bottom:16px">'+
+        kpiBox(total,"Total Temuan","#1565C0")+
+        kpiBox(closeRows.length,"Sudah Closeout","#2E7D32")+
+        kpiBox(openRows.length,"Masih Open","#2E7D32")+
+        kpiBox(pct+"%","Tingkat Closeout",stC)+
+      '</div>';
+      page+='<div style="font-size:11px;color:#444;line-height:1.6;margin-bottom:14px;background:#F0F4F8;padding:11px 14px;border-radius:7px">'+
+        'Laporan ini disusun sebagai pemantauan tindak lanjut (closeout) temuan Health Risk Assessment (HRA) dan Industrial Hygiene Monitoring (IHM) pada armada kapal, '+
+        'sesuai amanat <b>Permenaker No. 05 Tahun 2018</b> tentang Keselamatan dan Kesehatan Kerja Lingkungan Kerja, serta mendukung kesiapan <b>Audit SUPREME</b> di lingkungan Pertamina.</div>';
+      page+='<div style="text-align:center;padding:30px 20px;background:#E8F5E9;border:1px solid #A5D6A7;border-radius:10px;margin-top:8px">'+
         '<div style="font-size:34px;color:#2E7D32;margin-bottom:8px">\u2713</div>'+
         '<div style="font-size:14px;font-weight:800;color:#1B5E20">Seluruh Temuan Telah Closeout</div>'+
         '<div style="font-size:11px;color:#388E3C;margin-top:5px">Tidak ada temuan berstatus OPEN. Pertahankan kinerja ini.</div></div>';
+      reminderPages.push(page);
     }
-    p1+=pageFoot(1);
 
-    /* ===== HALAMAN 2: Apresiasi + Regulasi ===== */
+    /* ===== HALAMAN BERIKUTNYA: Apresiasi + Regulasi ===== */
     var p2=pageHead("Apresiasi & Dasar Regulasi");
     p2+='<div style="font-size:14px;font-weight:800;color:#2E7D32;margin:2px 0 10px;border-left:4px solid #2E7D32;padding-left:9px">Ucapan Terima Kasih</div>';
     p2+='<div style="font-size:11.5px;color:#222;line-height:1.8;margin-bottom:14px;text-align:justify">'+
@@ -5363,9 +5401,11 @@ async function exportCloseout25PDF(){
     });
 
     p2+='<div style="margin-top:20px;font-size:10.5px;color:#333;line-height:1.6">Hormat kami,<br><br><b>HSSE Fungsi Health</b><br>PT Pertamina Patra Niaga</div>';
-    p2+=pageFoot(2);
 
-    host.innerHTML=[p1,p2].map(function(h){return pageWrap(h);}).join('');
+    var allPages=reminderPages.concat([p2]);
+    allPages=allPages.map(function(h,i){return h+pageFoot(i+1);});
+
+    host.innerHTML=allPages.map(function(h){return pageWrap(h);}).join('');
     document.body.appendChild(host);
 
     var {jsPDF}=window.jspdf;
