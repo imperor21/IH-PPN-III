@@ -3,7 +3,7 @@
 /* ✅ Pedoman PDF & Foto Dokumentasi → Google Drive (multi-device)    */
 /* ✅ IndexedDB dihapus — data terpusat di GAS/Drive                  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbzpVINT0tcSK71qbXJI5DvBbDjyq2xk2wroa9kQCi1wOjsIJww2iY5qn9jqIf4BEZL-Nw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbz7VJv8KqxyfHFaZ5eWwJV1kx09ZZnFQymGLiPaVCz6KKhMPOwklgmbsnQ54pWjwDc_yQ/exec";
 
 async function gasPost(payload) {
   const controller = new AbortController();
@@ -384,12 +384,20 @@ function guardAdmin(msg){
 }
 
 
-let TOTAL_KAPAL=69; /* default fallback — otomatis di-update dari jumlah kapal unik di sheet "Sebaran Alkes Kapal" saat data dimuat (lihat updateTotalKapalFromMaster()) */
-function updateTotalKapalFromMaster(list){
+let TOTAL_KAPAL=71; /* default fallback — otomatis di-update dari gabungan kapal unik di sheet "Data IH" & "Closeout_25" saat data dimuat (lihat updateTotalKapalFromMaster()) */
+function updateTotalKapalFromMaster(hraList,co25List){
   try{
-    var names=(list||[]).map(function(r){return String(r["Nama Kapal"]||r["NAMA KAPAL"]||r._kapal||"").trim().toUpperCase();}).filter(Boolean);
+    var names=[];
+    (hraList||[]).forEach(function(r){
+      var n=hraBaseKapal(r["Nama Kapal"]||"").trim().toUpperCase();
+      if(n)names.push(n);
+    });
+    (co25List||[]).forEach(function(r){
+      var n=String(r.kapal||r["Nama Kapal"]||"").trim().toUpperCase();
+      if(n)names.push(n);
+    });
     var uniq=Array.from(new Set(names));
-    if(uniq.length>0)TOTAL_KAPAL=uniq.length; /* bertambah otomatis kalau ada baris kapal baru ditambahkan manual di spreadsheet */
+    if(uniq.length>0)TOTAL_KAPAL=uniq.length; /* bertambah/berkurang otomatis saat baris kapal ditambah/dikurangi manual di kedua sheet */
   }catch(e){}
 }
 const BULAN_ORDER=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
@@ -776,7 +784,6 @@ async function loadData(){
       return Object.assign({},r,{_status:status,_kelengkapanPct:pct,_expiredAED:isExpired,_alkesAda:adaCount,_alkesTotal:total});
     });
     filteredAlkes=[...rawAlkes];
-    updateTotalKapalFromMaster(rawAlkes);
     /* MCU Pelaut — ambil dari getData (SHEET_CONFIG mcu=MCU PELAUT) */
     if(data.mcu&&data.mcu.length>0){
       rawMCU=data.mcu;
@@ -807,6 +814,7 @@ async function loadData(){
       rawCloseout25=[...RAW_CLOSEOUT_2025];
       filteredCO25=[...RAW_CLOSEOUT_2025];
     }
+    updateTotalKapalFromMaster(rawHRA,rawCloseout25);
     /* Re-render closeout page jika sedang aktif */
     const pgCo25=document.getElementById("page-closeout25");
     if(pgCo25&&pgCo25.classList.contains("active"))renderCO25Page();
@@ -4286,7 +4294,7 @@ function getSummaryData(){
   /* HRA */
   var hraD=fd(rawHRA,"");
   var hraDone=new Set(hraD.filter(function(r){return(r["Status"]||"").toLowerCase()==="done";}).map(function(r){return r["Nama Kapal"];})).size;
-  var hraTot=typeof TOTAL_KAPAL!=="undefined"?TOTAL_KAPAL:69;
+  var hraTot=typeof TOTAL_KAPAL!=="undefined"?TOTAL_KAPAL:71;
   var hraCov=((hraDone/hraTot)*100).toFixed(1);
   var hraBudget=hraD.reduce(function(s,r){return s+parseFloat(r["Est Budget"]||0);},0);
 
