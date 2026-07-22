@@ -3,7 +3,7 @@
 /* ✅ Pedoman PDF & Foto Dokumentasi → Google Drive (multi-device)    */
 /* ✅ IndexedDB dihapus — data terpusat di GAS/Drive                  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbzpVINT0tcSK71qbXJI5DvBbDjyq2xk2wroa9kQCi1wOjsIJww2iY5qn9jqIf4BEZL-Nw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbz7VJv8KqxyfHFaZ5eWwJV1kx09ZZnFQymGLiPaVCz6KKhMPOwklgmbsnQ54pWjwDc_yQ/exec";
 
 async function gasPost(payload) {
   const controller = new AbortController();
@@ -384,20 +384,16 @@ function guardAdmin(msg){
 }
 
 
-let TOTAL_KAPAL=71; /* default fallback — otomatis di-update dari gabungan kapal unik di sheet "Data IH" & "Closeout_25" saat data dimuat (lihat updateTotalKapalFromMaster()) */
-function updateTotalKapalFromMaster(hraList,co25List){
+let TOTAL_KAPAL=71; /* default fallback — otomatis di-update dari jumlah kapal unik di sheet "Data IH" (menu HRA & IH) saat data dimuat (lihat updateTotalKapalFromMaster()) */
+function updateTotalKapalFromMaster(hraList){
   try{
     var names=[];
     (hraList||[]).forEach(function(r){
       var n=hraBaseKapal(r["Nama Kapal"]||"").trim().toUpperCase();
       if(n)names.push(n);
     });
-    (co25List||[]).forEach(function(r){
-      var n=String(r.kapal||r["Nama Kapal"]||"").trim().toUpperCase();
-      if(n)names.push(n);
-    });
     var uniq=Array.from(new Set(names));
-    if(uniq.length>0)TOTAL_KAPAL=uniq.length; /* bertambah/berkurang otomatis saat baris kapal ditambah/dikurangi manual di kedua sheet */
+    if(uniq.length>0)TOTAL_KAPAL=uniq.length; /* bertambah/berkurang otomatis saat baris kapal ditambah/dikurangi manual di sheet Data IH */
   }catch(e){}
 }
 const BULAN_ORDER=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
@@ -814,7 +810,7 @@ async function loadData(){
       rawCloseout25=[...RAW_CLOSEOUT_2025];
       filteredCO25=[...RAW_CLOSEOUT_2025];
     }
-    updateTotalKapalFromMaster(rawHRA,rawCloseout25);
+    updateTotalKapalFromMaster(rawHRA);
     /* Re-render closeout page jika sedang aktif */
     const pgCo25=document.getElementById("page-closeout25");
     if(pgCo25&&pgCo25.classList.contains("active"))renderCO25Page();
