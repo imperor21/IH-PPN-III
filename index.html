@@ -486,7 +486,7 @@ Kirim ulang kode OTP
 <button class="btn-memo-klinik admin-only" onclick="showMemoModal('klinik')" title="Buat Memo DAT ke Vendor"><i class="fas fa-file-word"></i> Memo Vendor</button>
 </div>
 <div class="kpi-grid">
-<div class="kpi-card blue"><a class="kpi-link" href="#">View Detail</a><div class="kpi-icon"><i class="fas fa-ship"></i></div><div class="kpi-body"><div class="kpi-value">85</div><div class="kpi-label">Total Kapal</div></div></div>
+<div class="kpi-card blue"><a class="kpi-link" href="#">View Detail</a><div class="kpi-icon"><i class="fas fa-ship"></i></div><div class="kpi-body"><div class="kpi-value" id="dat-total-kapal">70</div><div class="kpi-label">Est. Total Kapal</div></div></div>
 <div class="kpi-card green"><a class="kpi-link" href="#">View Detail</a><div class="kpi-icon"><i class="fas fa-circle-check"></i></div><div class="kpi-body"><div class="kpi-value" id="dat-done">—</div><div class="kpi-label">Sudah DAT</div></div></div>
 <div class="kpi-card orange"><a class="kpi-link" href="#">View Detail</a><div class="kpi-icon"><i class="fas fa-clock"></i></div><div class="kpi-body"><div class="kpi-value" id="dat-belum">—</div><div class="kpi-label">Belum DAT</div></div></div>
 <div class="kpi-card red"><a class="kpi-link" href="#">View Detail</a><div class="kpi-icon"><i class="fas fa-person-falling-burst"></i></div><div class="kpi-body"><div class="kpi-value" id="dat-positif">—</div><div class="kpi-label">Crew Positif</div></div></div>
@@ -1095,6 +1095,7 @@ Kirim ulang kode OTP
 
 <!-- ===== PAGE CLOSEOUT HRA & IH 2025 ===== -->
 <section class="page-content" id="page-closeout25">
+<div id="co25-sync-badge" style="display:inline-flex;align-items:center;padding:6px 14px;border-radius:20px;font-size:11px;font-weight:700;margin-bottom:12px"></div>
 <div class="filter-bar">
   <div class="filter-group">
     <label>Jenis Fleet</label>
