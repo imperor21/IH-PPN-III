@@ -384,22 +384,15 @@ function guardAdmin(msg){
 }
 
 
-let TOTAL_KAPAL=71; /* default fallback — otomatis di-update dari jumlah kapal unik di sheet "Data IH" (menu HRA & IH) saat data dimuat (lihat updateTotalKapalFromMaster()) */
+let TOTAL_KAPAL=70; /* NILAI TETAP (Est. Total Kapal) — sesuai permintaan, tidak lagi auto-dihitung dari jumlah baris unik di sheet "Data IH". Dipakai bersama oleh SEMUA menu (HRA & IH, Drugs & Alcohol Test/DAT, dst) supaya angkanya selalu konsisten dan tidak perlu diperbaiki berulang-ulang. Untuk mengubah jumlah armada di masa depan, cukup ubah angka ini di satu tempat. */
 function updateTotalKapalFromMaster(hraList){
-  try{
-    var names=[];
-    (hraList||[]).forEach(function(r){
-      var n=hraBaseKapal(r["Nama Kapal"]||"").trim().toUpperCase();
-      if(n)names.push(n);
-    });
-    var uniq=Array.from(new Set(names));
-    if(uniq.length>0)TOTAL_KAPAL=uniq.length; /* bertambah/berkurang otomatis saat baris kapal ditambah/dikurangi manual di sheet Data IH */
-  }catch(e){}
+  /* Dinonaktifkan sengaja: TOTAL_KAPAL sekarang nilai tetap (lihat komentar di atas), tidak lagi mengikuti jumlah baris di sheet Data IH. */
 }
 const BULAN_ORDER=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 let rawHRA=[],rawDAT=[],rawPest=[],filteredHRA=[],filteredDAT=[],filteredPest=[];
 let rawFisika=[],rawKimia=[],rawBiologi=[],rawErgonomi=[],rawPsikososial=[];
 let rawCloseout25=[];
+let co25IsLive=false; /* true jika data closeout25 berasal dari sheet "Closeout_25" live, false jika masih pakai data cadangan statis */
 let rawAlkes=[],filteredAlkes=[];
 let rawMCU=[],filteredMCU=[],mcuSummary={};
 let rawSertifikat=[],filteredSertifikat=[];
@@ -804,11 +797,15 @@ async function loadData(){
         };
       });
       filteredCO25=[...rawCloseout25];
-      showToast("Closeout 2025: "+rawCloseout25.length+" data live dari Google Sheets ✅","info");
+      co25IsLive=true;
+      showToast("Closeout 2025: "+rawCloseout25.length+" data live dari sheet Closeout_25 ✅","info");
     } else {
-      /* Fallback ke data statis sampai sheet GAS ditambahkan */
+      /* Fallback ke data statis (belum bisa membaca sheet Closeout_25 live) — beri tahu user secara eksplisit
+         supaya tidak bingung kenapa data dashboard tidak sama dengan spreadsheet. */
       rawCloseout25=[...RAW_CLOSEOUT_2025];
       filteredCO25=[...RAW_CLOSEOUT_2025];
+      co25IsLive=false;
+      showToast("⚠️ Sheet 'Closeout_25' tidak terbaca dari Google Sheets — menampilkan data cadangan lokal (BUKAN live). Cek nama tab sheet & SHEET_CONFIG.closeout25 di Code.gs.","error");
     }
     updateTotalKapalFromMaster(rawHRA);
     /* Re-render closeout page jika sedang aktif */
@@ -830,6 +827,7 @@ async function loadData(){
     /* Closeout tetap pakai data statis saat koneksi gagal */
     rawCloseout25=[...RAW_CLOSEOUT_2025];
     filteredCO25=[...RAW_CLOSEOUT_2025];
+    co25IsLive=false;
     const lastEl=document.getElementById("lastUpdated");
     if(lastEl)lastEl.textContent="Gagal terhubung";
   }
@@ -1033,7 +1031,7 @@ function renderHRAPage(){
     /* KPI STRIP */
     +'<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:18px;position:relative">'
     +[
-      {l:'Total Kapal',    v:TOTAL_KAPAL, ico:'fa-ship',           c:'#E3F2FD'},
+      {l:'Est. Total Kapal', v:TOTAL_KAPAL, ico:'fa-ship',         c:'#E3F2FD'},
       {l:'Sudah Monitoring',v:doneAll,    ico:'fa-circle-check',   c:'#A5D6A7'},
       {l:'Belum Monitoring',v:TOTAL_KAPAL-doneAll,ico:'fa-clock',  c:'#FFE0B2'},
       {l:'Est. Budget',    v:formatRupiah(budget),ico:'fa-sack-dollar',c:'#FFF9C4'},
@@ -1281,7 +1279,7 @@ function searchHRATable(){const q=document.getElementById("hra-search").value.to
 function sortHRATable(col){if(hraSortCol===col)hraSortDir*=-1;else{hraSortCol=col;hraSortDir=1;}const keys=["Nama Kapal","Jenis Fleet","Bulan Pelaksanaan","Vendor Pelaksana","Status","Est Budget"];filteredHRA.sort((a,b)=>String(a[keys[col]]||"").localeCompare(String(b[keys[col]]||""),"id")*hraSortDir);renderHRATable(filteredHRA);}
 
 /* DAT PAGE */
-function renderDATPage(){const data=filteredDAT;const done=new Set(data.map(r=>r["Nama Kapal"])).size;const belum=TOTAL_KAPAL-done;const crew=data.reduce((s,r)=>s+parseInt(r["Total Crew Diperiksa"]||0),0);const pos=data.reduce((s,r)=>s+parseInt(r["Jumlah Crew Positif"]||0),0);const biaya=data.reduce((s,r)=>s+parseFloat(r["Est Biaya"]||0),0);const coverage=((done/TOTAL_KAPAL)*100).toFixed(1);document.getElementById("dat-done").textContent=done;document.getElementById("dat-belum").textContent=belum;document.getElementById("dat-crew").textContent=fmtNum(crew);document.getElementById("dat-positif").textContent=pos;document.getElementById("dat-biaya").textContent=formatRupiah(biaya);document.getElementById("dat-coverage").textContent=coverage+"%";renderDATBarChart(data);renderDATDonutChart(data,crew,pos);renderDATTindakLanjut(data);renderDATTable(data);}
+function renderDATPage(){const data=filteredDAT;const done=new Set(data.map(r=>r["Nama Kapal"])).size;const belum=TOTAL_KAPAL-done;const datTotEl=document.getElementById("dat-total-kapal");if(datTotEl)datTotEl.textContent=TOTAL_KAPAL;const crew=data.reduce((s,r)=>s+parseInt(r["Total Crew Diperiksa"]||0),0);const pos=data.reduce((s,r)=>s+parseInt(r["Jumlah Crew Positif"]||0),0);const biaya=data.reduce((s,r)=>s+parseFloat(r["Est Biaya"]||0),0);const coverage=((done/TOTAL_KAPAL)*100).toFixed(1);document.getElementById("dat-done").textContent=done;document.getElementById("dat-belum").textContent=belum;document.getElementById("dat-crew").textContent=fmtNum(crew);document.getElementById("dat-positif").textContent=pos;document.getElementById("dat-biaya").textContent=formatRupiah(biaya);document.getElementById("dat-coverage").textContent=coverage+"%";renderDATBarChart(data);renderDATDonutChart(data,crew,pos);renderDATTindakLanjut(data);renderDATTable(data);}
 function renderDATBarChart(data){const done={},plan={};BULAN_ORDER.forEach(b=>{done[b]=0;plan[b]=0;});data.forEach(r=>{const b=r["Bulan Pelaksanaan"];if(!b||done[b]===undefined)return;const hasil=String(r["Hasil"]||"").trim();const nama=String(r["Nama Kapal"]||"").trim();if(hasil!=="")done[b]++;else if(nama)plan[b]++;});const isLine=datChartType==="line";const ctx=document.getElementById("datBarChart").getContext("2d");if(datBarChart)datBarChart.destroy();const opts=chartOpts();opts.plugins.legend={display:true,position:"top",labels:{color:"#607D8B",font:{size:11,family:"Plus Jakarta Sans",weight:"700"},padding:14,boxWidth:12,usePointStyle:true}};if(!isLine){opts.scales.x.stacked=true;opts.scales.y.stacked=true;}datBarChart=new Chart(ctx,{type:datChartType,data:{labels:BULAN_ORDER,datasets:[{label:"Terlaksana",data:BULAN_ORDER.map(b=>done[b]),backgroundColor:isLine?"rgba(67,160,71,0.12)":"#43A047",borderColor:"#2E7D32",borderWidth:isLine?2.5:1,borderRadius:isLine?0:6,fill:isLine,tension:0.4,pointBackgroundColor:"#2E7D32",pointRadius:isLine?4:0,stack:"dat"},{label:"Akan Dilaksanakan",data:BULAN_ORDER.map(b=>plan[b]),backgroundColor:isLine?"rgba(224,145,58,0.12)":"#F0A030",borderColor:"#E0913A",borderWidth:isLine?2.5:1,borderRadius:isLine?0:6,fill:isLine,tension:0.4,pointBackgroundColor:"#E0913A",pointRadius:isLine?4:0,stack:"dat"}]},options:opts});}
 function renderDATDonutChart(data,crew,pos){const neg=crew-pos;const ctx=document.getElementById("datDonutChart").getContext("2d");if(datDonutChart)datDonutChart.destroy();datDonutChart=new Chart(ctx,{type:"doughnut",data:{labels:["Negatif","Positif"],datasets:[{data:[Math.max(0,neg),pos],backgroundColor:["#43A047","#E53935"],borderColor:"#fff",borderWidth:3,hoverOffset:8}]},options:donutOpts()});}
 function toggleDATChartType(btn,type){datChartType=type;btn.closest(".pill-group").querySelectorAll(".pill").forEach(p=>p.classList.remove("active"));btn.classList.add("active");renderDATBarChart(filteredDAT);}
@@ -2321,6 +2319,14 @@ let co25BarChart,co25DonutChart;
 
 function renderCO25Page(){
   const data=filteredCO25;
+  const badgeEl=document.getElementById("co25-sync-badge");
+  if(badgeEl){
+    badgeEl.innerHTML=co25IsLive
+      ?'<i class="fas fa-plug-circle-check" style="margin-right:5px"></i>Live dari sheet Closeout_25'
+      :'<i class="fas fa-triangle-exclamation" style="margin-right:5px"></i>Data cadangan (bukan live) — sheet Closeout_25 belum terbaca';
+    badgeEl.style.background=co25IsLive?"#E8F5E9":"#FFF3E0";
+    badgeEl.style.color=co25IsLive?"#2E7D32":"#E65100";
+  }
   const total=data.length;
   const closeCount=data.filter(r=>r.closeout.trim()==="CLOSE").length;
   const openCount=data.filter(r=>r.closeout.trim()==="OPEN").length;
